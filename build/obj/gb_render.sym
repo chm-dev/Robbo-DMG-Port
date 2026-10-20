@@ -1,0 +1,102 @@
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 1
+Hexadecimal [32-Bits]
+
+Symbol Table
+
+    .__.$$$.                                                    =   00002710 L
+    .__.ABS.                                                    =   00000000 G
+    .__.CPU.                                                    =   00000000 L
+    .__.H$L.                                                    =   00000000 L
+    _BGP_REG                                                        ******** GX
+    _LCDC_REG                                                       ******** GX
+    _LYC_REG                                                        ******** GX
+    _LY_REG                                                         ******** GX
+    _SCX_REG                                                        ******** GX
+    _SCY_REG                                                        ******** GX
+    _STAT_REG                                                       ******** GX
+    _WX_REG                                                         ******** GX
+    _WY_REG                                                         ******** GX
+  0 ___str_0                                                        000004F4 R
+  0 ___str_1                                                        000005B7 R
+  0 ___str_2                                                        000005C7 R
+  0 ___str_3                                                        000005CF R
+    __current_bank                                                  ******** GX
+    __divuchar                                                      ******** GX
+    __moduchar                                                      ******** GX
+    _add_LCD                                                        ******** GX
+    _add_VBL                                                        ******** GX
+    _ammo                                                           ******** GX
+    _anim_frame                                                     ******** GX
+  0 _bullet_mt                                                      0000013F R
+    _cam_override                                                   ******** GX
+    _cam_pan_timer                                                  ******** GX
+    _cam_target_x                                                   ******** GX
+    _cam_target_y                                                   ******** GX
+    _cam_x                                                          ******** GX
+    _cam_y                                                          ******** GX
+    _digit_tiles                                                    ******** GX
+  2 _dirty_cells                                                    00000010 R
+  2 _dirty_count                                                    00000090 R
+  0 _draw_bg_text                                                   00000505 R
+  0 _draw_cell_now                                                  000005FC R
+  0 _draw_level_row                                                 000001A1 R
+  0 _draw_metatile                                                  0000014B R
+  0 _empty_tile                                                     00000147 R
+    _font_tiles                                                     ******** GX
+    _keys                                                           ******** GX
+  0 _lcd_isr                                                        000001FF R
+    _level_height                                                   ******** GX
+    _level_planet                                                   ******** GX
+    _map_extra                                                      ******** GX
+  2 _map_row_level                                                  00000000 R
+    _map_type                                                       ******** GX
+    _metatile_tiles                                                 ******** GX
+    _rROMB0                                                         ******** GX
+    _rROMB1                                                         ******** GX
+  0 _render_apply_camera                                            0000020B GR
+  0 _render_camera                                                  000006A6 GR
+  0 _render_cell                                                    00000645 GR
+  0 _render_flash_set                                               000004FB GR
+  0 _render_flush_cells                                             00000685 GR
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 2
+Hexadecimal [32-Bits]
+
+Symbol Table
+
+  0 _render_hud                                                     000002F3 GR
+  0 _render_init                                                    00000229 GR
+  0 _render_level                                                   000002DE GR
+  0 _render_metatile_for_cell                                       00000000 GR
+  0 _render_pause                                                   00000480 GR
+  0 _render_sync_rows                                               000005DB GR
+  0 _render_victory                                                 0000052D GR
+  0 _robbo_mt_base                                                  00000143 R
+    _robbo_x                                                        ******** GX
+    _robbo_y                                                        ******** GX
+    _screws_left                                                    ******** GX
+    _set_bkg_data                                                   ******** GX
+    _set_bkg_tile_xy                                                ******** GX
+    _set_bkg_tiles                                                  ******** GX
+    _set_interrupts                                                 ******** GX
+    _set_win_tiles                                                  ******** GX
+    _tileset_data                                                   ******** GX
+  0 _turret_mt                                                      0000013B R
+  0 _vbl_isr                                                        00000220 R
+
+
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 3
+Hexadecimal [32-Bits]
+
+Area Table
+
+   0 _CODE                                      size      7DA   flags    0
+   1 _HRAM                                      size        0   flags    0
+   2 _DATA                                      size       91   flags    0
+   3 _INITIALIZED                               size        0   flags    0
+   4 _DABS                                      size        0   flags    8
+   5 _HOME                                      size        0   flags    0
+   6 _GSINIT                                    size        0   flags    0
+   7 _GSFINAL                                   size        0   flags    0
+   8 _INITIALIZER                               size        0   flags    0
+   9 _CABS                                      size        0   flags    8
+

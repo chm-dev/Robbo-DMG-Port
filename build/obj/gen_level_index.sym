@@ -1,0 +1,151 @@
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 1
+Hexadecimal [32-Bits]
+
+Symbol Table
+
+    .__.$$$.                                                    =   00002710 L
+    .__.ABS.                                                    =   00000000 G
+    .__.CPU.                                                    =   00000000 L
+    .__.H$L.                                                    =   00000000 L
+    ___sdcc_bcall_ehl                                               ******** GX
+    _load_level_01                                                  ******** GX
+    _load_level_02                                                  ******** GX
+    _load_level_03                                                  ******** GX
+    _load_level_04                                                  ******** GX
+    _load_level_05                                                  ******** GX
+    _load_level_06                                                  ******** GX
+    _load_level_07                                                  ******** GX
+    _load_level_08                                                  ******** GX
+    _load_level_09                                                  ******** GX
+    _load_level_10                                                  ******** GX
+    _load_level_11                                                  ******** GX
+    _load_level_12                                                  ******** GX
+    _load_level_13                                                  ******** GX
+    _load_level_14                                                  ******** GX
+    _load_level_15                                                  ******** GX
+    _load_level_16                                                  ******** GX
+    _load_level_17                                                  ******** GX
+    _load_level_18                                                  ******** GX
+    _load_level_19                                                  ******** GX
+    _load_level_20                                                  ******** GX
+    _load_level_21                                                  ******** GX
+    _load_level_22                                                  ******** GX
+    _load_level_23                                                  ******** GX
+    _load_level_24                                                  ******** GX
+    _load_level_25                                                  ******** GX
+    _load_level_26                                                  ******** GX
+    _load_level_27                                                  ******** GX
+    _load_level_28                                                  ******** GX
+    _load_level_29                                                  ******** GX
+    _load_level_30                                                  ******** GX
+    _load_level_31                                                  ******** GX
+    _load_level_32                                                  ******** GX
+    _load_level_33                                                  ******** GX
+    _load_level_34                                                  ******** GX
+    _load_level_35                                                  ******** GX
+    _load_level_36                                                  ******** GX
+    _load_level_37                                                  ******** GX
+    _load_level_38                                                  ******** GX
+    _load_level_39                                                  ******** GX
+    _load_level_40                                                  ******** GX
+    _load_level_41                                                  ******** GX
+    _load_level_42                                                  ******** GX
+    _load_level_43                                                  ******** GX
+    _load_level_44                                                  ******** GX
+    _load_level_45                                                  ******** GX
+    _load_level_46                                                  ******** GX
+    _load_level_47                                                  ******** GX
+    _load_level_48                                                  ******** GX
+    _load_level_49                                                  ******** GX
+    _load_level_50                                                  ******** GX
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 2
+Hexadecimal [32-Bits]
+
+Symbol Table
+
+    _load_level_51                                                  ******** GX
+    _load_level_52                                                  ******** GX
+    _load_level_53                                                  ******** GX
+    _load_level_54                                                  ******** GX
+    _load_level_55                                                  ******** GX
+    _load_level_56                                                  ******** GX
+  0 _load_level_data                                                00000000 GR
+    b_load_level_01                                                 ******** GX
+    b_load_level_02                                                 ******** GX
+    b_load_level_03                                                 ******** GX
+    b_load_level_04                                                 ******** GX
+    b_load_level_05                                                 ******** GX
+    b_load_level_06                                                 ******** GX
+    b_load_level_07                                                 ******** GX
+    b_load_level_08                                                 ******** GX
+    b_load_level_09                                                 ******** GX
+    b_load_level_10                                                 ******** GX
+    b_load_level_11                                                 ******** GX
+    b_load_level_12                                                 ******** GX
+    b_load_level_13                                                 ******** GX
+    b_load_level_14                                                 ******** GX
+    b_load_level_15                                                 ******** GX
+    b_load_level_16                                                 ******** GX
+    b_load_level_17                                                 ******** GX
+    b_load_level_18                                                 ******** GX
+    b_load_level_19                                                 ******** GX
+    b_load_level_20                                                 ******** GX
+    b_load_level_21                                                 ******** GX
+    b_load_level_22                                                 ******** GX
+    b_load_level_23                                                 ******** GX
+    b_load_level_24                                                 ******** GX
+    b_load_level_25                                                 ******** GX
+    b_load_level_26                                                 ******** GX
+    b_load_level_27                                                 ******** GX
+    b_load_level_28                                                 ******** GX
+    b_load_level_29                                                 ******** GX
+    b_load_level_30                                                 ******** GX
+    b_load_level_31                                                 ******** GX
+    b_load_level_32                                                 ******** GX
+    b_load_level_33                                                 ******** GX
+    b_load_level_34                                                 ******** GX
+    b_load_level_35                                                 ******** GX
+    b_load_level_36                                                 ******** GX
+    b_load_level_37                                                 ******** GX
+    b_load_level_38                                                 ******** GX
+    b_load_level_39                                                 ******** GX
+    b_load_level_40                                                 ******** GX
+    b_load_level_41                                                 ******** GX
+    b_load_level_42                                                 ******** GX
+    b_load_level_43                                                 ******** GX
+    b_load_level_44                                                 ******** GX
+    b_load_level_45                                                 ******** GX
+    b_load_level_46                                                 ******** GX
+    b_load_level_47                                                 ******** GX
+    b_load_level_48                                                 ******** GX
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 3
+Hexadecimal [32-Bits]
+
+Symbol Table
+
+    b_load_level_49                                                 ******** GX
+    b_load_level_50                                                 ******** GX
+    b_load_level_51                                                 ******** GX
+    b_load_level_52                                                 ******** GX
+    b_load_level_53                                                 ******** GX
+    b_load_level_54                                                 ******** GX
+    b_load_level_55                                                 ******** GX
+    b_load_level_56                                                 ******** GX
+
+
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 4
+Hexadecimal [32-Bits]
+
+Area Table
+
+   0 _CODE                                      size      244   flags    0
+   1 _HRAM                                      size        0   flags    0
+   2 _DATA                                      size        0   flags    0
+   3 _INITIALIZED                               size        0   flags    0
+   4 _DABS                                      size        0   flags    8
+   5 _HOME                                      size        0   flags    0
+   6 _GSINIT                                    size        0   flags    0
+   7 _GSFINAL                                   size        0   flags    0
+   8 _INITIALIZER                               size        0   flags    0
+   9 _CABS                                      size        0   flags    8
+

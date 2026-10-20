@@ -1,0 +1,74 @@
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 1
+Hexadecimal [32-Bits]
+
+Symbol Table
+
+    .__.$$$.                                                    =   00002710 L
+    .__.ABS.                                                    =   00000000 G
+    .__.CPU.                                                    =   00000000 L
+    .__.H$L.                                                    =   00000000 L
+  8 _l49_extra                                                      0000025B R
+  8 _l49_map                                                        0000006B R
+  8 _l49_tp                                                         0000044B R
+  8 _l50_extra                                                      000006AA R
+  8 _l50_map                                                        000004BA R
+  8 _l50_tp                                                         0000089A R
+  8 _l51_extra                                                      00000AFC R
+  8 _l51_map                                                        0000090C R
+  8 _l51_tp                                                         00000CEC R
+  8 _l52_extra                                                      00000F49 R
+  8 _l52_map                                                        00000D59 R
+  8 _l52_tp                                                         00001139 R
+  8 _l53_extra                                                      00001398 R
+  8 _l53_map                                                        000011A8 R
+  8 _l53_tp                                                         00001588 R
+  8 _l54_extra                                                      000017EB R
+  8 _l54_map                                                        000015FB R
+  8 _l54_tp                                                         000019DB R
+  8 _l55_extra                                                      00001C3E R
+  8 _l55_map                                                        00001A4E R
+  8 _l55_tp                                                         00001E2E R
+  8 _l56_extra                                                      00002095 R
+  8 _l56_map                                                        00001EA5 R
+  8 _l56_tp                                                         00002285 R
+    _level_height                                                   ******** GX
+    _level_planet                                                   ******** GX
+    _level_screw                                                    ******** GX
+    _level_teleport_count                                           ******** GX
+  8 _load_level_49                                                  00000000 GR
+  8 _load_level_50                                                  0000044F GR
+  8 _load_level_51                                                  000008A2 GR
+  8 _load_level_52                                                  00000CEE GR
+  8 _load_level_53                                                  0000113D GR
+  8 _load_level_54                                                  00001590 GR
+  8 _load_level_55                                                  000019E3 GR
+  8 _load_level_56                                                  00001E3A GR
+    _map_extra                                                      ******** GX
+    _map_type                                                       ******** GX
+    _teleport_dest                                                  ******** GX
+    b_load_level_49                                             =   00000007 G
+    b_load_level_50                                             =   00000007 G
+    b_load_level_51                                             =   00000007 G
+    b_load_level_52                                             =   00000007 G
+    b_load_level_53                                             =   00000007 G
+    b_load_level_54                                             =   00000007 G
+    b_load_level_55                                             =   00000007 G
+    b_load_level_56                                             =   00000007 G
+
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 2
+Hexadecimal [32-Bits]
+
+Area Table
+
+   0 _CODE                                      size        0   flags    0
+   1 _HRAM                                      size        0   flags    0
+   2 _DATA                                      size        0   flags    0
+   3 _INITIALIZED                               size        0   flags    0
+   4 _DABS                                      size        0   flags    8
+   5 _HOME                                      size        0   flags    0
+   6 _GSINIT                                    size        0   flags    0
+   7 _GSFINAL                                   size        0   flags    0
+   8 _CODE_7                                    size     2295   flags    0
+   9 _INITIALIZER                               size        0   flags    0
+   A _CABS                                      size        0   flags    8
+
