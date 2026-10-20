@@ -3,9 +3,14 @@
 #define TILES_H
 
 #include <stdint.h>
+#include <gb/gb.h>
 
-#define TILESET_COUNT 240
+#define TILESET_COUNT 237
 #define METATILE_COUNT 51
+#define SHEET_COLS 11
+#define SHEET_ROWS 8
+#define SHEET_CELL_COUNT 88
+#define SHEET_CELL(row, col) ((uint8_t)((row) * SHEET_COLS + (col)))
 
 #define MT_EMPTY 0
 #define MT_WALL 1
@@ -63,8 +68,12 @@ extern const uint8_t tileset_data[];
 extern const uint8_t tileset_count;
 extern const uint8_t metatile_tiles[];
 extern const uint8_t metatile_count;
+extern const uint8_t sheet_metatile_tiles[];
+extern const uint8_t sheet_tile_count;
+extern const uint8_t sheet_tiles_data[];
 extern const uint8_t digit_tiles[10][2];
 extern const uint8_t font_tiles[128];
-
+void sheet_load_tiles(uint8_t first, uint8_t count, uint8_t dest) BANKED;
+void sheet_load_metatile(uint8_t cell, uint8_t dest) BANKED;
 
 #endif

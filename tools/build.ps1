@@ -70,7 +70,7 @@ if (-not $sources) {
 $commonFlags = @(
     '-Wm-ynROBBO'
     '-Wl-yt0x19'   # MBC5
-    '-Wl-yo8'      # 8 x 16 KiB banks (levels live in banks 1..7)
+    '-Wl-yo16'     # 16 x 16 KiB banks (levels 1..7, full sheet bank 8)
     '-Wl-j'        # emit .noi debug info
     '-Wl-w'        # show linker warnings
     '-Wf--opt-code-speed'

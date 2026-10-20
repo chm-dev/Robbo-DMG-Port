@@ -16,18 +16,17 @@ Symbol Table
     _STAT_REG                                                       ******** GX
     _WX_REG                                                         ******** GX
     _WY_REG                                                         ******** GX
-  0 ___str_0                                                        000004F4 R
-  0 ___str_1                                                        000005B7 R
-  0 ___str_2                                                        000005C7 R
-  0 ___str_3                                                        000005CF R
+  0 ___str_0                                                        000004DE R
+  0 ___str_1                                                        000005A1 R
+  0 ___str_2                                                        000005B1 R
+  0 ___str_3                                                        000005B9 R
     __current_bank                                                  ******** GX
     __divuchar                                                      ******** GX
     __moduchar                                                      ******** GX
     _add_LCD                                                        ******** GX
     _add_VBL                                                        ******** GX
     _ammo                                                           ******** GX
-    _anim_frame                                                     ******** GX
-  0 _bullet_mt                                                      0000013F R
+  0 _bullet_mt                                                      00000129 R
     _cam_override                                                   ******** GX
     _cam_pan_timer                                                  ******** GX
     _cam_target_x                                                   ******** GX
@@ -37,14 +36,14 @@ Symbol Table
     _digit_tiles                                                    ******** GX
   2 _dirty_cells                                                    00000010 R
   2 _dirty_count                                                    00000090 R
-  0 _draw_bg_text                                                   00000505 R
-  0 _draw_cell_now                                                  000005FC R
-  0 _draw_level_row                                                 000001A1 R
-  0 _draw_metatile                                                  0000014B R
-  0 _empty_tile                                                     00000147 R
+  0 _draw_bg_text                                                   000004EF R
+  0 _draw_cell_now                                                  000005E6 R
+  0 _draw_level_row                                                 0000018B R
+  0 _draw_metatile                                                  00000135 R
+  0 _empty_tile                                                     00000131 R
     _font_tiles                                                     ******** GX
     _keys                                                           ******** GX
-  0 _lcd_isr                                                        000001FF R
+  0 _lcd_isr                                                        000001E9 R
     _level_height                                                   ******** GX
     _level_planet                                                   ******** GX
     _map_extra                                                      ******** GX
@@ -53,24 +52,24 @@ Symbol Table
     _metatile_tiles                                                 ******** GX
     _rROMB0                                                         ******** GX
     _rROMB1                                                         ******** GX
-  0 _render_apply_camera                                            0000020B GR
-  0 _render_camera                                                  000006A6 GR
-  0 _render_cell                                                    00000645 GR
-  0 _render_flash_set                                               000004FB GR
-  0 _render_flush_cells                                             00000685 GR
+  0 _render_apply_camera                                            000001F5 GR
+  0 _render_camera                                                  00000690 GR
+  0 _render_cell                                                    0000062F GR
+  0 _render_flash_set                                               000004E5 GR
+  0 _render_flush_cells                                             0000066F GR
+  0 _render_hud                                                     000002DD GR
 ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 2
 Hexadecimal [32-Bits]
 
 Symbol Table
 
-  0 _render_hud                                                     000002F3 GR
-  0 _render_init                                                    00000229 GR
-  0 _render_level                                                   000002DE GR
+  0 _render_init                                                    00000213 GR
+  0 _render_level                                                   000002C8 GR
   0 _render_metatile_for_cell                                       00000000 GR
-  0 _render_pause                                                   00000480 GR
-  0 _render_sync_rows                                               000005DB GR
-  0 _render_victory                                                 0000052D GR
-  0 _robbo_mt_base                                                  00000143 R
+  0 _render_pause                                                   0000046A GR
+  0 _render_sync_rows                                               000005C5 GR
+  0 _render_victory                                                 00000517 GR
+  0 _robbo_mt_base                                                  0000012D R
     _robbo_x                                                        ******** GX
     _robbo_y                                                        ******** GX
     _screws_left                                                    ******** GX
@@ -80,8 +79,8 @@ Symbol Table
     _set_interrupts                                                 ******** GX
     _set_win_tiles                                                  ******** GX
     _tileset_data                                                   ******** GX
-  0 _turret_mt                                                      0000013B R
-  0 _vbl_isr                                                        00000220 R
+  0 _turret_mt                                                      00000125 R
+  0 _vbl_isr                                                        0000020A R
 
 
 ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 3
@@ -89,7 +88,7 @@ Hexadecimal [32-Bits]
 
 Area Table
 
-   0 _CODE                                      size      7DA   flags    0
+   0 _CODE                                      size      7C4   flags    0
    1 _HRAM                                      size        0   flags    0
    2 _DATA                                      size       91   flags    0
    3 _INITIALIZED                               size        0   flags    0
