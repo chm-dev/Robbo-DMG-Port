@@ -38,6 +38,11 @@ const CT_EMPTY = 0;
 const CT_BOMB = 15;
 const CT_QUESTION = 14;
 const CT_AMMO = 19;
+const CT_TURRET = 18;
+const CT_MUSTACHE = 21;
+const CT_BUTTERFLY = 22;
+const CT_BEAR = 23;
+const CT_BULLET = 27;
 const CT_EXPLOSION = 28;
 
 let failures = 0;
@@ -49,6 +54,18 @@ function check(label, ok, detail = '') {
 function setCell(x, y, type, ex = 0) {
   mem[S.map_type + y * 16 + x] = type;
   mem[S.map_extra + y * 16 + x] = ex;
+}
+
+function clearActors() {
+  for (let i = 0; i < 16 * 31; i++) {
+    const type = mem[S.map_type + i];
+    if (type === CT_TURRET || type === CT_MUSTACHE || type === CT_BUTTERFLY ||
+        type === CT_BEAR || type === CT_BULLET) {
+      mem[S.map_type + i] = CT_EMPTY;
+      mem[S.map_extra + i] = 0;
+      mem[S.map_obj + i] = 0;
+    }
+  }
 }
 
 function pressRightFire(maxFrames = 20) {
@@ -109,8 +126,14 @@ if (exploded) {
   savePng(gb.getScreen(), path.join(out, 'cp4-bomb.png'));
 }
 
-// --- Question: shoot it, then wait for its ammo payload. ---
+// The adjacent bomb blast kills Robbo, so wait for the automatic restart
+// before continuing with the question test.
+waitFor(() => byte('robbo_busy') === 0 &&
+  byte('robbo_x') === 2 && byte('robbo_y') === 2, 800);
 run(gb, 40);
+clearActors();
+
+// --- Question: shoot it, then wait for its ammo payload. ---
 mem[S.ammo] = 9;
 setCell(3, 2, CT_QUESTION, 6);  // randomCfg[6] = Ammo
 pressRightFire(12);

@@ -67,6 +67,7 @@ uint8_t game_restart_requested = 0;
 uint8_t game_level_advance_requested = 0;
 
 static void spawn_explosion_timer(uint16_t idx, uint8_t timer);
+static void kill_robbo(void);
 static void game_teleport(uint16_t entry_idx);
 static void teleport_arrive(uint16_t idx);
 static void destroy_teleport(uint16_t idx);
@@ -605,6 +606,11 @@ static void demolish_cell(uint16_t idx)
 static void blast_cell(uint16_t idx, uint8_t timer)
 {
     uint8_t type = map_type[idx];
+
+    if (type == CT_ROBBO) {
+        kill_robbo();
+        return;
+    }
 
     if (type == CT_TELEPORT) {
         destroy_teleport(idx);
