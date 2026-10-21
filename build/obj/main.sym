@@ -13,6 +13,10 @@ Symbol Table
   8 __xinit__game_complete                                          00000005 R
   8 __xinit__level                                                  00000000 R
   8 __xinit__move_delay                                             00000002 R
+  8 __xinit__pan_active                                             00000006 R
+  8 __xinit__pan_delay                                              00000007 R
+  8 __xinit__pan_saved_x                                            00000008 R
+  8 __xinit__pan_saved_y                                            00000009 R
   8 __xinit__pause_draw                                             00000004 R
   8 __xinit__paused                                                 00000001 R
   8 __xinit__tick_timer                                             00000003 R
@@ -35,9 +39,16 @@ Symbol Table
     _hud_dirty                                                      ******** GX
     _joypad                                                         ******** GX
   3 _level                                                          00000000 R
+    _level_height                                                   ******** GX
     _level_planet                                                   ******** GX
-  0 _main                                                           0000000A GR
+  0 _main                                                           0000006C GR
   3 _move_delay                                                     00000002 R
+  3 _pan_active                                                     00000006 R
+  0 _pan_cancel                                                     00000000 R
+  3 _pan_delay                                                      00000007 R
+  3 _pan_saved_x                                                    00000008 R
+  3 _pan_saved_y                                                    00000009 R
+  0 _pan_step                                                       0000001F R
   3 _pause_draw                                                     00000004 R
   3 _paused                                                         00000001 R
     _render_apply_camera                                            ******** GX
@@ -47,30 +58,36 @@ Symbol Table
     _render_pause                                                   ******** GX
     _render_sync_rows                                               ******** GX
     _render_victory                                                 ******** GX
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 2
+Hexadecimal [32-Bits]
+
+Symbol Table
+
     _robbo_busy                                                     ******** GX
     _robbo_no_move                                                  ******** GX
     _sfx_update                                                     ******** GX
     _sound_init                                                     ******** GX
     _sys_time                                                       ******** GX
   3 _tick_timer                                                     00000003 R
-  0 _wait_vbl                                                       00000000 R
+  0 _wait_vbl                                                       00000062 R
+    b_render_pause                                                  ******** GX
+    b_render_victory                                                ******** GX
     b_sfx_update                                                    ******** GX
     b_sound_init                                                    ******** GX
 
-
-ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 2
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 3
 Hexadecimal [32-Bits]
 
 Area Table
 
-   0 _CODE                                      size      338   flags    0
+   0 _CODE                                      size      43F   flags    0
    1 _HRAM                                      size        0   flags    0
    2 _DATA                                      size        0   flags    0
-   3 _INITIALIZED                               size        6   flags    0
+   3 _INITIALIZED                               size        A   flags    0
    4 _DABS                                      size        0   flags    8
    5 _HOME                                      size        0   flags    0
    6 _GSINIT                                    size        0   flags    0
    7 _GSFINAL                                   size        0   flags    0
-   8 _INITIALIZER                               size        6   flags    0
+   8 _INITIALIZER                               size        A   flags    0
    9 _CABS                                      size        0   flags    8
 

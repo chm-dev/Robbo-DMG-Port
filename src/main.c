@@ -5,6 +5,8 @@
  *
  * Controls:
  *   D-pad  move / push
+ *   A + direction  face/fire
+ *   B + direction  pan the camera; release B to restore the view
  *   Start  pause / resume
  *   Select next level (debug)
  *   Select + Right / Left  +10 / -10 levels
@@ -23,6 +25,7 @@
 
 #define LOGIC_TICK_FRAMES 6
 #define MOVE_REPEAT_FRAMES 6
+#define PAN_REPEAT_FRAMES 3
 
 static uint8_t level = 1;
 static uint8_t paused = 0;
@@ -30,6 +33,36 @@ static uint8_t move_delay = 0;
 static uint8_t tick_timer = 0;
 static uint8_t pause_draw = 0;
 static uint8_t game_complete = 0;
+static uint8_t pan_active = 0;
+static uint8_t pan_delay = 0;
+static uint8_t pan_saved_x = 0;
+static uint8_t pan_saved_y = 0;
+
+static void pan_cancel(uint8_t restore)
+{
+    if (pan_active && restore) {
+        cam_x = pan_saved_x;
+        cam_y = pan_saved_y;
+    }
+    pan_active = 0;
+    pan_delay = 0;
+}
+
+static void pan_step(uint8_t dir)
+{
+    uint8_t max_x = MAP_W - VIEW_COLS;
+    uint8_t max_y = (level_height > VIEW_ROWS) ? (level_height - VIEW_ROWS) : 0;
+
+    if (dir == 0) {
+        if (cam_x < max_x) cam_x++;
+    } else if (dir == 1) {
+        if (cam_y < max_y) cam_y++;
+    } else if (dir == 2) {
+        if (cam_x > 0) cam_x--;
+    } else if (dir == 3) {
+        if (cam_y > 0) cam_y--;
+    }
+}
 
 static void wait_vbl(void)
 {
@@ -70,6 +103,7 @@ void main(void)
             if ((pad & (J_START | J_SELECT)) && !(prev & (J_START | J_SELECT))) {
                 game_complete = 0;
                 level = 1;
+                pan_cancel(0);
                 paused = 0;
                 move_delay = 0;
                 tick_timer = 0;
@@ -82,7 +116,7 @@ void main(void)
         }
 
         /* All VRAM writes happen here, at the start of VBlank. */
-        render_camera();
+        if (!pan_active) render_camera();
         render_apply_camera();
         game_teleport_camera_ready();
         render_sync_rows();
@@ -100,6 +134,7 @@ void main(void)
 
         if ((pad & J_START) && !(prev & J_START)) {
             paused = !paused;
+            pan_cancel(1);
             if (paused) pause_draw = 1;
             else hud_dirty = 1;
         }
@@ -121,6 +156,7 @@ void main(void)
                 level++;
                 if (level > LEVEL_COUNT) level = 1;
             }
+            pan_cancel(0);
             DISPLAY_OFF;
             game_load_level(level);
             paused = 0;
@@ -137,17 +173,45 @@ void main(void)
                 game_tick();
             }
 
-            if (!robbo_busy && !robbo_no_move) {
-                uint8_t fire_held = pad & (J_A | J_B);
+            if (pad & J_RIGHT) dir = 0;
+            else if (pad & J_DOWN) dir = 1;
+            else if (pad & J_LEFT) dir = 2;
+            else if (pad & J_UP) dir = 3;
+            else dir = 0xFF;
 
-                if (pad & J_RIGHT) dir = 0;
-                else if (pad & J_DOWN) dir = 1;
-                else if (pad & J_LEFT) dir = 2;
-                else if (pad & J_UP) dir = 3;
-                else dir = 0xFF;
+            /* B + d-pad inspects the map; releasing B restores the view
+             * that was active when B was pressed. */
+            if ((pad & J_B) && !(prev & J_B) && !pan_active && !robbo_busy) {
+                pan_active = 1;
+                pan_saved_x = cam_x;
+                pan_saved_y = cam_y;
+                pan_delay = 0;
+                move_delay = 0;
+            }
+
+            if (pan_active) {
+                if (!(pad & J_B)) {
+                    cam_x = pan_saved_x;
+                    cam_y = pan_saved_y;
+                    pan_active = 0;
+                    pan_delay = 0;
+                } else if (dir != 0xFF) {
+                    if (pan_delay == 0) {
+                        pan_step(dir);
+                        pan_delay = PAN_REPEAT_FRAMES;
+                    } else {
+                        pan_delay--;
+                    }
+                } else {
+                    pan_delay = 0;
+                }
+            }
+
+            if (!pan_active && !robbo_busy && !robbo_no_move) {
+                uint8_t fire_held = pad & J_A;
 
                 if (fire_held) {
-                    /* Holding fire is aim mode: a direction changes facing and
+                    /* Holding A is aim mode: a direction changes facing and
                      * fires, but never moves Robbo. */
                     if (dir != 0xFF) {
                         game_face(dir);
@@ -172,6 +236,7 @@ void main(void)
 
         if (game_restart_requested) {
             game_restart_requested = 0;
+            pan_cancel(0);
             DISPLAY_OFF;
             level = level_planet;
             game_load_level(level);
@@ -185,6 +250,7 @@ void main(void)
 
         if (game_level_advance_requested) {
             game_level_advance_requested = 0;
+            pan_cancel(0);
             if (level_planet >= LEVEL_COUNT) {
                 game_complete = 1;
                 cam_x = 0;

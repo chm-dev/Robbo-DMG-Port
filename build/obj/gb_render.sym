@@ -16,10 +16,6 @@ Symbol Table
     _STAT_REG                                                       ******** GX
     _WX_REG                                                         ******** GX
     _WY_REG                                                         ******** GX
-  0 ___str_0                                                        0000052D R
-  0 ___str_1                                                        000005F0 R
-  0 ___str_2                                                        00000600 R
-  0 ___str_3                                                        00000608 R
     __current_bank                                                  ******** GX
     __divuchar                                                      ******** GX
     __moduchar                                                      ******** GX
@@ -36,12 +32,10 @@ Symbol Table
     _digit_tiles                                                    ******** GX
   2 _dirty_cells                                                    00000010 R
   2 _dirty_count                                                    00000090 R
-  0 _draw_bg_text                                                   0000053E R
-  0 _draw_cell_now                                                  00000635 R
+  0 _draw_cell_now                                                  000004E4 R
   0 _draw_level_row                                                 000001B3 R
   0 _draw_metatile                                                  0000015D R
   0 _empty_tile                                                     00000159 R
-    _font_tiles                                                     ******** GX
     _hud_bg_tile                                                    ******** GX
     _keys                                                           ******** GX
   0 _lcd_isr                                                        00000211 R
@@ -54,23 +48,21 @@ Symbol Table
     _rROMB0                                                         ******** GX
     _rROMB1                                                         ******** GX
   0 _render_apply_camera                                            0000021D GR
-  0 _render_camera                                                  000006DF GR
-  0 _render_cell                                                    0000067E GR
-  0 _render_flash_set                                               00000534 GR
-  0 _render_flush_cells                                             000006BE GR
-ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 2
-Hexadecimal [32-Bits]
-
-Symbol Table
-
+  0 _render_camera                                                  0000058E GR
+  0 _render_cell                                                    0000052D GR
+  0 _render_flash_set                                               000004B9 GR
+  0 _render_flush_cells                                             0000056D GR
   0 _render_hud                                                     00000305 GR
   0 _render_hud_hud_x_30000_200                                     000004B5 R
   0 _render_init                                                    0000023B GR
   0 _render_level                                                   000002F0 GR
   0 _render_metatile_for_cell                                       00000000 GR
-  0 _render_pause                                                   000004B9 GR
-  0 _render_sync_rows                                               00000614 GR
-  0 _render_victory                                                 00000566 GR
+  0 _render_sync_rows                                               000004C3 GR
+ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 2
+Hexadecimal [32-Bits]
+
+Symbol Table
+
   0 _robbo_mt_base                                                  00000155 R
     _robbo_step_anim                                                ******** GX
     _robbo_x                                                        ******** GX
@@ -91,7 +83,7 @@ Hexadecimal [32-Bits]
 
 Area Table
 
-   0 _CODE                                      size      813   flags    0
+   0 _CODE                                      size      6C2   flags    0
    1 _HRAM                                      size        0   flags    0
    2 _DATA                                      size       91   flags    0
    3 _INITIALIZED                               size        0   flags    0

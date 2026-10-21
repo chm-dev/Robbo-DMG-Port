@@ -1,0 +1,319 @@
+                                      1 ;--------------------------------------------------------
+                                      2 ; File Created by SDCC : free open source ISO C Compiler
+                                      3 ; Version 4.5.1 #15267 (MINGW64)
+                                      4 ;--------------------------------------------------------
+                                      5 	.module screens
+                                      6 	
+                                      7 ;--------------------------------------------------------
+                                      8 ; Public variables in this module
+                                      9 ;--------------------------------------------------------
+                                     10 	.globl _set_win_tiles
+                                     11 	.globl _set_bkg_tile_xy
+                                     12 	.globl _set_bkg_tiles
+                                     13 	.globl b_render_pause
+                                     14 	.globl _render_pause
+                                     15 	.globl b_render_victory
+                                     16 	.globl _render_victory
+                                     17 ;--------------------------------------------------------
+                                     18 ; special function registers
+                                     19 ;--------------------------------------------------------
+                                     20 	.area _HRAM
+                                     21 ;--------------------------------------------------------
+                                     22 ; ram data
+                                     23 ;--------------------------------------------------------
+                                     24 	.area _DATA
+                                     25 ;--------------------------------------------------------
+                                     26 ; ram data
+                                     27 ;--------------------------------------------------------
+                                     28 	.area _INITIALIZED
+                                     29 ;--------------------------------------------------------
+                                     30 ; absolute external ram data
+                                     31 ;--------------------------------------------------------
+                                     32 	.area _DABS (ABS)
+                                     33 ;--------------------------------------------------------
+                                     34 ; global & static initialisations
+                                     35 ;--------------------------------------------------------
+                                     36 	.area _HOME
+                                     37 	.area _GSINIT
+                                     38 	.area _GSFINAL
+                                     39 	.area _GSINIT
+                                     40 ;--------------------------------------------------------
+                                     41 ; Home
+                                     42 ;--------------------------------------------------------
+                                     43 	.area _HOME
+                                     44 	.area _HOME
+                                     45 ;--------------------------------------------------------
+                                     46 ; code
+                                     47 ;--------------------------------------------------------
+                                     48 	.area _CODE_9
+                                     49 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:10: static uint8_t screen_empty_tile(void)
+                                     50 ;	---------------------------------
+                                     51 ; Function screen_empty_tile
+                                     52 ; ---------------------------------
+    00000000                         53 _screen_empty_tile:
+                                     54 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:12: return metatile_tiles[MT_EMPTY * 4];
+    00000000 FAr00r00         [16]   55 	ld	a, (#_metatile_tiles + 0)
+                                     56 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:13: }
+    00000003 C9               [16]   57 	ret
+                                     58 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:15: void render_pause(void) BANKED
+                                     59 ;	---------------------------------
+                                     60 ; Function render_pause
+                                     61 ; ---------------------------------
+                         00000009    62 	b_render_pause	= 9
+    00000004                         63 _render_pause::
+    00000004 E8 D8            [16]   64 	add	sp, #-40
+                                     65 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:19: const char *msg = "PAUSED";
+                                     66 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:21: uint8_t empty = screen_empty_tile();
+    00000006 CDr00r00         [24]   67 	call	_screen_empty_tile
+    00000009 4F               [ 4]   68 	ld	c, a
+                                     69 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:23: for (i = 0; i < 20; i++) {
+    0000000A 06 00            [ 8]   70 	ld	b, #0x00
+    0000000C                         71 00103$:
+                                     72 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:24: row0[i] = empty;
+    0000000C 58               [ 4]   73 	ld	e, b
+    0000000D 16 00            [ 8]   74 	ld	d, #0x00
+    0000000F 21 00 00         [12]   75 	ld	hl, #0
+    00000012 39               [ 8]   76 	add	hl, sp
+    00000013 19               [ 8]   77 	add	hl, de
+    00000014 71               [ 8]   78 	ld	(hl), c
+                                     79 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:25: row1[i] = empty;
+    00000015 58               [ 4]   80 	ld	e, b
+    00000016 16 00            [ 8]   81 	ld	d, #0x00
+    00000018 21 14 00         [12]   82 	ld	hl, #20
+    0000001B 39               [ 8]   83 	add	hl, sp
+    0000001C 19               [ 8]   84 	add	hl, de
+    0000001D 71               [ 8]   85 	ld	(hl), c
+                                     86 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:23: for (i = 0; i < 20; i++) {
+    0000001E 04               [ 4]   87 	inc	b
+    0000001F 78               [ 4]   88 	ld	a, b
+    00000020 D6 14            [ 8]   89 	sub	a, #0x14
+    00000022 38 E8            [12]   90 	jr	C, 00103$
+                                     91 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:27: for (i = 0; msg[i]; i++) {
+    00000024 0E 00            [ 8]   92 	ld	c, #0x00
+    00000026                         93 00106$:
+    00000026 21r6Er00         [12]   94 	ld	hl, #___str_0
+    00000029 06 00            [ 8]   95 	ld	b, #0x00
+    0000002B 09               [ 8]   96 	add	hl, bc
+    0000002C 46               [ 8]   97 	ld	b, (hl)
+    0000002D 78               [ 4]   98 	ld	a, b
+    0000002E B7               [ 4]   99 	or	a, a
+    0000002F 28 1A            [12]  100 	jr	Z, 00102$
+                                    101 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:28: row0[7 + i] = font_tiles[(uint8_t)msg[i]];
+    00000031 79               [ 4]  102 	ld	a, c
+    00000032 C6 07            [ 8]  103 	add	a, #0x07
+    00000034 5F               [ 4]  104 	ld	e, a
+    00000035 07               [ 4]  105 	rlca
+    00000036 9F               [ 4]  106 	sbc	a, a
+    00000037 57               [ 4]  107 	ld	d, a
+    00000038 21 00 00         [12]  108 	ld	hl, #0
+    0000003B 39               [ 8]  109 	add	hl, sp
+    0000003C 19               [ 8]  110 	add	hl, de
+    0000003D 78               [ 4]  111 	ld	a, b
+    0000003E C6r00            [ 8]  112 	add	a, #<(_font_tiles)
+    00000040 5F               [ 4]  113 	ld	e, a
+    00000041 3E 00            [ 8]  114 	ld	a, #0x00
+    00000043 CEs00            [ 8]  115 	adc	a, #>(_font_tiles)
+    00000045 57               [ 4]  116 	ld	d, a
+    00000046 1A               [ 8]  117 	ld	a, (de)
+    00000047 77               [ 8]  118 	ld	(hl), a
+                                    119 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:27: for (i = 0; msg[i]; i++) {
+    00000048 0C               [ 4]  120 	inc	c
+    00000049 18 DB            [12]  121 	jr	00106$
+    0000004B                        122 00102$:
+                                    123 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:30: set_win_tiles(0, 0, 20, 1, row0);
+    0000004B 21 00 00         [12]  124 	ld	hl, #0
+    0000004E 39               [ 8]  125 	add	hl, sp
+    0000004F E5               [16]  126 	push	hl
+    00000050 21 14 01         [12]  127 	ld	hl, #0x114
+    00000053 E5               [16]  128 	push	hl
+    00000054 AF               [ 4]  129 	xor	a, a
+    00000055 0F               [ 4]  130 	rrca
+    00000056 F5               [16]  131 	push	af
+    00000057 CDr00r00         [24]  132 	call	_set_win_tiles
+    0000005A E8 06            [16]  133 	add	sp, #6
+                                    134 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:31: set_win_tiles(0, 1, 20, 1, row1);
+    0000005C 21 14 00         [12]  135 	ld	hl, #20
+    0000005F 39               [ 8]  136 	add	hl, sp
+    00000060 E5               [16]  137 	push	hl
+    00000061 21 14 01         [12]  138 	ld	hl, #0x114
+    00000064 E5               [16]  139 	push	hl
+    00000065 AF               [ 4]  140 	xor	a, a
+    00000066 3C               [ 4]  141 	inc	a
+    00000067 F5               [16]  142 	push	af
+    00000068 CDr00r00         [24]  143 	call	_set_win_tiles
+                                    144 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:32: }
+    0000006B E8 2E            [16]  145 	add	sp, #46
+    0000006D C9               [16]  146 	ret
+    0000006E                        147 ___str_0:
+    0000006E 50 41 55 53 45 44      148 	.ascii "PAUSED"
+    00000074 00                     149 	.db 0x00
+                                    150 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:34: static void draw_bg_text(const char *text, uint8_t x, uint8_t y)
+                                    151 ;	---------------------------------
+                                    152 ; Function draw_bg_text
+                                    153 ; ---------------------------------
+    00000075                        154 _draw_bg_text:
+    00000075 4B               [ 4]  155 	ld	c, e
+    00000076 42               [ 4]  156 	ld	b, d
+    00000077 57               [ 4]  157 	ld	d, a
+                                    158 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:36: while (*text) {
+    00000078                        159 00103$:
+    00000078 0A               [ 8]  160 	ld	a, (bc)
+    00000079 B7               [ 4]  161 	or	a, a
+    0000007A 28 1E            [12]  162 	jr	Z, 00106$
+                                    163 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:37: uint8_t tile = font_tiles[(uint8_t)*text];
+    0000007C C6r00            [ 8]  164 	add	a, #<(_font_tiles)
+    0000007E 6F               [ 4]  165 	ld	l, a
+    0000007F 3E 00            [ 8]  166 	ld	a, #0x00
+    00000081 CEs00            [ 8]  167 	adc	a, #>(_font_tiles)
+    00000083 67               [ 4]  168 	ld	h, a
+    00000084 7E               [ 8]  169 	ld	a, (hl)
+                                    170 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:38: if (tile != 0xFF) {
+    00000085 FE FF            [ 8]  171 	cp	a, #0xff
+    00000087 28 0D            [12]  172 	jr	Z, 00102$
+                                    173 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:39: set_bkg_tile_xy(x, y, tile);
+    00000089 C5               [16]  174 	push	bc
+    0000008A D5               [16]  175 	push	de
+    0000008B F5               [16]  176 	push	af
+    0000008C 33               [ 8]  177 	inc	sp
+    0000008D F8 07            [12]  178 	ldhl	sp,	#7
+    0000008F 5E               [ 8]  179 	ld	e, (hl)
+    00000090 7A               [ 4]  180 	ld	a, d
+    00000091 CDr00r00         [24]  181 	call	_set_bkg_tile_xy
+    00000094 D1               [12]  182 	pop	de
+    00000095 C1               [12]  183 	pop	bc
+    00000096                        184 00102$:
+                                    185 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:41: x++;
+    00000096 14               [ 4]  186 	inc	d
+                                    187 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:42: text++;
+    00000097 03               [ 8]  188 	inc	bc
+    00000098 18 DE            [12]  189 	jr	00103$
+    0000009A                        190 00106$:
+                                    191 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:44: }
+    0000009A E1               [12]  192 	pop	hl
+    0000009B 33               [ 8]  193 	inc	sp
+    0000009C E9               [ 4]  194 	jp	(hl)
+                                    195 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:46: void render_victory(void) BANKED
+                                    196 ;	---------------------------------
+                                    197 ; Function render_victory
+                                    198 ; ---------------------------------
+                         00000009   199 	b_render_victory	= 9
+    0000009D                        200 _render_victory::
+    0000009D E8 E0            [16]  201 	add	sp, #-32
+                                    202 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:50: uint8_t empty = screen_empty_tile();
+    0000009F CDr00r00         [24]  203 	call	_screen_empty_tile
+    000000A2 5F               [ 4]  204 	ld	e, a
+                                    205 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:52: BGP_REG = 0xE4;
+    000000A3 3E E4            [ 8]  206 	ld	a, #0xe4
+    000000A5 E0r00            [12]  207 	ldh	(_BGP_REG + 0), a
+                                    208 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:53: SCX_REG = 0;
+    000000A7 AF               [ 4]  209 	xor	a, a
+    000000A8 E0r00            [12]  210 	ldh	(_SCX_REG + 0), a
+                                    211 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:54: SCY_REG = 0;
+    000000AA AF               [ 4]  212 	xor	a, a
+    000000AB E0r00            [12]  213 	ldh	(_SCY_REG + 0), a
+                                    214 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:56: for (x = 0; x < 32; x++) buf[x] = empty;
+    000000AD F8 00            [12]  215 	ldhl	sp,	#0
+    000000AF 4D               [ 4]  216 	ld	c, l
+    000000B0 44               [ 4]  217 	ld	b, h
+    000000B1 16 00            [ 8]  218 	ld	d, #0x00
+    000000B3                        219 00104$:
+    000000B3 6A               [ 4]  220 	ld	l, d
+    000000B4 26 00            [ 8]  221 	ld	h, #0x00
+    000000B6 09               [ 8]  222 	add	hl, bc
+    000000B7 73               [ 8]  223 	ld	(hl), e
+    000000B8 14               [ 4]  224 	inc	d
+    000000B9 7A               [ 4]  225 	ld	a, d
+    000000BA D6 20            [ 8]  226 	sub	a, #0x20
+    000000BC 38 F5            [12]  227 	jr	C, 00104$
+                                    228 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:57: for (y = 0; y < 32; y++) {
+    000000BE 16 00            [ 8]  229 	ld	d, #0x00
+    000000C0                        230 00106$:
+                                    231 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:58: set_bkg_tiles(0, y, 32, 1, buf);
+    000000C0 69               [ 4]  232 	ld	l, c
+    000000C1 60               [ 4]  233 	ld	h, b
+    000000C2 D5               [16]  234 	push	de
+    000000C3 E5               [16]  235 	push	hl
+    000000C4 21 20 01         [12]  236 	ld	hl, #0x120
+    000000C7 E5               [16]  237 	push	hl
+    000000C8 D5               [16]  238 	push	de
+    000000C9 33               [ 8]  239 	inc	sp
+    000000CA AF               [ 4]  240 	xor	a, a
+    000000CB F5               [16]  241 	push	af
+    000000CC 33               [ 8]  242 	inc	sp
+    000000CD CDr00r00         [24]  243 	call	_set_bkg_tiles
+    000000D0 E8 06            [16]  244 	add	sp, #6
+    000000D2 D1               [12]  245 	pop	de
+                                    246 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:57: for (y = 0; y < 32; y++) {
+    000000D3 14               [ 4]  247 	inc	d
+    000000D4 7A               [ 4]  248 	ld	a, d
+    000000D5 D6 20            [ 8]  249 	sub	a, #0x20
+    000000D7 38 E7            [12]  250 	jr	C, 00106$
+                                    251 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:60: for (x = 0; x < 20; x++) buf[x] = empty;
+    000000D9 16 00            [ 8]  252 	ld	d, #0x00
+    000000DB                        253 00108$:
+    000000DB 6A               [ 4]  254 	ld	l, d
+    000000DC 26 00            [ 8]  255 	ld	h, #0x00
+    000000DE 09               [ 8]  256 	add	hl, bc
+    000000DF 73               [ 8]  257 	ld	(hl), e
+    000000E0 14               [ 4]  258 	inc	d
+    000000E1 7A               [ 4]  259 	ld	a, d
+    000000E2 D6 14            [ 8]  260 	sub	a, #0x14
+    000000E4 38 F5            [12]  261 	jr	C, 00108$
+                                    262 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:58: set_bkg_tiles(0, y, 32, 1, buf);
+                                    263 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:61: set_win_tiles(0, 0, 20, 1, buf);
+    000000E6 C5               [16]  264 	push	bc
+    000000E7 21 14 01         [12]  265 	ld	hl, #0x114
+    000000EA E5               [16]  266 	push	hl
+    000000EB AF               [ 4]  267 	xor	a, a
+    000000EC 0F               [ 4]  268 	rrca
+    000000ED F5               [16]  269 	push	af
+    000000EE CDr00r00         [24]  270 	call	_set_win_tiles
+    000000F1 E8 06            [16]  271 	add	sp, #6
+                                    272 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:62: set_win_tiles(0, 1, 20, 1, buf);
+    000000F3 C5               [16]  273 	push	bc
+    000000F4 21 14 01         [12]  274 	ld	hl, #0x114
+    000000F7 E5               [16]  275 	push	hl
+    000000F8 AF               [ 4]  276 	xor	a, a
+    000000F9 3C               [ 4]  277 	inc	a
+    000000FA F5               [16]  278 	push	af
+    000000FB CDr00r00         [24]  279 	call	_set_win_tiles
+    000000FE E8 06            [16]  280 	add	sp, #6
+                                    281 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:64: draw_bg_text("CONGRATULATIONS", 2, 7);
+    00000100 3E 07            [ 8]  282 	ld	a, #0x07
+    00000102 F5               [16]  283 	push	af
+    00000103 33               [ 8]  284 	inc	sp
+    00000104 3E 02            [ 8]  285 	ld	a, #0x02
+    00000106 11r27r01         [12]  286 	ld	de, #___str_1
+    00000109 CDr75r00         [24]  287 	call	_draw_bg_text
+                                    288 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:65: draw_bg_text("YOU WIN", 6, 9);
+    0000010C 3E 09            [ 8]  289 	ld	a, #0x09
+    0000010E F5               [16]  290 	push	af
+    0000010F 33               [ 8]  291 	inc	sp
+    00000110 3E 06            [ 8]  292 	ld	a, #0x06
+    00000112 11r37r01         [12]  293 	ld	de, #___str_2
+    00000115 CDr75r00         [24]  294 	call	_draw_bg_text
+                                    295 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:66: draw_bg_text("PRESS START", 4, 11);
+    00000118 3E 0B            [ 8]  296 	ld	a, #0x0b
+    0000011A F5               [16]  297 	push	af
+    0000011B 33               [ 8]  298 	inc	sp
+    0000011C 3E 04            [ 8]  299 	ld	a, #0x04
+    0000011E 11r3Fr01         [12]  300 	ld	de, #___str_3
+    00000121 CDr75r00         [24]  301 	call	_draw_bg_text
+                                    302 ;C:\dev\AI\robbo-port2\gb\src\gb\screens.c:67: }
+    00000124 E8 20            [16]  303 	add	sp, #32
+    00000126 C9               [16]  304 	ret
+    00000127                        305 ___str_1:
+    00000127 43 4F 4E 47 52 41 54   306 	.ascii "CONGRATULATIONS"
+             55 4C 41 54 49 4F 4E
+             53
+    00000136 00                     307 	.db 0x00
+    00000137                        308 ___str_2:
+    00000137 59 4F 55 20 57 49 4E   309 	.ascii "YOU WIN"
+    0000013E 00                     310 	.db 0x00
+    0000013F                        311 ___str_3:
+    0000013F 50 52 45 53 53 20 53   312 	.ascii "PRESS START"
+             54 41 52 54
+    0000014A 00                     313 	.db 0x00
+                                    314 	.area _CODE_9
+                                    315 	.area _INITIALIZER
+                                    316 	.area _CABS (ABS)

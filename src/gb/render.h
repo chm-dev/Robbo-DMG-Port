@@ -2,12 +2,13 @@
 #define RENDER_H
 
 #include <stdint.h>
+#include <gb/gb.h>
 
 void render_init(void);
 void render_level(void);
 void render_hud(void);
-void render_pause(void);
-void render_victory(void);
+void render_pause(void) BANKED;
+void render_victory(void) BANKED;
 void render_flash_set(uint8_t on);
 void render_camera(void);
 void render_apply_camera(void);

@@ -188,7 +188,7 @@ function clearActors(ctx) {
   check('key pickup sound', pickup.peak > 0.02, `peak=${pickup.peak}`);
 }
 
-/* --- Firing: hold B to aim and shoot. ---------------------------------- */
+/* --- Firing: hold A to aim and shoot. ---------------------------------- */
 {
   const ctx = fresh();
   run(ctx.gb, 180);
@@ -197,7 +197,7 @@ function clearActors(ctx) {
   setCell(ctx, 4, 2, CT_EMPTY);
   ctx.mem[S.ammo] = 9;
   capture(ctx, 5);
-  const shot = capture(ctx, 20, ['RIGHT', 'B']);
+  const shot = capture(ctx, 20, ['RIGHT', 'A']);
   check('shot consumed ammo', ctx.byte('ammo') < 9, `ammo=${ctx.byte('ammo')}`);
   check('fire sound', shot.peak > 0.02, `peak=${shot.peak}`);
 }
