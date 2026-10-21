@@ -18,6 +18,7 @@
 
 #include "core/game.h"
 #include "gb/render.h"
+#include "gb/sound.h"
 #include "gen/levels.h"
 
 #define LOGIC_TICK_FRAMES 6
@@ -40,14 +41,29 @@ void main(void)
 {
     uint8_t pad, prev = 0;
     uint8_t dir = 0xFF;
+    uint16_t sound_time;
 
     DISPLAY_OFF;
+    sound_init();
     game_init();
     DISPLAY_ON;
+
+    sound_time = sys_time;
 
     while (1) {
         wait_vbl();
         debug_ticks++;
+
+        /* The game loop can take more than one VBlank per iteration.  Advance
+         * the effect player once per elapsed frame so sounds keep the 60 Hz
+         * timing they were authored for. */
+        {
+            uint16_t now = sys_time;
+            uint8_t elapsed = (uint8_t)(now - sound_time);
+            sound_time = now;
+            if (elapsed > 4) elapsed = 4;
+            while (elapsed--) sfx_update();
+        }
 
         if (game_complete) {
             pad = joypad();

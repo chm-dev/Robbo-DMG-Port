@@ -8,6 +8,7 @@ Symbol Table
     .__.CPU.                                                    =   00000000 L
     .__.H$L.                                                    =   00000000 L
     _DIV_REG                                                        ******** GX
+    ___sdcc_bcall_ehl                                               ******** GX
     __moduchar                                                      ******** GX
   8 __xinit__death_timer                                            00000005 R
   8 __xinit__fire_delay                                             00000000 R
@@ -20,62 +21,62 @@ Symbol Table
   8 __xinit__teleport_to                                            00000002 R
   8 __xinit__transition_active                                      00000007 R
   8 __xinit__wipe_col                                               00000008 R
-  0 _add_bullet                                                     00000DC0 R
-  0 _add_sliding                                                    000001F8 R
+  0 _add_bullet                                                     00000FE4 R
+  0 _add_sliding                                                    00000309 R
   2 _ammo                                                           00000658 GR
   2 _anim_frame                                                     00000668 GR
-  0 _bear_step                                                      00001278 R
-  0 _blast_cell                                                     00000C2F R
+  0 _bear_step                                                      000014AA R
+  0 _blast_cell                                                     00000E46 R
   2 _bomb_count                                                     00000D1C R
-  0 _bomb_explode                                                   00000CB5 R
-  0 _bomb_explode_blast_timer_10000_397                             00000DA2 R
+  0 _bomb_explode                                                   00000ECC R
+  0 _bomb_explode_blast_timer_10000_407                             00000FC6 R
   2 _bomb_list                                                      000007DA R
   2 _bullet_cells                                                   000006AA R
   2 _bullet_count                                                   00000D20 R
-  0 _bullet_make_extra                                              00000DAB R
-  0 _butterfly_step                                                 000014D7 R
+  0 _bullet_make_extra                                              00000FCF R
+  0 _butterfly_step                                                 00001709 R
   2 _cam_override                                                   00000664 GR
   2 _cam_pan_timer                                                  00000667 GR
   2 _cam_target_x                                                   00000665 GR
   2 _cam_target_y                                                   00000666 GR
   2 _cam_x                                                          0000065A GR
   2 _cam_y                                                          0000065B GR
-  0 _collect_actors                                                 0000191F R
+  0 _collect_actors                                                 00001B51 R
   3 _death_timer                                                    00000005 R
   2 _debug_pad                                                      0000065C GR
   2 _debug_ticks                                                    0000065D GR
-  0 _demolish_cell                                                  00000BEE R
-  0 _destroy_teleport                                               0000060B R
-  0 _dirs_contains                                                  0000125C R
-  0 _enemy_check_kills                                              00001220 R
+  0 _demolish_cell                                                  00000D68 R
+  0 _destroy_teleport                                               00000729 R
+  0 _dirs_contains                                                  0000148E R
+  0 _enemy_check_kills                                              00001452 R
   2 _enemy_count                                                    00000D1B R
   2 _enemy_list                                                     0000078A R
-  0 _enemy_tick                                                     000019EB R
-  0 _enemy_try_kill_at                                              000011C2 R
+  0 _enemy_tick                                                     00001C1D R
+  0 _enemy_try_kill_at                                              000013F4 R
   2 _explosion_count                                                00000D1D R
   2 _explosion_list                                                 0000091A R
   3 _fire_delay                                                     00000000 R
-  0 _game_check_enemies                                             00001D07 GR
-  0 _game_face                                                      00001D0A GR
-  0 _game_fire                                                      00001D3D GR
+  0 _game_check_enemies                                             00001F46 GR
+  0 _game_face                                                      00001F49 GR
 ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 2
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+  0 _game_fire                                                      00001F7C GR
   0 _game_init                                                      00000000 GR
   3 _game_level_advance_requested                                   0000000A GR
-  0 _game_load_level                                                00000008 GR
+  0 _game_load_level                                                0000010C GR
   3 _game_restart_requested                                         00000009 GR
-  0 _game_teleport                                                  00000495 R
-  0 _game_teleport_camera_ready                                     00000571 GR
-  0 _game_tick                                                      00001E1B GR
-  0 _game_try_move                                                  000006C9 GR
+  0 _game_teleport                                                  000005A6 R
+  0 _game_teleport_camera_ready                                     0000068F GR
+  0 _game_tick                                                      00002086 GR
+  0 _game_try_move                                                  000007E7 GR
   2 _hud_dirty                                                      0000065F GR
-  0 _is_demolishable                                                00000127 R
-  0 _is_explodable                                                  00000148 R
+  0 _is_demolishable                                                00000238 R
+  0 _is_explodable                                                  00000259 R
   2 _keys                                                           00000659 GR
-  0 _kill_robbo                                                     00000E70 R
+  0 _kill_robbo                                                     00001094 R
   2 _level_height                                                   00000650 GR
   2 _level_planet                                                   00000652 GR
   2 _level_screw                                                    00000651 GR
@@ -84,19 +85,19 @@ Symbol Table
   2 _magnet_count                                                   00000D1F R
   2 _magnet_field                                                   00000662 R
   2 _magnet_list                                                    00000CFA R
-  0 _magnet_tick                                                    00001A88 R
+  0 _magnet_tick                                                    00001CBA R
   2 _map_extra                                                      000001F0 GR
   2 _map_obj                                                        000003E0 GR
   2 _map_type                                                       00000000 GR
-  0 _move_robbo_to                                                  000002C0 R
-  0 _mustache_step                                                  0000171A R
-  0 _next_rand8                                                     00000184 R
-  0 _player_bullet_active                                           00000E3D R
-  0 _question_payload                                               00000B26 R
-  0 _random_question_payload                                        000001B0 R
-  0 _refresh_spaceships                                             00000293 R
-  0 _remove_bullet_at                                               00000E22 R
-  0 _remove_sliding                                                 00000278 R
+  0 _move_robbo_to                                                  000003D1 R
+  0 _mustache_step                                                  0000194C R
+  0 _next_rand8                                                     00000295 R
+  0 _player_bullet_active                                           00001061 R
+  0 _question_payload                                               00000CA0 R
+  0 _random_question_payload                                        000002C1 R
+  0 _refresh_spaceships                                             000003A4 R
+  0 _remove_bullet_at                                               00001046 R
+  0 _remove_sliding                                                 00000389 R
     _render_apply_camera                                            ******** GX
     _render_camera                                                  ******** GX
     _render_cell                                                    ******** GX
@@ -112,40 +113,54 @@ Symbol Table
   2 _robbo_y                                                        00000655 GR
   3 _screen_flash_ticks                                             00000006 R
   2 _screws_left                                                    00000657 GR
-  2 _sliding_boxes                                                  00000669 R
-  2 _sliding_count                                                  000006A9 R
-  0 _spawn_explosion                                                00000AE7 R
-  0 _spawn_explosion_timer                                          00000AC2 R
-  0 _spawn_payload_explosion                                        00000B1E R
-  0 _spawn_payload_explosion_timer                                  00000AEC R
+  0 _sfx_bolt_pickup                                                00000080 R
+  0 _sfx_destroy                                                    0000006C R
+  0 _sfx_door_open                                                  000000A8 R
+  0 _sfx_exit_capsule                                               000000BC R
+  0 _sfx_explosion                                                  000000F8 R
 ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 3
 Hexadecimal [32-Bits]
 
 Symbol Table
 
-  0 _spawn_question_payload                                         00000B35 R
-  0 _teleport_arrive                                                000005C3 R
+  0 _sfx_fire_shot                                                  00000044 R
+  0 _sfx_key_pickup                                                 00000094 R
+  0 _sfx_level_start                                                00000008 R
+  0 _sfx_magnet                                                     000000E4 R
+    _sfx_play_def                                                   ******** GX
+  0 _sfx_push                                                       00000030 R
+  0 _sfx_robbo_step                                                 0000001C R
+  0 _sfx_shot_impact                                                00000058 R
+  0 _sfx_teleport                                                   000000D0 R
+  2 _sliding_boxes                                                  00000669 R
+  2 _sliding_count                                                  000006A9 R
+  0 _spawn_explosion                                                00000C61 R
+  0 _spawn_explosion_timer                                          00000C3C R
+  0 _spawn_payload_explosion                                        00000C98 R
+  0 _spawn_payload_explosion_timer                                  00000C66 R
+  0 _spawn_question_payload                                         00000CAF R
+  0 _teleport_arrive                                                000006E1 R
   2 _teleport_dest                                                  000005D0 GR
-  0 _teleport_find_next                                             0000044C R
+  0 _teleport_find_next                                             0000055D R
   3 _teleport_phase                                                 00000001 R
-  0 _teleport_scan                                                  0000033B R
+  0 _teleport_scan                                                  0000044C R
   3 _teleport_to                                                    00000002 R
-  0 _tp_dx                                                          00000444 R
-  0 _tp_dy                                                          00000448 R
+  0 _tp_dx                                                          00000555 R
+  0 _tp_dy                                                          00000559 R
   3 _transition_active                                              00000007 R
   2 _turret_count                                                   00000D1A R
-  0 _turret_fire                                                    00000EAD R
+  0 _turret_fire                                                    000010DF R
   2 _turret_list                                                    0000076A R
-  0 _turret_tick                                                    00000F3C R
+  0 _turret_tick                                                    0000116E R
   3 _wipe_col                                                       00000008 R
-
+    b_sfx_play_def                                                  ******** GX
 
 ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 4
 Hexadecimal [32-Bits]
 
 Area Table
 
-   0 _CODE                                      size     25EC   flags    0
+   0 _CODE                                      size     28E2   flags    0
    1 _HRAM                                      size        0   flags    0
    2 _DATA                                      size      D21   flags    0
    3 _INITIALIZED                               size        D   flags    0

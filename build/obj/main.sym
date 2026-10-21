@@ -8,6 +8,7 @@ Symbol Table
     .__.CPU.                                                    =   00000000 L
     .__.H$L.                                                    =   00000000 L
     _LCDC_REG                                                       ******** GX
+    ___sdcc_bcall_ehl                                               ******** GX
     __vbl_done                                                      ******** GX
   8 __xinit__game_complete                                          00000005 R
   8 __xinit__level                                                  00000000 R
@@ -48,8 +49,13 @@ Symbol Table
     _render_victory                                                 ******** GX
     _robbo_busy                                                     ******** GX
     _robbo_no_move                                                  ******** GX
+    _sfx_update                                                     ******** GX
+    _sound_init                                                     ******** GX
+    _sys_time                                                       ******** GX
   3 _tick_timer                                                     00000003 R
   0 _wait_vbl                                                       00000000 R
+    b_sfx_update                                                    ******** GX
+    b_sound_init                                                    ******** GX
 
 
 ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 2
@@ -57,7 +63,7 @@ Hexadecimal [32-Bits]
 
 Area Table
 
-   0 _CODE                                      size      296   flags    0
+   0 _CODE                                      size      338   flags    0
    1 _HRAM                                      size        0   flags    0
    2 _DATA                                      size        0   flags    0
    3 _INITIALIZED                               size        6   flags    0
