@@ -224,11 +224,11 @@
     000000D6                        224 00120$:
     000000D6 3E 1E            [ 8]  225 	ld	a, #0x1e
     000000D8 18 48            [12]  226 	jr	00129$
-                                    227 ;C:\dev\AI\robbo-port2\gb\src\gb\render.c:53: case CT_MAGNET:     return (extra & 1) ? MT_MAGNET_1 : MT_MAGNET_0;
+                                    227 ;C:\dev\AI\robbo-port2\gb\src\gb\render.c:53: case CT_MAGNET:     return (extra & 2) ? MT_MAGNET_1 : MT_MAGNET_0;
     000000DA                        228 00121$:
     000000DA E5               [16]  229 	push	hl
     000000DB F8 02            [12]  230 	ldhl	sp,	#2
-    000000DD CB 46            [12]  231 	bit	0, (hl)
+    000000DD CB 4E            [12]  231 	bit	1, (hl)
     000000DF E1               [12]  232 	pop	hl
     000000E0 28 04            [12]  233 	jr	Z, 00138$
     000000E2 3E 21            [ 8]  234 	ld	a, #0x21

@@ -121,7 +121,7 @@ void main(void)
                 game_tick();
             }
 
-            if (!robbo_busy) {
+            if (!robbo_busy && !robbo_no_move) {
                 uint8_t fire_held = pad & (J_A | J_B);
 
                 if (pad & J_RIGHT) dir = 0;

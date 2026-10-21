@@ -103,16 +103,16 @@ _main::
 	or	a, #0x80
 	ldh	(_LCDC_REG + 0), a
 ;C:\dev\AI\robbo-port2\gb\src\main.c:48: while (1) {
-00178$:
+00179$:
 ;C:\dev\AI\robbo-port2\gb\src\main.c:49: wait_vbl();
 	call	_wait_vbl
 ;C:\dev\AI\robbo-port2\gb\src\main.c:50: debug_ticks++;
 	ld	hl, #_debug_ticks
 	inc	(hl)
-	jr	NZ, 00440$
+	jr	NZ, 00448$
 	inc	hl
 	inc	(hl)
-00440$:
+00448$:
 ;C:\dev\AI\robbo-port2\gb\src\main.c:52: if (game_complete) {
 	ld	a, (#_game_complete)
 	or	a, a
@@ -157,7 +157,7 @@ _main::
 	ld	a, (hl-)
 	ld	(hl), a
 ;C:\dev\AI\robbo-port2\gb\src\main.c:65: continue;
-	jr	00178$
+	jr	00179$
 00105$:
 ;C:\dev\AI\robbo-port2\gb\src\main.c:69: render_camera();
 	call	_render_camera
@@ -257,22 +257,22 @@ _main::
 	jr	Z, 00129$
 ;C:\dev\AI\robbo-port2\gb\src\main.c:97: level = (level + 10 > LEVEL_COUNT) ? LEVEL_COUNT : (level + 10);
 	ld	a, (_level)
-	ld	h, #0x00
-	ld	l, a
-	ld	de, #0x000a
+	ld	e, a
+	ld	d, #0x00
+	ld	hl, #0x000a
 	add	hl, de
 	ld	a, #0x38
 	cp	a, l
 	ld	a, #0x00
 	sbc	a, h
-	jr	NC, 00182$
+	jr	NC, 00183$
 	ld	e, #0x38
-	jr	00183$
-00182$:
+	jr	00184$
+00183$:
 	ld	a, (_level)
 	add	a, #0x0a
 	ld	e, a
-00183$:
+00184$:
 	ld	hl, #_level
 	ld	(hl), e
 	jr	00136$
@@ -284,14 +284,14 @@ _main::
 	ld	a, #0x0a
 	ld	hl, #_level
 	sub	a, (hl)
-	jr	NC, 00184$
+	jr	NC, 00185$
 	ld	a, (hl)
 	add	a, #0xf6
 	ld	b, a
-	jr	00185$
-00184$:
-	ld	b, #0x01
+	jr	00186$
 00185$:
+	ld	b, #0x01
+00186$:
 	ld	hl, #_level
 	ld	(hl), b
 	jr	00136$
@@ -303,14 +303,14 @@ _main::
 	ld	a, #0x01
 	ld	hl, #_level
 	sub	a, (hl)
-	jr	NC, 00186$
+	jr	NC, 00187$
 	ld	a, (hl)
 	dec	a
 	ld	b, a
-	jr	00187$
-00186$:
-	ld	b, #0x38
+	jr	00188$
 00187$:
+	ld	b, #0x38
+00188$:
 	ld	hl, #_level
 	ld	(hl), b
 	jr	00136$
@@ -355,15 +355,15 @@ _main::
 	ldhl	sp,	#0
 	ld	(hl), c
 ;C:\dev\AI\robbo-port2\gb\src\main.c:115: continue;
-	jp	00178$
+	jp	00179$
 00138$:
 ;C:\dev\AI\robbo-port2\gb\src\main.c:118: if (!paused && !(pad & J_SELECT)) {
 	ld	a, (#_paused)
 	or	a, a
-	jp	NZ, 00168$
+	jp	NZ, 00169$
 	ld	a, e
 	or	a, b
-	jp	NZ, 00168$
+	jp	NZ, 00169$
 ;C:\dev\AI\robbo-port2\gb\src\main.c:119: if (++tick_timer >= LOGIC_TICK_FRAMES) {
 	ld	hl, #_tick_timer
 	inc	(hl)
@@ -377,10 +377,13 @@ _main::
 	call	_game_tick
 	pop	bc
 00141$:
-;C:\dev\AI\robbo-port2\gb\src\main.c:124: if (!robbo_busy) {
+;C:\dev\AI\robbo-port2\gb\src\main.c:124: if (!robbo_busy && !robbo_no_move) {
 	ld	a, (#_robbo_busy)
 	or	a, a
-	jr	NZ, 00168$
+	jr	NZ, 00169$
+	ld	a, (#_robbo_no_move)
+	or	a, a
+	jr	NZ, 00169$
 ;C:\dev\AI\robbo-port2\gb\src\main.c:125: uint8_t fire_held = pad & (J_A | J_B);
 	ld	a, c
 	and	a, #0x30
@@ -414,9 +417,9 @@ _main::
 	ld	a, e
 	inc	a
 	ld	a, #0x01
-	jr	Z, 00460$
+	jr	Z, 00468$
 	xor	a, a
-00460$:
+00468$:
 	ld	d, a
 ;C:\dev\AI\robbo-port2\gb\src\main.c:133: if (fire_held) {
 	ld	a, b
@@ -436,7 +439,7 @@ _main::
 ;C:\dev\AI\robbo-port2\gb\src\main.c:140: move_delay = 0;
 	xor	a, a
 	ld	(#_move_delay),a
-	jr	00168$
+	jr	00169$
 00163$:
 ;C:\dev\AI\robbo-port2\gb\src\main.c:142: if (dir != 0xFF) {
 	bit	0, d
@@ -455,22 +458,22 @@ _main::
 ;C:\dev\AI\robbo-port2\gb\src\main.c:146: move_delay = MOVE_REPEAT_FRAMES;
 	ld	hl, #_move_delay
 	ld	(hl), #0x06
-	jr	00168$
+	jr	00169$
 00157$:
 ;C:\dev\AI\robbo-port2\gb\src\main.c:148: move_delay--;
 	ld	hl, #_move_delay
 	dec	(hl)
-	jr	00168$
+	jr	00169$
 00160$:
 ;C:\dev\AI\robbo-port2\gb\src\main.c:151: move_delay = 0;
 	xor	a, a
 	ld	(#_move_delay),a
-00168$:
+00169$:
 ;C:\dev\AI\robbo-port2\gb\src\main.c:157: if (game_restart_requested) {
 	ld	hl, #_game_restart_requested
 	ld	a, (hl)
 	or	a, a
-	jr	Z, 00171$
+	jr	Z, 00172$
 ;C:\dev\AI\robbo-port2\gb\src\main.c:158: game_restart_requested = 0;
 	ld	(hl), #0x00
 ;C:\dev\AI\robbo-port2\gb\src\main.c:159: DISPLAY_OFF;
@@ -500,19 +503,19 @@ _main::
 	ldhl	sp,	#0
 	ld	(hl), c
 ;C:\dev\AI\robbo-port2\gb\src\main.c:167: continue;
-	jp	00178$
-00171$:
+	jp	00179$
+00172$:
 ;C:\dev\AI\robbo-port2\gb\src\main.c:170: if (game_level_advance_requested) {
 	ld	hl, #_game_level_advance_requested
 	ld	a, (hl)
 	or	a, a
-	jr	Z, 00176$
+	jr	Z, 00177$
 ;C:\dev\AI\robbo-port2\gb\src\main.c:171: game_level_advance_requested = 0;
 	ld	(hl), #0x00
 ;C:\dev\AI\robbo-port2\gb\src\main.c:172: if (level_planet >= LEVEL_COUNT) {
 	ld	a, (#_level_planet)
 	sub	a, #0x38
-	jr	C, 00173$
+	jr	C, 00174$
 ;C:\dev\AI\robbo-port2\gb\src\main.c:173: game_complete = 1;
 	ld	hl, #_game_complete
 	ld	(hl), #0x01
@@ -531,8 +534,8 @@ _main::
 	ldh	a, (_LCDC_REG + 0)
 	or	a, #0x80
 	ldh	(_LCDC_REG + 0), a
-	jr	00174$
-00173$:
+	jr	00175$
+00174$:
 ;C:\dev\AI\robbo-port2\gb\src\main.c:180: level = level_planet + 1;
 	ld	a, (_level_planet)
 	inc	a
@@ -548,7 +551,7 @@ _main::
 	ldh	a, (_LCDC_REG + 0)
 	or	a, #0x80
 	ldh	(_LCDC_REG + 0), a
-00174$:
+00175$:
 ;C:\dev\AI\robbo-port2\gb\src\main.c:185: paused = 0;
 ;C:\dev\AI\robbo-port2\gb\src\main.c:186: move_delay = 0;
 	xor	a, a
@@ -561,12 +564,12 @@ _main::
 	ldhl	sp,	#0
 	ld	(hl), c
 ;C:\dev\AI\robbo-port2\gb\src\main.c:189: continue;
-	jp	00178$
-00176$:
+	jp	00179$
+00177$:
 ;C:\dev\AI\robbo-port2\gb\src\main.c:192: prev = pad;
 	ldhl	sp,	#0
 	ld	(hl), c
-	jp	00178$
+	jp	00179$
 ;C:\dev\AI\robbo-port2\gb\src\main.c:194: }
 	inc	sp
 	inc	sp

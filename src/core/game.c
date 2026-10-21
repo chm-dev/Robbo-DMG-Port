@@ -27,6 +27,8 @@ uint8_t debug_pad;
 uint16_t debug_ticks;
 uint8_t hud_dirty;
 uint8_t robbo_busy;
+uint8_t robbo_no_move;
+static uint16_t magnet_field;
 uint8_t cam_override;
 uint8_t cam_target_x;
 uint8_t cam_target_y;
@@ -43,14 +45,17 @@ static uint16_t bullet_cells[MAX_BULLETS];
 #define MAX_ENEMY_LIST 40
 #define MAX_BOMB_LIST 160
 #define MAX_EXPLOSION_LIST 496
+#define MAX_MAGNET_LIST 16
 static uint16_t turret_list[MAX_TURRET_LIST];
 static uint16_t enemy_list[MAX_ENEMY_LIST];
 static uint16_t bomb_list[MAX_BOMB_LIST];
 static uint16_t explosion_list[MAX_EXPLOSION_LIST];
+static uint16_t magnet_list[MAX_MAGNET_LIST];
 static uint8_t turret_count;
 static uint8_t enemy_count;
 static uint8_t bomb_count;
 static uint16_t explosion_count;
+static uint8_t magnet_count;
 static uint8_t bullet_count;
 #define BULLET_LASER_WAIT   1
 #define BULLET_LASER_RETURN 2
@@ -114,6 +119,8 @@ void game_load_level(uint8_t level)
     bullet_count = 0;
     fire_delay = 0;
     robbo_busy = 0;
+    robbo_no_move = 0;
+    magnet_field = 0;
     teleport_phase = 0;
     teleport_to = 0;
     cam_override = 0;
@@ -171,7 +178,6 @@ static uint8_t is_explodable(uint8_t type)
         case CT_BUTTERFLY:
         case CT_BEAR:
         case CT_LAVA:
-        case CT_MAGNET:
             return 1;
         default:
             return 0;
@@ -341,6 +347,8 @@ static void teleport_arrive(uint16_t idx)
     map_type[idx] = CT_ROBBO;
     map_extra[idx] = robbo_dir;
     robbo_busy = 0;
+    robbo_no_move = 0;
+    magnet_field = 0;
     render_cell(robbo_x, robbo_y);
 }
 
@@ -377,7 +385,7 @@ uint8_t game_try_move(uint8_t dir)
     uint16_t old_idx;
     uint16_t new_idx;
 
-    if (robbo_busy) return 0;
+    if (robbo_busy || robbo_no_move) return 0;
 
     if (dir == 0) {
         nx++;
@@ -1031,6 +1039,7 @@ static void collect_actors(void)
     enemy_count = 0;
     bomb_count = 0;
     explosion_count = 0;
+    magnet_count = 0;
 
     for (idx = 0; idx < MAP_CELLS; idx++) {
         uint8_t type = map_type[idx];
@@ -1043,6 +1052,8 @@ static void collect_actors(void)
             if (bomb_count < MAX_BOMB_LIST) bomb_list[bomb_count++] = idx;
         } else if (type == CT_EXPLOSION) {
             if (explosion_count < MAX_EXPLOSION_LIST) explosion_list[explosion_count++] = idx;
+        } else if (type == CT_MAGNET) {
+            if (magnet_count < MAX_MAGNET_LIST) magnet_list[magnet_count++] = idx;
         }
     }
 }
@@ -1079,6 +1090,73 @@ static void enemy_tick(void)
     }
 }
 
+static void magnet_tick(void)
+{
+    uint8_t i;
+
+    if (robbo_dead || robbo_busy) return;
+
+    for (i = 0; i < magnet_count; i++) {
+        uint16_t midx = magnet_list[i];
+        uint16_t field = (uint16_t)(midx + 1);
+        uint8_t dir;
+        int8_t dx, dy;
+        int8_t sx, sy;
+        int16_t nx, ny;
+        uint8_t distance = 0;
+        uint8_t found = 0;
+
+        if (map_type[midx] != CT_MAGNET) continue;
+        if (magnet_field && magnet_field != field) continue;
+
+        dir = map_extra[midx] & 3;
+        dx = tp_dx[dir];
+        dy = tp_dy[dir];
+
+        sx = (robbo_x > midx % MAP_W) ? 1 : (robbo_x < midx % MAP_W ? -1 : 0);
+        sy = (robbo_y > midx / MAP_W) ? 1 : (robbo_y < midx / MAP_W ? -1 : 0);
+        if (sx != dx || sy != dy) continue;
+
+        nx = (int16_t)(midx % MAP_W) + dx;
+        ny = (int16_t)(midx / MAP_W) + dy;
+        while (nx >= 0 && ny >= 0 && nx < MAP_W && ny < level_height) {
+            uint16_t cell = (uint16_t)ny * MAP_W + (uint8_t)nx;
+            uint8_t type = map_type[cell];
+
+            if (type == CT_ROBBO) {
+                found = 1;
+                break;
+            }
+            if (type != CT_EMPTY) break;
+            nx += dx;
+            ny += dy;
+            distance++;
+        }
+        if (!found) continue;
+
+        if (!robbo_no_move) {
+            robbo_no_move = 1;
+            magnet_field = field;
+            return;
+        }
+
+        if (distance == 0) {
+            kill_robbo();
+            return;
+        }
+
+        /* Pull Robbo one cell towards the magnet. */
+        {
+            int16_t tx = (int16_t)robbo_x - dx;
+            int16_t ty = (int16_t)robbo_y - dy;
+            if (tx >= 0 && ty >= 0 && tx < MAP_W && ty < level_height &&
+                map_type[(uint16_t)ty * MAP_W + (uint8_t)tx] == CT_EMPTY) {
+                move_robbo_to((uint8_t)tx, (uint8_t)ty, robbo_dir);
+            }
+        }
+    }
+}
+
 void game_check_enemies(void)
 {
     enemy_check_kills();
@@ -1086,7 +1164,7 @@ void game_check_enemies(void)
 
 void game_face(uint8_t dir)
 {
-    if (dir > 3 || robbo_busy) return;
+    if (dir > 3 || robbo_busy || robbo_no_move) return;
     robbo_dir = dir;
     map_extra[(uint16_t)robbo_y * MAP_W + robbo_x] = dir;
     render_cell(robbo_x, robbo_y);
@@ -1103,7 +1181,7 @@ uint8_t game_fire(void)
     if (player_bullet_active()) return 0;
     if (ammo == 0) return 0;
     if (fire_delay != 0) return 0;
-    if (robbo_busy) return 0;
+    if (robbo_busy || robbo_no_move) return 0;
 
     if (robbo_dir == 0) nx++;
     else if (robbo_dir == 1) ny++;
@@ -1421,4 +1499,6 @@ void game_tick(void)
             remove_sliding(i);
         }
     }
+
+    magnet_tick();
 }

@@ -50,7 +50,7 @@ uint8_t render_metatile_for_cell(uint8_t type, uint8_t extra)
         case CT_BUTTERFLY:  return MT_BUTTERFLY_0;
         case CT_BEAR:       return (extra & 4) ? MT_BEAR_2 : MT_BEAR_0;
         case CT_LAVA:       return MT_LAVA_0;
-        case CT_MAGNET:     return (extra & 1) ? MT_MAGNET_1 : MT_MAGNET_0;
+        case CT_MAGNET:     return (extra & 2) ? MT_MAGNET_1 : MT_MAGNET_0;
         case CT_ROBBO:      return MT_ROBBO_0 + robbo_mt_base[extra & 3];
         case CT_BULLET:     return bullet_mt[extra & 3];
         case CT_EXPLOSION: {

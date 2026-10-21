@@ -224,11 +224,11 @@ _render_metatile_for_cell::
 00120$:
 	ld	a, #0x1e
 	jr	00129$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:53: case CT_MAGNET:     return (extra & 1) ? MT_MAGNET_1 : MT_MAGNET_0;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:53: case CT_MAGNET:     return (extra & 2) ? MT_MAGNET_1 : MT_MAGNET_0;
 00121$:
 	push	hl
 	ldhl	sp,	#2
-	bit	0, (hl)
+	bit	1, (hl)
 	pop	hl
 	jr	Z, 00138$
 	ld	a, #0x21

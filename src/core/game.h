@@ -75,6 +75,7 @@ extern uint8_t debug_pad;
 extern uint16_t debug_ticks;
 extern uint8_t hud_dirty;
 extern uint8_t robbo_busy;
+extern uint8_t robbo_no_move;
 extern uint8_t game_restart_requested;
 extern uint8_t game_level_advance_requested;
 extern uint8_t cam_override;

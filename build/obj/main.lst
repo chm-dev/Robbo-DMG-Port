@@ -103,16 +103,16 @@
     00000018 F6 80            [ 8]  103 	or	a, #0x80
     0000001A E0r00            [12]  104 	ldh	(_LCDC_REG + 0), a
                                     105 ;C:\dev\AI\robbo-port2\gb\src\main.c:48: while (1) {
-    0000001C                        106 00178$:
+    0000001C                        106 00179$:
                                     107 ;C:\dev\AI\robbo-port2\gb\src\main.c:49: wait_vbl();
     0000001C CDr00r00         [24]  108 	call	_wait_vbl
                                     109 ;C:\dev\AI\robbo-port2\gb\src\main.c:50: debug_ticks++;
     0000001F 21r00r00         [12]  110 	ld	hl, #_debug_ticks
     00000022 34               [12]  111 	inc	(hl)
-    00000023 20 02            [12]  112 	jr	NZ, 00440$
+    00000023 20 02            [12]  112 	jr	NZ, 00448$
     00000025 23               [ 8]  113 	inc	hl
     00000026 34               [12]  114 	inc	(hl)
-    00000027                        115 00440$:
+    00000027                        115 00448$:
                                     116 ;C:\dev\AI\robbo-port2\gb\src\main.c:52: if (game_complete) {
     00000027 FAr05r00         [16]  117 	ld	a, (#_game_complete)
     0000002A B7               [ 4]  118 	or	a, a
@@ -157,7 +157,7 @@
     00000063 3A               [ 8]  157 	ld	a, (hl-)
     00000064 77               [ 8]  158 	ld	(hl), a
                                     159 ;C:\dev\AI\robbo-port2\gb\src\main.c:65: continue;
-    00000065 18 B5            [12]  160 	jr	00178$
+    00000065 18 B5            [12]  160 	jr	00179$
     00000067                        161 00105$:
                                     162 ;C:\dev\AI\robbo-port2\gb\src\main.c:69: render_camera();
     00000067 CDr00r00         [24]  163 	call	_render_camera
@@ -257,22 +257,22 @@
     000000EA 28 22            [12]  257 	jr	Z, 00129$
                                     258 ;C:\dev\AI\robbo-port2\gb\src\main.c:97: level = (level + 10 > LEVEL_COUNT) ? LEVEL_COUNT : (level + 10);
     000000EC FAr00r00         [16]  259 	ld	a, (_level)
-    000000EF 26 00            [ 8]  260 	ld	h, #0x00
-    000000F1 6F               [ 4]  261 	ld	l, a
-    000000F2 11 0A 00         [12]  262 	ld	de, #0x000a
+    000000EF 5F               [ 4]  260 	ld	e, a
+    000000F0 16 00            [ 8]  261 	ld	d, #0x00
+    000000F2 21 0A 00         [12]  262 	ld	hl, #0x000a
     000000F5 19               [ 8]  263 	add	hl, de
     000000F6 3E 38            [ 8]  264 	ld	a, #0x38
     000000F8 BD               [ 4]  265 	cp	a, l
     000000F9 3E 00            [ 8]  266 	ld	a, #0x00
     000000FB 9C               [ 4]  267 	sbc	a, h
-    000000FC 30 04            [12]  268 	jr	NC, 00182$
+    000000FC 30 04            [12]  268 	jr	NC, 00183$
     000000FE 1E 38            [ 8]  269 	ld	e, #0x38
-    00000100 18 06            [12]  270 	jr	00183$
-    00000102                        271 00182$:
+    00000100 18 06            [12]  270 	jr	00184$
+    00000102                        271 00183$:
     00000102 FAr00r00         [16]  272 	ld	a, (_level)
     00000105 C6 0A            [ 8]  273 	add	a, #0x0a
     00000107 5F               [ 4]  274 	ld	e, a
-    00000108                        275 00183$:
+    00000108                        275 00184$:
     00000108 21r00r00         [12]  276 	ld	hl, #_level
     0000010B 73               [ 8]  277 	ld	(hl), e
     0000010C 18 49            [12]  278 	jr	00136$
@@ -284,14 +284,14 @@
     00000112 3E 0A            [ 8]  284 	ld	a, #0x0a
     00000114 21r00r00         [12]  285 	ld	hl, #_level
     00000117 96               [ 8]  286 	sub	a, (hl)
-    00000118 30 06            [12]  287 	jr	NC, 00184$
+    00000118 30 06            [12]  287 	jr	NC, 00185$
     0000011A 7E               [ 8]  288 	ld	a, (hl)
     0000011B C6 F6            [ 8]  289 	add	a, #0xf6
     0000011D 47               [ 4]  290 	ld	b, a
-    0000011E 18 02            [12]  291 	jr	00185$
-    00000120                        292 00184$:
+    0000011E 18 02            [12]  291 	jr	00186$
+    00000120                        292 00185$:
     00000120 06 01            [ 8]  293 	ld	b, #0x01
-    00000122                        294 00185$:
+    00000122                        294 00186$:
     00000122 21r00r00         [12]  295 	ld	hl, #_level
     00000125 70               [ 8]  296 	ld	(hl), b
     00000126 18 2F            [12]  297 	jr	00136$
@@ -303,14 +303,14 @@
     0000012C 3E 01            [ 8]  303 	ld	a, #0x01
     0000012E 21r00r00         [12]  304 	ld	hl, #_level
     00000131 96               [ 8]  305 	sub	a, (hl)
-    00000132 30 05            [12]  306 	jr	NC, 00186$
+    00000132 30 05            [12]  306 	jr	NC, 00187$
     00000134 7E               [ 8]  307 	ld	a, (hl)
     00000135 3D               [ 4]  308 	dec	a
     00000136 47               [ 4]  309 	ld	b, a
-    00000137 18 02            [12]  310 	jr	00187$
-    00000139                        311 00186$:
+    00000137 18 02            [12]  310 	jr	00188$
+    00000139                        311 00187$:
     00000139 06 38            [ 8]  312 	ld	b, #0x38
-    0000013B                        313 00187$:
+    0000013B                        313 00188$:
     0000013B 21r00r00         [12]  314 	ld	hl, #_level
     0000013E 70               [ 8]  315 	ld	(hl), b
     0000013F 18 16            [12]  316 	jr	00136$
@@ -355,15 +355,15 @@
     00000173 F8 00            [12]  355 	ldhl	sp,	#0
     00000175 71               [ 8]  356 	ld	(hl), c
                                     357 ;C:\dev\AI\robbo-port2\gb\src\main.c:115: continue;
-    00000176 C3r1Cr00         [16]  358 	jp	00178$
+    00000176 C3r1Cr00         [16]  358 	jp	00179$
     00000179                        359 00138$:
                                     360 ;C:\dev\AI\robbo-port2\gb\src\main.c:118: if (!paused && !(pad & J_SELECT)) {
     00000179 FAr01r00         [16]  361 	ld	a, (#_paused)
     0000017C B7               [ 4]  362 	or	a, a
-    0000017D C2r02r02         [16]  363 	jp	NZ, 00168$
+    0000017D C2r08r02         [16]  363 	jp	NZ, 00169$
     00000180 7B               [ 4]  364 	ld	a, e
     00000181 B0               [ 4]  365 	or	a, b
-    00000182 C2r02r02         [16]  366 	jp	NZ, 00168$
+    00000182 C2r08r02         [16]  366 	jp	NZ, 00169$
                                     367 ;C:\dev\AI\robbo-port2\gb\src\main.c:119: if (++tick_timer >= LOGIC_TICK_FRAMES) {
     00000185 21r03r00         [12]  368 	ld	hl, #_tick_timer
     00000188 34               [12]  369 	inc	(hl)
@@ -377,212 +377,215 @@
     00000191 CDr00r00         [24]  377 	call	_game_tick
     00000194 C1               [12]  378 	pop	bc
     00000195                        379 00141$:
-                                    380 ;C:\dev\AI\robbo-port2\gb\src\main.c:124: if (!robbo_busy) {
+                                    380 ;C:\dev\AI\robbo-port2\gb\src\main.c:124: if (!robbo_busy && !robbo_no_move) {
     00000195 FAr00r00         [16]  381 	ld	a, (#_robbo_busy)
     00000198 B7               [ 4]  382 	or	a, a
-    00000199 20 67            [12]  383 	jr	NZ, 00168$
-                                    384 ;C:\dev\AI\robbo-port2\gb\src\main.c:125: uint8_t fire_held = pad & (J_A | J_B);
-    0000019B 79               [ 4]  385 	ld	a, c
-    0000019C E6 30            [ 8]  386 	and	a, #0x30
-    0000019E 47               [ 4]  387 	ld	b, a
-                                    388 ;C:\dev\AI\robbo-port2\gb\src\main.c:127: if (pad & J_RIGHT) dir = 0;
-    0000019F CB 41            [ 8]  389 	bit	0, c
-    000001A1 28 04            [12]  390 	jr	Z, 00152$
-    000001A3 1E 00            [ 8]  391 	ld	e, #0x00
-    000001A5 18 18            [12]  392 	jr	00153$
-    000001A7                        393 00152$:
-                                    394 ;C:\dev\AI\robbo-port2\gb\src\main.c:128: else if (pad & J_DOWN) dir = 1;
-    000001A7 CB 59            [ 8]  395 	bit	3, c
-    000001A9 28 04            [12]  396 	jr	Z, 00149$
-    000001AB 1E 01            [ 8]  397 	ld	e, #0x01
-    000001AD 18 10            [12]  398 	jr	00153$
-    000001AF                        399 00149$:
-                                    400 ;C:\dev\AI\robbo-port2\gb\src\main.c:129: else if (pad & J_LEFT) dir = 2;
-    000001AF CB 49            [ 8]  401 	bit	1, c
-    000001B1 28 04            [12]  402 	jr	Z, 00146$
-    000001B3 1E 02            [ 8]  403 	ld	e, #0x02
-    000001B5 18 08            [12]  404 	jr	00153$
-    000001B7                        405 00146$:
-                                    406 ;C:\dev\AI\robbo-port2\gb\src\main.c:130: else if (pad & J_UP) dir = 3;
-    000001B7 CB 51            [ 8]  407 	bit	2, c
-                                    408 ;C:\dev\AI\robbo-port2\gb\src\main.c:131: else dir = 0xFF;
-    000001B9 1E 03            [ 8]  409 	ld	e, #0x03
-    000001BB 20 02            [12]  410 	jr	NZ, 00153$
-    000001BD 1E FF            [ 8]  411 	ld	e, #0xff
-    000001BF                        412 00153$:
-                                    413 ;C:\dev\AI\robbo-port2\gb\src\main.c:136: if (dir != 0xFF) {
-    000001BF 7B               [ 4]  414 	ld	a, e
-    000001C0 3C               [ 4]  415 	inc	a
-    000001C1 3E 01            [ 8]  416 	ld	a, #0x01
-    000001C3 28 01            [12]  417 	jr	Z, 00460$
-    000001C5 AF               [ 4]  418 	xor	a, a
-    000001C6                        419 00460$:
-    000001C6 57               [ 4]  420 	ld	d, a
-                                    421 ;C:\dev\AI\robbo-port2\gb\src\main.c:133: if (fire_held) {
-    000001C7 78               [ 4]  422 	ld	a, b
-    000001C8 B7               [ 4]  423 	or	a, a
-    000001C9 28 13            [12]  424 	jr	Z, 00163$
-                                    425 ;C:\dev\AI\robbo-port2\gb\src\main.c:136: if (dir != 0xFF) {
-    000001CB CB 42            [ 8]  426 	bit	0, d
-    000001CD 20 09            [12]  427 	jr	NZ, 00155$
-                                    428 ;C:\dev\AI\robbo-port2\gb\src\main.c:137: game_face(dir);
-    000001CF C5               [16]  429 	push	bc
-    000001D0 7B               [ 4]  430 	ld	a, e
-    000001D1 CDr00r00         [24]  431 	call	_game_face
-                                    432 ;C:\dev\AI\robbo-port2\gb\src\main.c:138: game_fire();
-    000001D4 CDr00r00         [24]  433 	call	_game_fire
-    000001D7 C1               [12]  434 	pop	bc
-    000001D8                        435 00155$:
-                                    436 ;C:\dev\AI\robbo-port2\gb\src\main.c:140: move_delay = 0;
-    000001D8 AF               [ 4]  437 	xor	a, a
-    000001D9 EAr02r00         [16]  438 	ld	(#_move_delay),a
-    000001DC 18 24            [12]  439 	jr	00168$
-    000001DE                        440 00163$:
-                                    441 ;C:\dev\AI\robbo-port2\gb\src\main.c:142: if (dir != 0xFF) {
-    000001DE CB 42            [ 8]  442 	bit	0, d
-    000001E0 20 1C            [12]  443 	jr	NZ, 00160$
-                                    444 ;C:\dev\AI\robbo-port2\gb\src\main.c:143: if (move_delay == 0) {
-    000001E2 FAr02r00         [16]  445 	ld	a, (#_move_delay)
-    000001E5 B7               [ 4]  446 	or	a, a
-    000001E6 20 10            [12]  447 	jr	NZ, 00157$
-                                    448 ;C:\dev\AI\robbo-port2\gb\src\main.c:144: game_try_move(dir);
-    000001E8 C5               [16]  449 	push	bc
-    000001E9 7B               [ 4]  450 	ld	a, e
-    000001EA CDr00r00         [24]  451 	call	_game_try_move
-                                    452 ;C:\dev\AI\robbo-port2\gb\src\main.c:145: game_check_enemies();
-    000001ED CDr00r00         [24]  453 	call	_game_check_enemies
-    000001F0 C1               [12]  454 	pop	bc
-                                    455 ;C:\dev\AI\robbo-port2\gb\src\main.c:146: move_delay = MOVE_REPEAT_FRAMES;
-    000001F1 21r02r00         [12]  456 	ld	hl, #_move_delay
-    000001F4 36 06            [12]  457 	ld	(hl), #0x06
-    000001F6 18 0A            [12]  458 	jr	00168$
-    000001F8                        459 00157$:
-                                    460 ;C:\dev\AI\robbo-port2\gb\src\main.c:148: move_delay--;
-    000001F8 21r02r00         [12]  461 	ld	hl, #_move_delay
-    000001FB 35               [12]  462 	dec	(hl)
-    000001FC 18 04            [12]  463 	jr	00168$
-    000001FE                        464 00160$:
-                                    465 ;C:\dev\AI\robbo-port2\gb\src\main.c:151: move_delay = 0;
-    000001FE AF               [ 4]  466 	xor	a, a
-    000001FF EAr02r00         [16]  467 	ld	(#_move_delay),a
-    00000202                        468 00168$:
-                                    469 ;C:\dev\AI\robbo-port2\gb\src\main.c:157: if (game_restart_requested) {
-    00000202 21r00r00         [12]  470 	ld	hl, #_game_restart_requested
-    00000205 7E               [ 8]  471 	ld	a, (hl)
-    00000206 B7               [ 4]  472 	or	a, a
-    00000207 28 29            [12]  473 	jr	Z, 00171$
-                                    474 ;C:\dev\AI\robbo-port2\gb\src\main.c:158: game_restart_requested = 0;
-    00000209 36 00            [12]  475 	ld	(hl), #0x00
-                                    476 ;C:\dev\AI\robbo-port2\gb\src\main.c:159: DISPLAY_OFF;
-    0000020B CDr00r00         [24]  477 	call	_display_off
-                                    478 ;C:\dev\AI\robbo-port2\gb\src\main.c:160: level = level_planet;
-    0000020E FAr00r00         [16]  479 	ld	a, (#_level_planet)
-    00000211 21r00r00         [12]  480 	ld	hl, #_level
-    00000214 77               [ 8]  481 	ld	(hl), a
-                                    482 ;C:\dev\AI\robbo-port2\gb\src\main.c:161: game_load_level(level);
-    00000215 C5               [16]  483 	push	bc
-    00000216 7E               [ 8]  484 	ld	a, (hl)
-    00000217 CDr00r00         [24]  485 	call	_game_load_level
-    0000021A C1               [12]  486 	pop	bc
-                                    487 ;C:\dev\AI\robbo-port2\gb\src\main.c:162: paused = 0;
-                                    488 ;C:\dev\AI\robbo-port2\gb\src\main.c:163: move_delay = 0;
-    0000021B AF               [ 4]  489 	xor	a, a
-    0000021C EAr01r00         [16]  490 	ld	(#_paused), a
-    0000021F EAr02r00         [16]  491 	ld	(#_move_delay),a
-                                    492 ;C:\dev\AI\robbo-port2\gb\src\main.c:164: tick_timer = 0;
-    00000222 AF               [ 4]  493 	xor	a, a
-    00000223 EAr03r00         [16]  494 	ld	(#_tick_timer),a
-                                    495 ;C:\dev\AI\robbo-port2\gb\src\main.c:165: DISPLAY_ON;
-    00000226 F0r00            [12]  496 	ldh	a, (_LCDC_REG + 0)
-    00000228 F6 80            [ 8]  497 	or	a, #0x80
-    0000022A E0r00            [12]  498 	ldh	(_LCDC_REG + 0), a
-                                    499 ;C:\dev\AI\robbo-port2\gb\src\main.c:166: prev = pad;
-    0000022C F8 00            [12]  500 	ldhl	sp,	#0
-    0000022E 71               [ 8]  501 	ld	(hl), c
-                                    502 ;C:\dev\AI\robbo-port2\gb\src\main.c:167: continue;
-    0000022F C3r1Cr00         [16]  503 	jp	00178$
-    00000232                        504 00171$:
-                                    505 ;C:\dev\AI\robbo-port2\gb\src\main.c:170: if (game_level_advance_requested) {
-    00000232 21r00r00         [12]  506 	ld	hl, #_game_level_advance_requested
-    00000235 7E               [ 8]  507 	ld	a, (hl)
-    00000236 B7               [ 4]  508 	or	a, a
-    00000237 28 4E            [12]  509 	jr	Z, 00176$
-                                    510 ;C:\dev\AI\robbo-port2\gb\src\main.c:171: game_level_advance_requested = 0;
-    00000239 36 00            [12]  511 	ld	(hl), #0x00
-                                    512 ;C:\dev\AI\robbo-port2\gb\src\main.c:172: if (level_planet >= LEVEL_COUNT) {
-    0000023B FAr00r00         [16]  513 	ld	a, (#_level_planet)
-    0000023E D6 38            [ 8]  514 	sub	a, #0x38
-    00000240 38 1C            [12]  515 	jr	C, 00173$
-                                    516 ;C:\dev\AI\robbo-port2\gb\src\main.c:173: game_complete = 1;
-    00000242 21r05r00         [12]  517 	ld	hl, #_game_complete
-    00000245 36 01            [12]  518 	ld	(hl), #0x01
-                                    519 ;C:\dev\AI\robbo-port2\gb\src\main.c:174: cam_x = 0;
-                                    520 ;C:\dev\AI\robbo-port2\gb\src\main.c:175: cam_y = 0;
-    00000247 AF               [ 4]  521 	xor	a, a
-    00000248 EAr00r00         [16]  522 	ld	(#_cam_x), a
-    0000024B EAr00r00         [16]  523 	ld	(#_cam_y),a
-                                    524 ;C:\dev\AI\robbo-port2\gb\src\main.c:176: DISPLAY_OFF;
-    0000024E CDr00r00         [24]  525 	call	_display_off
-                                    526 ;C:\dev\AI\robbo-port2\gb\src\main.c:177: render_victory();
-    00000251 C5               [16]  527 	push	bc
-    00000252 CDr00r00         [24]  528 	call	_render_victory
-    00000255 C1               [12]  529 	pop	bc
-                                    530 ;C:\dev\AI\robbo-port2\gb\src\main.c:178: DISPLAY_ON;
-    00000256 F0r00            [12]  531 	ldh	a, (_LCDC_REG + 0)
-    00000258 F6 80            [ 8]  532 	or	a, #0x80
-    0000025A E0r00            [12]  533 	ldh	(_LCDC_REG + 0), a
-    0000025C 18 18            [12]  534 	jr	00174$
-    0000025E                        535 00173$:
-                                    536 ;C:\dev\AI\robbo-port2\gb\src\main.c:180: level = level_planet + 1;
-    0000025E FAr00r00         [16]  537 	ld	a, (_level_planet)
-    00000261 3C               [ 4]  538 	inc	a
-    00000262 EAr00r00         [16]  539 	ld	(#_level),a
-                                    540 ;C:\dev\AI\robbo-port2\gb\src\main.c:181: DISPLAY_OFF;
-    00000265 CDr00r00         [24]  541 	call	_display_off
-                                    542 ;C:\dev\AI\robbo-port2\gb\src\main.c:182: game_load_level(level);
-    00000268 C5               [16]  543 	push	bc
-    00000269 FAr00r00         [16]  544 	ld	a, (_level)
-    0000026C CDr00r00         [24]  545 	call	_game_load_level
-    0000026F C1               [12]  546 	pop	bc
-                                    547 ;C:\dev\AI\robbo-port2\gb\src\main.c:183: DISPLAY_ON;
-    00000270 F0r00            [12]  548 	ldh	a, (_LCDC_REG + 0)
-    00000272 F6 80            [ 8]  549 	or	a, #0x80
-    00000274 E0r00            [12]  550 	ldh	(_LCDC_REG + 0), a
-    00000276                        551 00174$:
-                                    552 ;C:\dev\AI\robbo-port2\gb\src\main.c:185: paused = 0;
-                                    553 ;C:\dev\AI\robbo-port2\gb\src\main.c:186: move_delay = 0;
-    00000276 AF               [ 4]  554 	xor	a, a
-    00000277 EAr01r00         [16]  555 	ld	(#_paused), a
-    0000027A EAr02r00         [16]  556 	ld	(#_move_delay),a
-                                    557 ;C:\dev\AI\robbo-port2\gb\src\main.c:187: tick_timer = 0;
-    0000027D AF               [ 4]  558 	xor	a, a
-    0000027E EAr03r00         [16]  559 	ld	(#_tick_timer),a
-                                    560 ;C:\dev\AI\robbo-port2\gb\src\main.c:188: prev = pad;
-    00000281 F8 00            [12]  561 	ldhl	sp,	#0
-    00000283 71               [ 8]  562 	ld	(hl), c
-                                    563 ;C:\dev\AI\robbo-port2\gb\src\main.c:189: continue;
-    00000284 C3r1Cr00         [16]  564 	jp	00178$
-    00000287                        565 00176$:
-                                    566 ;C:\dev\AI\robbo-port2\gb\src\main.c:192: prev = pad;
-    00000287 F8 00            [12]  567 	ldhl	sp,	#0
-    00000289 71               [ 8]  568 	ld	(hl), c
-    0000028A C3r1Cr00         [16]  569 	jp	00178$
-                                    570 ;C:\dev\AI\robbo-port2\gb\src\main.c:194: }
-    0000028D 33               [ 8]  571 	inc	sp
-    0000028E 33               [ 8]  572 	inc	sp
-    0000028F C9               [16]  573 	ret
-                                    574 	.area _CODE
-                                    575 	.area _INITIALIZER
-    00000000                        576 __xinit__level:
-    00000000 01                     577 	.db #0x01	; 1
-    00000001                        578 __xinit__paused:
-    00000001 00                     579 	.db #0x00	; 0
-    00000002                        580 __xinit__move_delay:
-    00000002 00                     581 	.db #0x00	; 0
-    00000003                        582 __xinit__tick_timer:
-    00000003 00                     583 	.db #0x00	; 0
-    00000004                        584 __xinit__pause_draw:
-    00000004 00                     585 	.db #0x00	; 0
-    00000005                        586 __xinit__game_complete:
-    00000005 00                     587 	.db #0x00	; 0
-                                    588 	.area _CABS (ABS)
+    00000199 20 6D            [12]  383 	jr	NZ, 00169$
+    0000019B FAr00r00         [16]  384 	ld	a, (#_robbo_no_move)
+    0000019E B7               [ 4]  385 	or	a, a
+    0000019F 20 67            [12]  386 	jr	NZ, 00169$
+                                    387 ;C:\dev\AI\robbo-port2\gb\src\main.c:125: uint8_t fire_held = pad & (J_A | J_B);
+    000001A1 79               [ 4]  388 	ld	a, c
+    000001A2 E6 30            [ 8]  389 	and	a, #0x30
+    000001A4 47               [ 4]  390 	ld	b, a
+                                    391 ;C:\dev\AI\robbo-port2\gb\src\main.c:127: if (pad & J_RIGHT) dir = 0;
+    000001A5 CB 41            [ 8]  392 	bit	0, c
+    000001A7 28 04            [12]  393 	jr	Z, 00152$
+    000001A9 1E 00            [ 8]  394 	ld	e, #0x00
+    000001AB 18 18            [12]  395 	jr	00153$
+    000001AD                        396 00152$:
+                                    397 ;C:\dev\AI\robbo-port2\gb\src\main.c:128: else if (pad & J_DOWN) dir = 1;
+    000001AD CB 59            [ 8]  398 	bit	3, c
+    000001AF 28 04            [12]  399 	jr	Z, 00149$
+    000001B1 1E 01            [ 8]  400 	ld	e, #0x01
+    000001B3 18 10            [12]  401 	jr	00153$
+    000001B5                        402 00149$:
+                                    403 ;C:\dev\AI\robbo-port2\gb\src\main.c:129: else if (pad & J_LEFT) dir = 2;
+    000001B5 CB 49            [ 8]  404 	bit	1, c
+    000001B7 28 04            [12]  405 	jr	Z, 00146$
+    000001B9 1E 02            [ 8]  406 	ld	e, #0x02
+    000001BB 18 08            [12]  407 	jr	00153$
+    000001BD                        408 00146$:
+                                    409 ;C:\dev\AI\robbo-port2\gb\src\main.c:130: else if (pad & J_UP) dir = 3;
+    000001BD CB 51            [ 8]  410 	bit	2, c
+                                    411 ;C:\dev\AI\robbo-port2\gb\src\main.c:131: else dir = 0xFF;
+    000001BF 1E 03            [ 8]  412 	ld	e, #0x03
+    000001C1 20 02            [12]  413 	jr	NZ, 00153$
+    000001C3 1E FF            [ 8]  414 	ld	e, #0xff
+    000001C5                        415 00153$:
+                                    416 ;C:\dev\AI\robbo-port2\gb\src\main.c:136: if (dir != 0xFF) {
+    000001C5 7B               [ 4]  417 	ld	a, e
+    000001C6 3C               [ 4]  418 	inc	a
+    000001C7 3E 01            [ 8]  419 	ld	a, #0x01
+    000001C9 28 01            [12]  420 	jr	Z, 00468$
+    000001CB AF               [ 4]  421 	xor	a, a
+    000001CC                        422 00468$:
+    000001CC 57               [ 4]  423 	ld	d, a
+                                    424 ;C:\dev\AI\robbo-port2\gb\src\main.c:133: if (fire_held) {
+    000001CD 78               [ 4]  425 	ld	a, b
+    000001CE B7               [ 4]  426 	or	a, a
+    000001CF 28 13            [12]  427 	jr	Z, 00163$
+                                    428 ;C:\dev\AI\robbo-port2\gb\src\main.c:136: if (dir != 0xFF) {
+    000001D1 CB 42            [ 8]  429 	bit	0, d
+    000001D3 20 09            [12]  430 	jr	NZ, 00155$
+                                    431 ;C:\dev\AI\robbo-port2\gb\src\main.c:137: game_face(dir);
+    000001D5 C5               [16]  432 	push	bc
+    000001D6 7B               [ 4]  433 	ld	a, e
+    000001D7 CDr00r00         [24]  434 	call	_game_face
+                                    435 ;C:\dev\AI\robbo-port2\gb\src\main.c:138: game_fire();
+    000001DA CDr00r00         [24]  436 	call	_game_fire
+    000001DD C1               [12]  437 	pop	bc
+    000001DE                        438 00155$:
+                                    439 ;C:\dev\AI\robbo-port2\gb\src\main.c:140: move_delay = 0;
+    000001DE AF               [ 4]  440 	xor	a, a
+    000001DF EAr02r00         [16]  441 	ld	(#_move_delay),a
+    000001E2 18 24            [12]  442 	jr	00169$
+    000001E4                        443 00163$:
+                                    444 ;C:\dev\AI\robbo-port2\gb\src\main.c:142: if (dir != 0xFF) {
+    000001E4 CB 42            [ 8]  445 	bit	0, d
+    000001E6 20 1C            [12]  446 	jr	NZ, 00160$
+                                    447 ;C:\dev\AI\robbo-port2\gb\src\main.c:143: if (move_delay == 0) {
+    000001E8 FAr02r00         [16]  448 	ld	a, (#_move_delay)
+    000001EB B7               [ 4]  449 	or	a, a
+    000001EC 20 10            [12]  450 	jr	NZ, 00157$
+                                    451 ;C:\dev\AI\robbo-port2\gb\src\main.c:144: game_try_move(dir);
+    000001EE C5               [16]  452 	push	bc
+    000001EF 7B               [ 4]  453 	ld	a, e
+    000001F0 CDr00r00         [24]  454 	call	_game_try_move
+                                    455 ;C:\dev\AI\robbo-port2\gb\src\main.c:145: game_check_enemies();
+    000001F3 CDr00r00         [24]  456 	call	_game_check_enemies
+    000001F6 C1               [12]  457 	pop	bc
+                                    458 ;C:\dev\AI\robbo-port2\gb\src\main.c:146: move_delay = MOVE_REPEAT_FRAMES;
+    000001F7 21r02r00         [12]  459 	ld	hl, #_move_delay
+    000001FA 36 06            [12]  460 	ld	(hl), #0x06
+    000001FC 18 0A            [12]  461 	jr	00169$
+    000001FE                        462 00157$:
+                                    463 ;C:\dev\AI\robbo-port2\gb\src\main.c:148: move_delay--;
+    000001FE 21r02r00         [12]  464 	ld	hl, #_move_delay
+    00000201 35               [12]  465 	dec	(hl)
+    00000202 18 04            [12]  466 	jr	00169$
+    00000204                        467 00160$:
+                                    468 ;C:\dev\AI\robbo-port2\gb\src\main.c:151: move_delay = 0;
+    00000204 AF               [ 4]  469 	xor	a, a
+    00000205 EAr02r00         [16]  470 	ld	(#_move_delay),a
+    00000208                        471 00169$:
+                                    472 ;C:\dev\AI\robbo-port2\gb\src\main.c:157: if (game_restart_requested) {
+    00000208 21r00r00         [12]  473 	ld	hl, #_game_restart_requested
+    0000020B 7E               [ 8]  474 	ld	a, (hl)
+    0000020C B7               [ 4]  475 	or	a, a
+    0000020D 28 29            [12]  476 	jr	Z, 00172$
+                                    477 ;C:\dev\AI\robbo-port2\gb\src\main.c:158: game_restart_requested = 0;
+    0000020F 36 00            [12]  478 	ld	(hl), #0x00
+                                    479 ;C:\dev\AI\robbo-port2\gb\src\main.c:159: DISPLAY_OFF;
+    00000211 CDr00r00         [24]  480 	call	_display_off
+                                    481 ;C:\dev\AI\robbo-port2\gb\src\main.c:160: level = level_planet;
+    00000214 FAr00r00         [16]  482 	ld	a, (#_level_planet)
+    00000217 21r00r00         [12]  483 	ld	hl, #_level
+    0000021A 77               [ 8]  484 	ld	(hl), a
+                                    485 ;C:\dev\AI\robbo-port2\gb\src\main.c:161: game_load_level(level);
+    0000021B C5               [16]  486 	push	bc
+    0000021C 7E               [ 8]  487 	ld	a, (hl)
+    0000021D CDr00r00         [24]  488 	call	_game_load_level
+    00000220 C1               [12]  489 	pop	bc
+                                    490 ;C:\dev\AI\robbo-port2\gb\src\main.c:162: paused = 0;
+                                    491 ;C:\dev\AI\robbo-port2\gb\src\main.c:163: move_delay = 0;
+    00000221 AF               [ 4]  492 	xor	a, a
+    00000222 EAr01r00         [16]  493 	ld	(#_paused), a
+    00000225 EAr02r00         [16]  494 	ld	(#_move_delay),a
+                                    495 ;C:\dev\AI\robbo-port2\gb\src\main.c:164: tick_timer = 0;
+    00000228 AF               [ 4]  496 	xor	a, a
+    00000229 EAr03r00         [16]  497 	ld	(#_tick_timer),a
+                                    498 ;C:\dev\AI\robbo-port2\gb\src\main.c:165: DISPLAY_ON;
+    0000022C F0r00            [12]  499 	ldh	a, (_LCDC_REG + 0)
+    0000022E F6 80            [ 8]  500 	or	a, #0x80
+    00000230 E0r00            [12]  501 	ldh	(_LCDC_REG + 0), a
+                                    502 ;C:\dev\AI\robbo-port2\gb\src\main.c:166: prev = pad;
+    00000232 F8 00            [12]  503 	ldhl	sp,	#0
+    00000234 71               [ 8]  504 	ld	(hl), c
+                                    505 ;C:\dev\AI\robbo-port2\gb\src\main.c:167: continue;
+    00000235 C3r1Cr00         [16]  506 	jp	00179$
+    00000238                        507 00172$:
+                                    508 ;C:\dev\AI\robbo-port2\gb\src\main.c:170: if (game_level_advance_requested) {
+    00000238 21r00r00         [12]  509 	ld	hl, #_game_level_advance_requested
+    0000023B 7E               [ 8]  510 	ld	a, (hl)
+    0000023C B7               [ 4]  511 	or	a, a
+    0000023D 28 4E            [12]  512 	jr	Z, 00177$
+                                    513 ;C:\dev\AI\robbo-port2\gb\src\main.c:171: game_level_advance_requested = 0;
+    0000023F 36 00            [12]  514 	ld	(hl), #0x00
+                                    515 ;C:\dev\AI\robbo-port2\gb\src\main.c:172: if (level_planet >= LEVEL_COUNT) {
+    00000241 FAr00r00         [16]  516 	ld	a, (#_level_planet)
+    00000244 D6 38            [ 8]  517 	sub	a, #0x38
+    00000246 38 1C            [12]  518 	jr	C, 00174$
+                                    519 ;C:\dev\AI\robbo-port2\gb\src\main.c:173: game_complete = 1;
+    00000248 21r05r00         [12]  520 	ld	hl, #_game_complete
+    0000024B 36 01            [12]  521 	ld	(hl), #0x01
+                                    522 ;C:\dev\AI\robbo-port2\gb\src\main.c:174: cam_x = 0;
+                                    523 ;C:\dev\AI\robbo-port2\gb\src\main.c:175: cam_y = 0;
+    0000024D AF               [ 4]  524 	xor	a, a
+    0000024E EAr00r00         [16]  525 	ld	(#_cam_x), a
+    00000251 EAr00r00         [16]  526 	ld	(#_cam_y),a
+                                    527 ;C:\dev\AI\robbo-port2\gb\src\main.c:176: DISPLAY_OFF;
+    00000254 CDr00r00         [24]  528 	call	_display_off
+                                    529 ;C:\dev\AI\robbo-port2\gb\src\main.c:177: render_victory();
+    00000257 C5               [16]  530 	push	bc
+    00000258 CDr00r00         [24]  531 	call	_render_victory
+    0000025B C1               [12]  532 	pop	bc
+                                    533 ;C:\dev\AI\robbo-port2\gb\src\main.c:178: DISPLAY_ON;
+    0000025C F0r00            [12]  534 	ldh	a, (_LCDC_REG + 0)
+    0000025E F6 80            [ 8]  535 	or	a, #0x80
+    00000260 E0r00            [12]  536 	ldh	(_LCDC_REG + 0), a
+    00000262 18 18            [12]  537 	jr	00175$
+    00000264                        538 00174$:
+                                    539 ;C:\dev\AI\robbo-port2\gb\src\main.c:180: level = level_planet + 1;
+    00000264 FAr00r00         [16]  540 	ld	a, (_level_planet)
+    00000267 3C               [ 4]  541 	inc	a
+    00000268 EAr00r00         [16]  542 	ld	(#_level),a
+                                    543 ;C:\dev\AI\robbo-port2\gb\src\main.c:181: DISPLAY_OFF;
+    0000026B CDr00r00         [24]  544 	call	_display_off
+                                    545 ;C:\dev\AI\robbo-port2\gb\src\main.c:182: game_load_level(level);
+    0000026E C5               [16]  546 	push	bc
+    0000026F FAr00r00         [16]  547 	ld	a, (_level)
+    00000272 CDr00r00         [24]  548 	call	_game_load_level
+    00000275 C1               [12]  549 	pop	bc
+                                    550 ;C:\dev\AI\robbo-port2\gb\src\main.c:183: DISPLAY_ON;
+    00000276 F0r00            [12]  551 	ldh	a, (_LCDC_REG + 0)
+    00000278 F6 80            [ 8]  552 	or	a, #0x80
+    0000027A E0r00            [12]  553 	ldh	(_LCDC_REG + 0), a
+    0000027C                        554 00175$:
+                                    555 ;C:\dev\AI\robbo-port2\gb\src\main.c:185: paused = 0;
+                                    556 ;C:\dev\AI\robbo-port2\gb\src\main.c:186: move_delay = 0;
+    0000027C AF               [ 4]  557 	xor	a, a
+    0000027D EAr01r00         [16]  558 	ld	(#_paused), a
+    00000280 EAr02r00         [16]  559 	ld	(#_move_delay),a
+                                    560 ;C:\dev\AI\robbo-port2\gb\src\main.c:187: tick_timer = 0;
+    00000283 AF               [ 4]  561 	xor	a, a
+    00000284 EAr03r00         [16]  562 	ld	(#_tick_timer),a
+                                    563 ;C:\dev\AI\robbo-port2\gb\src\main.c:188: prev = pad;
+    00000287 F8 00            [12]  564 	ldhl	sp,	#0
+    00000289 71               [ 8]  565 	ld	(hl), c
+                                    566 ;C:\dev\AI\robbo-port2\gb\src\main.c:189: continue;
+    0000028A C3r1Cr00         [16]  567 	jp	00179$
+    0000028D                        568 00177$:
+                                    569 ;C:\dev\AI\robbo-port2\gb\src\main.c:192: prev = pad;
+    0000028D F8 00            [12]  570 	ldhl	sp,	#0
+    0000028F 71               [ 8]  571 	ld	(hl), c
+    00000290 C3r1Cr00         [16]  572 	jp	00179$
+                                    573 ;C:\dev\AI\robbo-port2\gb\src\main.c:194: }
+    00000293 33               [ 8]  574 	inc	sp
+    00000294 33               [ 8]  575 	inc	sp
+    00000295 C9               [16]  576 	ret
+                                    577 	.area _CODE
+                                    578 	.area _INITIALIZER
+    00000000                        579 __xinit__level:
+    00000000 01                     580 	.db #0x01	; 1
+    00000001                        581 __xinit__paused:
+    00000001 00                     582 	.db #0x00	; 0
+    00000002                        583 __xinit__move_delay:
+    00000002 00                     584 	.db #0x00	; 0
+    00000003                        585 __xinit__tick_timer:
+    00000003 00                     586 	.db #0x00	; 0
+    00000004                        587 __xinit__pause_draw:
+    00000004 00                     588 	.db #0x00	; 0
+    00000005                        589 __xinit__game_complete:
+    00000005 00                     590 	.db #0x00	; 0
+                                    591 	.area _CABS (ABS)
