@@ -55,6 +55,7 @@ SPRITES: dict[str, tuple[int, int]] = {
     "TURRET_L": (7, 4),
     "TURRET_U": (8, 4),
     "TELEPORT_0": (0, 4),
+    "TELEPORT_1": (1, 4),
     "EXPLOSION_0": (0, 7),
     "EXPLOSION_1": (1, 7),
     "EXPLOSION_2": (2, 7),
@@ -402,18 +403,6 @@ def emit(metatiles: dict[str, list[list[int]]], pool: TilePool,
     lines.append("")
     lines.append(f"const uint8_t metatile_count = {len(mt_names)};")
     lines.append("")
-    lines.append("/* Every 16x16 cell in tiles_dmg.png, row-major.  These tile indices")
-    lines.append(" * refer to the full sheet pool stored in bank 8, not to the")
-    lines.append(" * currently loaded active tileset. */")
-    lines.append(f"const uint8_t sheet_metatile_tiles[{len(sheet_cells) * 4}] = {{")
-    for cell_index, cell in enumerate(sheet_cells):
-        vals = []
-        for q in quadrants(cell):
-            vals.append(sheet_pool.index[to_tile_bytes(q)])
-        row, col = divmod(cell_index, 11)
-        lines.append(f"    {vals[0]}, {vals[1]}, {vals[2]}, {vals[3]},  /* {cell_index} r{row}c{col} */")
-    lines.append("};")
-    lines.append("")
     lines.append(f"const uint8_t sheet_tile_count = {len(sheet_pool.data)};")
     lines.append("")
     lines.append("const uint8_t digit_tiles[10][2] = {")
@@ -460,6 +449,16 @@ def emit(metatiles: dict[str, list[list[int]]], pool: TilePool,
     ]
     for i, data in enumerate(sheet_pool.data):
         sheet_lines.append("    " + ", ".join(f"0x{b:02X}" for b in data) + f",  /* {i} {sheet_pool.names[i]} */")
+    sheet_lines.append("};")
+    sheet_lines.append("")
+    sheet_lines.append("/* Every 16x16 cell in tiles_dmg.png, row-major. */")
+    sheet_lines.append(f"const uint8_t sheet_metatile_tiles[{len(sheet_cells) * 4}] = {{")
+    for cell_index, cell in enumerate(sheet_cells):
+        vals = []
+        for q in quadrants(cell):
+            vals.append(sheet_pool.index[to_tile_bytes(q)])
+        row, col = divmod(cell_index, 11)
+        sheet_lines.append(f"    {vals[0]}, {vals[1]}, {vals[2]}, {vals[3]},  /* {cell_index} r{row}c{col} */")
     sheet_lines.append("};")
     sheet_lines.append("")
     sheet_lines.append("void sheet_load_tiles(uint8_t first, uint8_t count, uint8_t dest) BANKED")

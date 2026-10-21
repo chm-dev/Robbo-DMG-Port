@@ -8,9 +8,9 @@ Symbol Table
     .__.CPU.                                                    =   00000000 L
     .__.H$L.                                                    =   00000000 L
     _set_bkg_data                                                   ******** GX
-  8 _sheet_load_metatile                                            00000FCB GR
+  8 _sheet_load_metatile                                            0000112B GR
   8 _sheet_load_tiles                                               00000000 GR
-    _sheet_metatile_tiles                                           ******** GX
+  8 _sheet_metatile_tiles                                           00000FCB GR
   8 _sheet_tiles_data                                               0000001B GR
     b_sheet_load_metatile                                       =   00000008 G
     b_sheet_load_tiles                                          =   00000008 G
@@ -29,7 +29,7 @@ Area Table
    5 _HOME                                      size        0   flags    0
    6 _GSINIT                                    size        0   flags    0
    7 _GSFINAL                                   size        0   flags    0
-   8 _CODE_8                                    size     1012   flags    0
+   8 _CODE_8                                    size     1172   flags    0
    9 _INITIALIZER                               size        0   flags    0
    A _CABS                                      size        0   flags    8
 

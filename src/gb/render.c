@@ -16,12 +16,6 @@ static uint8_t dirty_count;
 static const uint8_t turret_mt[4] = {
     MT_TURRET_R, MT_TURRET_D, MT_TURRET_L, MT_TURRET_U
 };
-static const uint8_t bullet_mt[4] = {
-    MT_BULLET_0,  /* right: horizontal */
-    MT_BULLET_2,  /* down: vertical */
-    MT_BULLET_1,  /* left: horizontal */
-    MT_BULLET_3   /* up: vertical */
-};
 /* Source sprite order is [direction * 2 + step]: right, down, left, up. */
 static const uint8_t robbo_mt_base[4] = { 0, 2, 4, 6 };
 
@@ -35,23 +29,29 @@ uint8_t render_metatile_for_cell(uint8_t type, uint8_t extra)
         case CT_STONE:      return MT_STONE;
         case CT_PUSHABLE:   return MT_PUSHABLE;
         case CT_DOOR:       return MT_DOOR;
-        case CT_SPACESHIP:  return ((extra & 1) || screws_left == 0) ? MT_SPACESHIP_1 : MT_SPACESHIP_0;
+        case CT_SPACESHIP:
+            if (screws_left == 0 || (extra & 1)) {
+                return (anim_frame & 1) ? MT_SPACESHIP_1 : MT_SPACESHIP_0;
+            }
+            return MT_SPACESHIP_1;
         case CT_QUESTION:   return MT_QUESTION;
         case CT_BOMB:       return MT_BOMB;
         case CT_KEY:        return MT_KEY;
         case CT_SCREW:      return MT_SCREW;
         case CT_AMMO:       return MT_AMMO;
         case CT_TURRET:     return turret_mt[extra & 3];
-        case CT_TELEPORT:   return MT_TELEPORT_0;
-        /* Sprite animation is intentionally static for now; the second
-         * frames remain available in the sheet for later use. */
-        case CT_MUSTACHE:   return MT_MUSTACHE_0;
-        case CT_BUTTERFLY:  return MT_BUTTERFLY_0;
-        case CT_BEAR:       return (extra & 4) ? MT_BEAR_2 : MT_BEAR_0;
+        case CT_TELEPORT:   return MT_TELEPORT_0 + (anim_frame & 1);
+        case CT_MUSTACHE:   return MT_MUSTACHE_0 + (anim_frame & 1);
+        case CT_BUTTERFLY:  return MT_BUTTERFLY_0 + (anim_frame & 1);
+        case CT_BEAR:       return ((extra & 4) ? MT_BEAR_2 : MT_BEAR_0) + (anim_frame & 1);
         case CT_LAVA:       return MT_LAVA_0;
         case CT_MAGNET:     return (extra & 2) ? MT_MAGNET_1 : MT_MAGNET_0;
-        case CT_ROBBO:      return MT_ROBBO_0 + robbo_mt_base[extra & 3];
-        case CT_BULLET:     return bullet_mt[extra & 3];
+        case CT_ROBBO:      return MT_ROBBO_0 + robbo_mt_base[extra & 3] +
+                                   (robbo_step_anim & 1);
+        case CT_BULLET: {
+            uint8_t dir = extra & 3;
+            return MT_BULLET_0 + (uint8_t)((dir & 1) * 2) + (anim_frame & 1);
+        }
         case CT_EXPLOSION: {
             uint8_t t = extra & 7;
             uint8_t frame;

@@ -5,8 +5,8 @@
 #include <stdint.h>
 #include <gb/gb.h>
 
-#define TILESET_COUNT 233
-#define METATILE_COUNT 51
+#define TILESET_COUNT 237
+#define METATILE_COUNT 52
 #define SHEET_COLS 11
 #define SHEET_ROWS 8
 #define SHEET_CELL_COUNT 88
@@ -30,39 +30,40 @@
 #define MT_TURRET_L 15
 #define MT_TURRET_U 16
 #define MT_TELEPORT_0 17
-#define MT_EXPLOSION_0 18
-#define MT_EXPLOSION_1 19
-#define MT_EXPLOSION_2 20
-#define MT_EXPLOSION_3 21
-#define MT_BULLET_0 22
-#define MT_BULLET_1 23
-#define MT_BULLET_2 24
-#define MT_BULLET_3 25
-#define MT_MUSTACHE_0 26
-#define MT_MUSTACHE_1 27
-#define MT_BUTTERFLY_0 28
-#define MT_BUTTERFLY_1 29
-#define MT_LAVA_0 30
-#define MT_LAVA_1 31
-#define MT_MAGNET_0 32
-#define MT_MAGNET_1 33
-#define MT_HUD_SCREW 34
-#define MT_HUD_AMMO 35
-#define MT_HUD_KEY 36
-#define MT_HUD_LIVES 37
-#define MT_HUD_PLANET 38
-#define MT_BEAR_0 39
-#define MT_BEAR_1 40
-#define MT_BEAR_2 41
-#define MT_BEAR_3 42
-#define MT_ROBBO_0 43
-#define MT_ROBBO_1 44
-#define MT_ROBBO_2 45
-#define MT_ROBBO_3 46
-#define MT_ROBBO_4 47
-#define MT_ROBBO_5 48
-#define MT_ROBBO_6 49
-#define MT_ROBBO_7 50
+#define MT_TELEPORT_1 18
+#define MT_EXPLOSION_0 19
+#define MT_EXPLOSION_1 20
+#define MT_EXPLOSION_2 21
+#define MT_EXPLOSION_3 22
+#define MT_BULLET_0 23
+#define MT_BULLET_1 24
+#define MT_BULLET_2 25
+#define MT_BULLET_3 26
+#define MT_MUSTACHE_0 27
+#define MT_MUSTACHE_1 28
+#define MT_BUTTERFLY_0 29
+#define MT_BUTTERFLY_1 30
+#define MT_LAVA_0 31
+#define MT_LAVA_1 32
+#define MT_MAGNET_0 33
+#define MT_MAGNET_1 34
+#define MT_HUD_SCREW 35
+#define MT_HUD_AMMO 36
+#define MT_HUD_KEY 37
+#define MT_HUD_LIVES 38
+#define MT_HUD_PLANET 39
+#define MT_BEAR_0 40
+#define MT_BEAR_1 41
+#define MT_BEAR_2 42
+#define MT_BEAR_3 43
+#define MT_ROBBO_0 44
+#define MT_ROBBO_1 45
+#define MT_ROBBO_2 46
+#define MT_ROBBO_3 47
+#define MT_ROBBO_4 48
+#define MT_ROBBO_5 49
+#define MT_ROBBO_6 50
+#define MT_ROBBO_7 51
 
 extern const uint8_t tileset_data[];
 extern const uint8_t tileset_count;

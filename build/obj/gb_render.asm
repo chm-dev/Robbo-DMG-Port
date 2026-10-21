@@ -64,7 +64,7 @@ _dirty_count:
 ; code
 ;--------------------------------------------------------
 	.area _CODE
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:28: uint8_t render_metatile_for_cell(uint8_t type, uint8_t extra)
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:22: uint8_t render_metatile_for_cell(uint8_t type, uint8_t extra)
 ;	---------------------------------
 ; Function render_metatile_for_cell
 ; ---------------------------------
@@ -73,7 +73,7 @@ _render_metatile_for_cell::
 	dec	sp
 	ldhl	sp,	#1
 	ld	(hl-), a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:30: if (IS_WALL(type)) return MT_WALL;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:24: if (IS_WALL(type)) return MT_WALL;
 	ld	a, e
 	ld	(hl+), a
 	ld	a, (hl)
@@ -83,16 +83,16 @@ _render_metatile_for_cell::
 	sub	a, (hl)
 	jr	C, 00102$
 	ld	a, #0x01
-	jp	00129$
+	jp	00132$
 00102$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:32: switch (type) {
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:26: switch (type) {
 	ld	a, #0x1c
 	ldhl	sp,	#1
 	sub	a, (hl)
-	jp	C, 00127$
+	jp	C, 00130$
 	ld	c, (hl)
 	ld	b, #0x00
-	ld	hl, #00199$
+	ld	hl, #00205$
 	add	hl, bc
 	add	hl, bc
 	ld	c, (hl)
@@ -100,93 +100,104 @@ _render_metatile_for_cell::
 	ld	h, (hl)
 	ld	l, c
 	jp	(hl)
-00199$:
+00205$:
 	.dw	00104$
-	.dw	00127$
-	.dw	00127$
-	.dw	00127$
-	.dw	00127$
-	.dw	00127$
-	.dw	00127$
-	.dw	00127$
-	.dw	00127$
+	.dw	00130$
+	.dw	00130$
+	.dw	00130$
+	.dw	00130$
+	.dw	00130$
+	.dw	00130$
+	.dw	00130$
+	.dw	00130$
 	.dw	00105$
 	.dw	00106$
 	.dw	00107$
 	.dw	00108$
 	.dw	00109$
-	.dw	00110$
-	.dw	00111$
-	.dw	00112$
 	.dw	00113$
-	.dw	00115$
 	.dw	00114$
+	.dw	00115$
 	.dw	00116$
-	.dw	00117$
 	.dw	00118$
+	.dw	00117$
 	.dw	00119$
 	.dw	00120$
 	.dw	00121$
 	.dw	00122$
 	.dw	00123$
 	.dw	00124$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:33: case CT_EMPTY:      return MT_EMPTY;
+	.dw	00125$
+	.dw	00126$
+	.dw	00127$
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:27: case CT_EMPTY:      return MT_EMPTY;
 00104$:
 	xor	a, a
-	jp	00129$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:34: case CT_GROUND:     return MT_GROUND;
+	jp	00132$
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:28: case CT_GROUND:     return MT_GROUND;
 00105$:
 	ld	a, #0x02
-	jp	00129$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:35: case CT_STONE:      return MT_STONE;
+	jp	00132$
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:29: case CT_STONE:      return MT_STONE;
 00106$:
 	ld	a, #0x03
-	jp	00129$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:36: case CT_PUSHABLE:   return MT_PUSHABLE;
+	jp	00132$
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:30: case CT_PUSHABLE:   return MT_PUSHABLE;
 00107$:
 	ld	a, #0x04
-	jp	00129$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:37: case CT_DOOR:       return MT_DOOR;
+	jp	00132$
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:31: case CT_DOOR:       return MT_DOOR;
 00108$:
 	ld	a, #0x05
-	jp	00129$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:38: case CT_SPACESHIP:  return ((extra & 1) || screws_left == 0) ? MT_SPACESHIP_1 : MT_SPACESHIP_0;
+	jp	00132$
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:32: case CT_SPACESHIP:
 00109$:
-	ldhl	sp,	#0
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:33: if (screws_left == 0 || (extra & 1)) {
+	ld	hl, #_screws_left
 	ld	a, (hl)
-	and	a, #0x01
-	jr	NZ, 00134$
-	ld	a, (#_screws_left)
 	or	a, a
-	jr	NZ, 00131$
-00134$:
-	ld	a, #0x07
-	jp	00129$
-00131$:
-	ld	a, #0x06
-	jp	00129$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:39: case CT_QUESTION:   return MT_QUESTION;
+	jr	Z, 00110$
+	push	hl
+	ldhl	sp,	#2
+	bit	0, (hl)
+	pop	hl
+	jr	Z, 00111$
 00110$:
-	ld	a, #0x08
-	jp	00129$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:40: case CT_BOMB:       return MT_BOMB;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:34: return (anim_frame & 1) ? MT_SPACESHIP_1 : MT_SPACESHIP_0;
+	ld	a, (_anim_frame)
+	rrca
+	jr	NC, 00134$
+	ld	a, #0x07
+	jp	00132$
+00134$:
+	ld	a, #0x06
+	jp	00132$
 00111$:
-	ld	a, #0x09
-	jp	00129$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:41: case CT_KEY:        return MT_KEY;
-00112$:
-	ld	a, #0x0a
-	jp	00129$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:42: case CT_SCREW:      return MT_SCREW;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:36: return MT_SPACESHIP_1;
+	ld	a, #0x07
+	jp	00132$
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:37: case CT_QUESTION:   return MT_QUESTION;
 00113$:
-	ld	a, #0x0b
-	jr	00129$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:43: case CT_AMMO:       return MT_AMMO;
+	ld	a, #0x08
+	jp	00132$
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:38: case CT_BOMB:       return MT_BOMB;
 00114$:
-	ld	a, #0x0c
-	jr	00129$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:44: case CT_TURRET:     return turret_mt[extra & 3];
+	ld	a, #0x09
+	jp	00132$
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:39: case CT_KEY:        return MT_KEY;
 00115$:
+	ld	a, #0x0a
+	jp	00132$
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:40: case CT_SCREW:      return MT_SCREW;
+00116$:
+	ld	a, #0x0b
+	jp	00132$
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:41: case CT_AMMO:       return MT_AMMO;
+00117$:
+	ld	a, #0x0c
+	jp	00132$
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:42: case CT_TURRET:     return turret_mt[extra & 3];
+00118$:
 	ld	bc, #_turret_mt+0
 	ldhl	sp,	#0
 	ld	a, (hl)
@@ -195,49 +206,57 @@ _render_metatile_for_cell::
 	ld	h, #0x00
 	add	hl, bc
 	ld	a, (hl)
-	jr	00129$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:45: case CT_TELEPORT:   return MT_TELEPORT_0;
-00116$:
-	ld	a, #0x11
-	jr	00129$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:48: case CT_MUSTACHE:   return MT_MUSTACHE_0;
-00117$:
-	ld	a, #0x1a
-	jr	00129$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:49: case CT_BUTTERFLY:  return MT_BUTTERFLY_0;
-00118$:
-	ld	a, #0x1c
-	jr	00129$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:50: case CT_BEAR:       return (extra & 4) ? MT_BEAR_2 : MT_BEAR_0;
+	jp	00132$
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:43: case CT_TELEPORT:   return MT_TELEPORT_0 + (anim_frame & 1);
 00119$:
+	ld	a, (_anim_frame)
+	and	a, #0x01
+	add	a, #0x11
+	jr	00132$
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:44: case CT_MUSTACHE:   return MT_MUSTACHE_0 + (anim_frame & 1);
+00120$:
+	ld	a, (_anim_frame)
+	and	a, #0x01
+	add	a, #0x1b
+	jr	00132$
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:45: case CT_BUTTERFLY:  return MT_BUTTERFLY_0 + (anim_frame & 1);
+00121$:
+	ld	a, (_anim_frame)
+	and	a, #0x01
+	add	a, #0x1d
+	jr	00132$
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:46: case CT_BEAR:       return ((extra & 4) ? MT_BEAR_2 : MT_BEAR_0) + (anim_frame & 1);
+00122$:
 	push	hl
 	ldhl	sp,	#2
 	bit	2, (hl)
 	pop	hl
-	jr	Z, 00136$
-	ld	a, #0x29
-	jr	00129$
-00136$:
-	ld	a, #0x27
-	jr	00129$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:51: case CT_LAVA:       return MT_LAVA_0;
-00120$:
-	ld	a, #0x1e
-	jr	00129$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:52: case CT_MAGNET:     return (extra & 2) ? MT_MAGNET_1 : MT_MAGNET_0;
-00121$:
+	ld	c, #0x2a
+	jr	NZ, 00137$
+	ld	c, #0x28
+00137$:
+	ld	a, (_anim_frame)
+	and	a, #0x01
+	add	a, c
+	jr	00132$
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:47: case CT_LAVA:       return MT_LAVA_0;
+00123$:
+	ld	a, #0x1f
+	jr	00132$
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:48: case CT_MAGNET:     return (extra & 2) ? MT_MAGNET_1 : MT_MAGNET_0;
+00124$:
 	push	hl
 	ldhl	sp,	#2
 	bit	1, (hl)
 	pop	hl
 	jr	Z, 00138$
-	ld	a, #0x21
-	jr	00129$
+	ld	a, #0x22
+	jr	00132$
 00138$:
-	ld	a, #0x20
-	jr	00129$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:53: case CT_ROBBO:      return MT_ROBBO_0 + robbo_mt_base[extra & 3];
-00122$:
+	ld	a, #0x21
+	jr	00132$
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:49: case CT_ROBBO:      return MT_ROBBO_0 + robbo_mt_base[extra & 3] +
+00125$:
 	ld	bc, #_robbo_mt_base+0
 	ldhl	sp,	#0
 	ld	a, (hl)
@@ -246,30 +265,38 @@ _render_metatile_for_cell::
 	ld	h, #0x00
 	add	hl, bc
 	ld	a, (hl)
-	add	a, #0x2b
-	jr	00129$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:54: case CT_BULLET:     return bullet_mt[extra & 3];
-00123$:
-	ld	bc, #_bullet_mt+0
+	add	a, #0x2c
+	ld	c, a
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:50: (robbo_step_anim & 1);
+	ld	a, (_robbo_step_anim)
+	and	a, #0x01
+	add	a, c
+	jr	00132$
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:51: case CT_BULLET: {
+00126$:
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:52: uint8_t dir = extra & 3;
 	ldhl	sp,	#0
 	ld	a, (hl)
-	and	a, #0x03
-	ld	l, a
-	ld	h, #0x00
-	add	hl, bc
-	ld	a, (hl)
-	jr	00129$
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:53: return MT_BULLET_0 + (uint8_t)((dir & 1) * 2) + (anim_frame & 1);
+	and	a, #0x1
+	add	a, a
+	add	a, #0x17
+	ld	c, a
+	ld	a, (_anim_frame)
+	and	a, #0x01
+	add	a, c
+	jr	00132$
 ;C:\dev\AI\robbo-port2\gb\src\gb\render.c:55: case CT_EXPLOSION: {
-00124$:
+00127$:
 ;C:\dev\AI\robbo-port2\gb\src\gb\render.c:56: uint8_t t = extra & 7;
 	ldhl	sp,	#0
 	ld	a, (hl)
 	and	a, #0x07
 ;C:\dev\AI\robbo-port2\gb\src\gb\render.c:58: if (t > 5) t = 5;
 	cp	a, #0x06
-	jr	C, 00126$
+	jr	C, 00129$
 	ld	a, #0x05
-00126$:
+00129$:
 ;C:\dev\AI\robbo-port2\gb\src\gb\render.c:59: frame = (t >= 3) ? (uint8_t)(6 - t) : t;
 	cp	a, #0x03
 	jr	C, 00140$
@@ -278,13 +305,13 @@ _render_metatile_for_cell::
 	sub	a, c
 00140$:
 ;C:\dev\AI\robbo-port2\gb\src\gb\render.c:60: return MT_EXPLOSION_0 + frame;
-	add	a, #0x12
-	jr	00129$
+	add	a, #0x13
+	jr	00132$
 ;C:\dev\AI\robbo-port2\gb\src\gb\render.c:62: default:            return MT_EMPTY;
-00127$:
+00130$:
 	xor	a, a
 ;C:\dev\AI\robbo-port2\gb\src\gb\render.c:63: }
-00129$:
+00132$:
 ;C:\dev\AI\robbo-port2\gb\src\gb\render.c:64: }
 	inc	sp
 	inc	sp
@@ -294,11 +321,6 @@ _turret_mt:
 	.db #0x0e	; 14
 	.db #0x0f	; 15
 	.db #0x10	; 16
-_bullet_mt:
-	.db #0x16	; 22
-	.db #0x18	; 24
-	.db #0x17	; 23
-	.db #0x19	; 25
 _robbo_mt_base:
 	.db #0x00	; 0
 	.db #0x02	; 2
@@ -552,7 +574,7 @@ _render_init::
 ;C:\dev\AI\robbo-port2\gb\src\gb\render.c:134: set_bkg_data(0, TILESET_COUNT, tileset_data);
 	ld	de, #_tileset_data
 	push	de
-	ld	hl, #0xe900
+	ld	hl, #0xed00
 	push	hl
 	call	_set_bkg_data
 	add	sp, #4
@@ -692,13 +714,13 @@ _render_hud::
 	add	sp, #-56
 ;C:\dev\AI\robbo-port2\gb\src\gb\render.c:177: uint8_t icons[4] = {
 	ldhl	sp,	#46
-	ld	a, #0x22
-	ld	(hl+), a
 	ld	a, #0x23
 	ld	(hl+), a
 	ld	a, #0x24
 	ld	(hl+), a
-	ld	(hl), #0x26
+	ld	a, #0x25
+	ld	(hl+), a
+	ld	(hl), #0x27
 ;C:\dev\AI\robbo-port2\gb\src\gb\render.c:181: for (i = 0; i < 40; i++) win[i] = hud_bg_tile;
 	ldhl	sp,	#2
 	ld	c, l
@@ -827,7 +849,7 @@ _render_hud::
 ;C:\dev\AI\robbo-port2\gb\src\gb\render.c:196: x = hud_x[g];
 	ld	(hl+), a
 	inc	hl
-	ld	de, #_render_hud_hud_x_30000_197
+	ld	de, #_render_hud_hud_x_30000_200
 	ld	l, (hl)
 	ld	h, #0x00
 	add	hl, de
@@ -1036,7 +1058,7 @@ _render_hud::
 ;C:\dev\AI\robbo-port2\gb\src\gb\render.c:209: }
 	add	sp, #62
 	ret
-_render_hud_hud_x_30000_197:
+_render_hud_hud_x_30000_200:
 	.db #0x00	; 0
 	.db #0x05	; 5
 	.db #0x0b	; 11

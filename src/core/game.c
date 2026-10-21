@@ -56,6 +56,7 @@ uint8_t cam_target_x;
 uint8_t cam_target_y;
 uint8_t cam_pan_timer;
 uint8_t anim_frame;
+uint8_t robbo_step_anim;
 
 #define MAX_SLIDING 32
 static uint16_t sliding_boxes[MAX_SLIDING];
@@ -68,16 +69,22 @@ static uint16_t bullet_cells[MAX_BULLETS];
 #define MAX_BOMB_LIST 160
 #define MAX_EXPLOSION_LIST 496
 #define MAX_MAGNET_LIST 16
+#define MAX_SPACESHIP_LIST 8
+#define MAX_TELEPORT_LIST 24
 static uint16_t turret_list[MAX_TURRET_LIST];
 static uint16_t enemy_list[MAX_ENEMY_LIST];
 static uint16_t bomb_list[MAX_BOMB_LIST];
 static uint16_t explosion_list[MAX_EXPLOSION_LIST];
 static uint16_t magnet_list[MAX_MAGNET_LIST];
+static uint16_t spaceship_list[MAX_SPACESHIP_LIST];
+static uint16_t teleport_list[MAX_TELEPORT_LIST];
 static uint8_t turret_count;
 static uint8_t enemy_count;
 static uint8_t bomb_count;
 static uint16_t explosion_count;
 static uint8_t magnet_count;
+static uint8_t spaceship_count;
+static uint8_t teleport_count;
 static uint8_t bullet_count;
 #define BULLET_LASER_WAIT   1
 #define BULLET_LASER_RETURN 2
@@ -159,6 +166,7 @@ void game_load_level(uint8_t level)
     transition_active = 0;
     wipe_col = 0;
     anim_frame = 0;
+    robbo_step_anim = 0;
     render_flash_set(0);
 
     render_level();
@@ -274,6 +282,12 @@ static void move_robbo_to(uint8_t nx, uint8_t ny, uint8_t dir)
     robbo_y = ny;
     robbo_dir = dir;
     render_cell(robbo_x, robbo_y);
+}
+
+static void robbo_step_to(uint8_t nx, uint8_t ny, uint8_t dir)
+{
+    robbo_step_anim ^= 1;
+    move_robbo_to(nx, ny, dir);
 }
 
 static const int8_t tp_dx[4] = { 1, 0, -1, 0 };
@@ -455,7 +469,7 @@ uint8_t game_try_move(uint8_t dir)
     }
 
     if (target == CT_EMPTY) {
-        move_robbo_to(nx, ny, dir);
+        robbo_step_to(nx, ny, dir);
         sfx_play_def(&sfx_robbo_step);
         return 1;
     }
@@ -470,7 +484,7 @@ uint8_t game_try_move(uint8_t dir)
             render_flash_set(1);
             refresh_spaceships();
         }
-        move_robbo_to(nx, ny, dir);
+        robbo_step_to(nx, ny, dir);
         sfx_play_def(&sfx_bolt_pickup);
         return 1;
     }
@@ -481,7 +495,7 @@ uint8_t game_try_move(uint8_t dir)
         map_type[new_idx] = CT_EMPTY;
         map_extra[new_idx] = 0;
         hud_dirty = 1;
-        move_robbo_to(nx, ny, dir);
+        robbo_step_to(nx, ny, dir);
         /* The original POKEY table has no ammo sound; keep the step. */
         sfx_play_def(&sfx_robbo_step);
         return 1;
@@ -493,7 +507,7 @@ uint8_t game_try_move(uint8_t dir)
         map_type[new_idx] = CT_EMPTY;
         map_extra[new_idx] = 0;
         hud_dirty = 1;
-        move_robbo_to(nx, ny, dir);
+        robbo_step_to(nx, ny, dir);
         sfx_play_def(&sfx_key_pickup);
         return 1;
     }
@@ -563,7 +577,7 @@ uint8_t game_try_move(uint8_t dir)
         render_cell(bx, by);
         render_cell(nx, ny);
         if (target == CT_PUSHABLE) add_sliding(beyond_idx);
-        move_robbo_to(nx, ny, dir);
+        robbo_step_to(nx, ny, dir);
         sfx_play_def(&sfx_push);
         return 1;
     }
@@ -1109,6 +1123,8 @@ static void collect_actors(void)
     bomb_count = 0;
     explosion_count = 0;
     magnet_count = 0;
+    spaceship_count = 0;
+    teleport_count = 0;
 
     for (idx = 0; idx < MAP_CELLS; idx++) {
         uint8_t type = map_type[idx];
@@ -1123,6 +1139,10 @@ static void collect_actors(void)
             if (explosion_count < MAX_EXPLOSION_LIST) explosion_list[explosion_count++] = idx;
         } else if (type == CT_MAGNET) {
             if (magnet_count < MAX_MAGNET_LIST) magnet_list[magnet_count++] = idx;
+        } else if (type == CT_SPACESHIP) {
+            if (spaceship_count < MAX_SPACESHIP_LIST) spaceship_list[spaceship_count++] = idx;
+        } else if (type == CT_TELEPORT) {
+            if (teleport_count < MAX_TELEPORT_LIST) teleport_list[teleport_count++] = idx;
         }
     }
 }
@@ -1223,6 +1243,26 @@ static void magnet_tick(void)
                 map_type[(uint16_t)ty * MAP_W + (uint8_t)tx] == CT_EMPTY) {
                 move_robbo_to((uint8_t)tx, (uint8_t)ty, robbo_dir);
             }
+        }
+    }
+}
+
+static void animate_static_objects(void)
+{
+    uint8_t i;
+
+    for (i = 0; i < teleport_count; i++) {
+        uint16_t idx = teleport_list[i];
+        if (map_type[idx] == CT_TELEPORT) {
+            render_cell(idx % MAP_W, idx / MAP_W);
+        }
+    }
+
+    for (i = 0; i < spaceship_count; i++) {
+        uint16_t idx = spaceship_list[i];
+        if (map_type[idx] == CT_SPACESHIP &&
+            (screws_left == 0 || (map_extra[idx] & 1))) {
+            render_cell(idx % MAP_W, idx / MAP_W);
         }
     }
 }
@@ -1380,6 +1420,7 @@ void game_tick(void)
             uint8_t lstate = (be >> 5) & 3;
 
             if (lstate == BULLET_LASER_WAIT) {
+                render_cell(bx, by);
                 i++;
                 continue;
             }
@@ -1582,5 +1623,6 @@ void game_tick(void)
         }
     }
 
+    animate_static_objects();
     magnet_tick();
 }
