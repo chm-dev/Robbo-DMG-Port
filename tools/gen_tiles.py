@@ -249,7 +249,7 @@ def digit16(ch: str) -> tuple[list[list[int]], list[list[int]]]:
     for row in glyph:
         pixels.append(row)
         pixels.append(row)
-    grid = [[2] * 8 for _ in range(16)]
+    grid = [[3] * 8 for _ in range(16)]
     for y in range(14):
         for x in range(5):
             if pixels[y][x] == "#":
@@ -375,7 +375,8 @@ def build_mock(metatiles: dict[str, list[list[int]]]) -> None:
 
 def emit(metatiles: dict[str, list[list[int]]], pool: TilePool,
          digit_tiles: dict[str, tuple[int, int]], font_tiles: dict[str, int],
-         sheet_cells: list[list[list[int]]], sheet_pool: TilePool) -> None:
+         hud_bg_tile: int, sheet_cells: list[list[list[int]]],
+         sheet_pool: TilePool) -> None:
     GEN.mkdir(parents=True, exist_ok=True)
     mt_names = list(metatiles.keys())
     mt_index = {name: i for i, name in enumerate(mt_names)}
@@ -386,6 +387,7 @@ def emit(metatiles: dict[str, list[list[int]]], pool: TilePool,
         '#include "tiles.h"',
         "",
         f"const uint8_t tileset_count = {len(pool.data)};",
+        f"const uint8_t hud_bg_tile = {hud_bg_tile};",
         "",
         f"const uint8_t metatile_tiles[{len(mt_names) * 4}] = {{",
     ]
@@ -498,6 +500,7 @@ def emit(metatiles: dict[str, list[list[int]]], pool: TilePool,
         "",
         "extern const uint8_t tileset_data[];",
         "extern const uint8_t tileset_count;",
+        "extern const uint8_t hud_bg_tile;",
         "extern const uint8_t metatile_tiles[];",
         "extern const uint8_t metatile_count;",
         "extern const uint8_t sheet_metatile_tiles[];",
@@ -513,9 +516,14 @@ def emit(metatiles: dict[str, list[list[int]]], pool: TilePool,
     (GEN / "tiles.h").write_text("\n".join(hlines) + "\n", encoding="utf-8")
 
 
+# The sheet's digit glyphs sit on an 8.5px pitch (17px in the 2x source),
+# so use their actual rounded start positions rather than a uniform 8px step.
+DIGIT_X = [18, 27, 35, 44, 52, 60, 69, 78, 86, 95]
+
+
 def sheet_digit(image: Image.Image, digit: int) -> tuple[list[list[int]], list[list[int]]]:
-    """Extract one 8x16 HUD digit from row 6 of the sheet."""
-    x0 = 17 + digit * 8
+    """Extract one native 8x16 HUD digit from row 6 of the sheet."""
+    x0 = DIGIT_X[digit]
     y0 = 1 + 6 * 17
     top = [[image.getpixel((x0 + x, y0 + y)) for x in range(8)] for y in range(8)]
     bottom = [[image.getpixel((x0 + x, y0 + 8 + y)) for x in range(8)] for y in range(8)]
@@ -540,7 +548,10 @@ def main() -> None:
             sheet_pool.add(q, f"sheet.{cell_index}.q")
 
     pool = TilePool()
-    # Add metatile quadrants first so the tile indices are ordered by sprite.
+    # Keep a solid black HUD background tile in the low, reliably loaded tile
+    # range; it is used for the window rows behind the HUD items.
+    hud_bg_tile = pool.add([[3] * 8 for _ in range(8)], "hud.bg")
+    # Add metatile quadrants next so the remaining tile indices follow sprites.
     for name in metatiles:
         for q in quadrants(metatiles[name]):
             pool.add(q, f"{name}.q")
@@ -556,7 +567,7 @@ def main() -> None:
 
     build_contact_sheet(metatiles)
     build_mock(metatiles)
-    emit(metatiles, pool, digit_tiles, font_tiles, sheet_cells, sheet_pool)
+    emit(metatiles, pool, digit_tiles, font_tiles, hud_bg_tile, sheet_cells, sheet_pool)
 
     print(f"Metatiles: {len(metatiles)}")
     print(f"Active 8x8 tiles: {len(pool.data)} / 256")

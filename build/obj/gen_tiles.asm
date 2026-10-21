@@ -13,6 +13,7 @@
 	.globl _sheet_metatile_tiles
 	.globl _metatile_count
 	.globl _metatile_tiles
+	.globl _hud_bg_tile
 	.globl _tileset_count
 ;--------------------------------------------------------
 ; special function registers
@@ -48,28 +49,29 @@
 	.area _CODE
 	.area _CODE
 _tileset_count:
-	.db #0xed	; 237
+	.db #0xe9	; 233
+_hud_bg_tile:
+	.db #0x00	; 0
 _metatile_tiles:
-	.db #0x00	; 0
-	.db #0x00	; 0
-	.db #0x00	; 0
-	.db #0x00	; 0
 	.db #0x01	; 1
 	.db #0x01	; 1
 	.db #0x01	; 1
 	.db #0x01	; 1
 	.db #0x02	; 2
+	.db #0x02	; 2
+	.db #0x02	; 2
+	.db #0x02	; 2
 	.db #0x03	; 3
 	.db #0x04	; 4
 	.db #0x05	; 5
 	.db #0x06	; 6
-	.db #0x06	; 6
 	.db #0x07	; 7
 	.db #0x07	; 7
 	.db #0x08	; 8
 	.db #0x08	; 8
 	.db #0x09	; 9
 	.db #0x09	; 9
+	.db #0x0a	; 10
 	.db #0x0a	; 10
 	.db #0x0b	; 11
 	.db #0x0c	; 12
@@ -106,19 +108,19 @@ _metatile_tiles:
 	.db #0x2b	; 43
 	.db #0x2c	; 44
 	.db #0x2d	; 45
-	.db #0x2a	; 42
 	.db #0x2e	; 46
+	.db #0x2b	; 43
 	.db #0x2f	; 47
 	.db #0x30	; 48	'0'
 	.db #0x31	; 49	'1'
-	.db #0x2e	; 46
 	.db #0x32	; 50	'2'
+	.db #0x2f	; 47
 	.db #0x33	; 51	'3'
 	.db #0x34	; 52	'4'
 	.db #0x35	; 53	'5'
-	.db #0x2c	; 44
-	.db #0x33	; 51	'3'
 	.db #0x36	; 54	'6'
+	.db #0x2d	; 45
+	.db #0x34	; 52	'4'
 	.db #0x37	; 55	'7'
 	.db #0x38	; 56	'8'
 	.db #0x39	; 57	'9'
@@ -139,20 +141,20 @@ _metatile_tiles:
 	.db #0x48	; 72	'H'
 	.db #0x49	; 73	'I'
 	.db #0x4a	; 74	'J'
-	.db #0x4a	; 74	'J'
 	.db #0x4b	; 75	'K'
 	.db #0x4b	; 75	'K'
 	.db #0x4c	; 76	'L'
 	.db #0x4c	; 76	'L'
 	.db #0x4d	; 77	'M'
 	.db #0x4d	; 77	'M'
+	.db #0x4e	; 78	'N'
 	.db #0x4e	; 78	'N'
 	.db #0x4f	; 79	'O'
-	.db #0x4e	; 78	'N'
+	.db #0x50	; 80	'P'
 	.db #0x4f	; 79	'O'
 	.db #0x50	; 80	'P'
 	.db #0x51	; 81	'Q'
-	.db #0x50	; 80	'P'
+	.db #0x52	; 82	'R'
 	.db #0x51	; 81	'Q'
 	.db #0x52	; 82	'R'
 	.db #0x53	; 83	'S'
@@ -171,13 +173,13 @@ _metatile_tiles:
 	.db #0x60	; 96
 	.db #0x61	; 97	'a'
 	.db #0x62	; 98	'b'
-	.db #0x62	; 98	'b'
 	.db #0x63	; 99	'c'
 	.db #0x63	; 99	'c'
 	.db #0x64	; 100	'd'
 	.db #0x64	; 100	'd'
 	.db #0x65	; 101	'e'
 	.db #0x65	; 101	'e'
+	.db #0x66	; 102	'f'
 	.db #0x66	; 102	'f'
 	.db #0x67	; 103	'g'
 	.db #0x68	; 104	'h'
@@ -235,8 +237,8 @@ _metatile_tiles:
 	.db #0x9c	; 156
 	.db #0x9d	; 157
 	.db #0x9e	; 158
-	.db #0x93	; 147
 	.db #0x9f	; 159
+	.db #0x94	; 148
 	.db #0xa0	; 160
 	.db #0xa1	; 161
 	.db #0xa2	; 162
@@ -248,12 +250,13 @@ _metatile_tiles:
 	.db #0xa8	; 168
 	.db #0xa9	; 169
 	.db #0xaa	; 170
-	.db #0x9c	; 156
 	.db #0xab	; 171
+	.db #0x9d	; 157
 	.db #0xac	; 172
 	.db #0xad	; 173
 	.db #0xae	; 174
 	.db #0xaf	; 175
+	.db #0xb0	; 176
 _metatile_count:
 	.db #0x33	; 51	'3'
 _sheet_metatile_tiles:
@@ -612,26 +615,26 @@ _sheet_metatile_tiles:
 _sheet_tile_count:
 	.db #0xfb	; 251
 _digit_tiles:
-	.db #0xb0	; 176
 	.db #0xb1	; 177
 	.db #0xb2	; 178
-	.db #0xb2	; 178
+	.db #0xb3	; 179
 	.db #0xb3	; 179
 	.db #0xb4	; 180
 	.db #0xb5	; 181
+	.db #0xb4	; 180
 	.db #0xb6	; 182
 	.db #0xb7	; 183
+	.db #0xb3	; 179
 	.db #0xb8	; 184
 	.db #0xb9	; 185
 	.db #0xba	; 186
+	.db #0xb2	; 178
 	.db #0xbb	; 187
+	.db #0xb3	; 179
 	.db #0xbc	; 188
+	.db #0xb2	; 178
 	.db #0xbd	; 189
 	.db #0xbe	; 190
-	.db #0xbf	; 191
-	.db #0xc0	; 192
-	.db #0xc1	; 193
-	.db #0xc2	; 194
 _font_tiles:
 	.db #0xff	; 255
 	.db #0xff	; 255
@@ -665,39 +668,43 @@ _font_tiles:
 	.db #0xff	; 255
 	.db #0xff	; 255
 	.db #0xff	; 255
+	.db #0xe3	; 227
+	.db #0xe4	; 228
+	.db #0xff	; 255
+	.db #0xff	; 255
+	.db #0xff	; 255
+	.db #0xff	; 255
+	.db #0xff	; 255
+	.db #0xff	; 255
+	.db #0xff	; 255
+	.db #0xff	; 255
+	.db #0xff	; 255
+	.db #0xff	; 255
+	.db #0xff	; 255
+	.db #0xe6	; 230
 	.db #0xe7	; 231
-	.db #0xe8	; 232
 	.db #0xff	; 255
-	.db #0xff	; 255
-	.db #0xff	; 255
-	.db #0xff	; 255
-	.db #0xff	; 255
-	.db #0xff	; 255
-	.db #0xff	; 255
-	.db #0xff	; 255
-	.db #0xff	; 255
-	.db #0xff	; 255
-	.db #0xff	; 255
-	.db #0xea	; 234
-	.db #0xeb	; 235
-	.db #0xff	; 255
+	.db #0xd9	; 217
+	.db #0xda	; 218
+	.db #0xdb	; 219
+	.db #0xdc	; 220
 	.db #0xdd	; 221
 	.db #0xde	; 222
 	.db #0xdf	; 223
 	.db #0xe0	; 224
 	.db #0xe1	; 225
 	.db #0xe2	; 226
-	.db #0xe3	; 227
-	.db #0xe4	; 228
+	.db #0xe8	; 232
+	.db #0xff	; 255
+	.db #0xff	; 255
+	.db #0xff	; 255
+	.db #0xff	; 255
 	.db #0xe5	; 229
-	.db #0xe6	; 230
-	.db #0xec	; 236
 	.db #0xff	; 255
-	.db #0xff	; 255
-	.db #0xff	; 255
-	.db #0xff	; 255
-	.db #0xe9	; 233
-	.db #0xff	; 255
+	.db #0xbf	; 191
+	.db #0xc0	; 192
+	.db #0xc1	; 193
+	.db #0xc2	; 194
 	.db #0xc3	; 195
 	.db #0xc4	; 196
 	.db #0xc5	; 197
@@ -720,10 +727,6 @@ _font_tiles:
 	.db #0xd6	; 214
 	.db #0xd7	; 215
 	.db #0xd8	; 216
-	.db #0xd9	; 217
-	.db #0xda	; 218
-	.db #0xdb	; 219
-	.db #0xdc	; 220
 	.db #0xff	; 255
 	.db #0xff	; 255
 	.db #0xff	; 255

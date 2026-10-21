@@ -71,6 +71,8 @@ static int8_t wipe_col = 0;
 uint8_t game_restart_requested = 0;
 uint8_t game_level_advance_requested = 0;
 
+#define QUESTION_UNROLLED 0xFF
+
 static void spawn_explosion_timer(uint16_t idx, uint8_t timer);
 static void kill_robbo(void);
 static void game_teleport(uint16_t entry_idx);
@@ -106,6 +108,8 @@ void game_load_level(uint8_t level)
                 robbo_x = x;
                 robbo_y = y;
                 robbo_dir = map_extra[idx] & 3;
+            } else if (map_type[idx] == CT_QUESTION) {
+                map_extra[idx] = QUESTION_UNROLLED;
             }
         }
     }
@@ -192,6 +196,17 @@ static uint8_t next_rand8(void)
     rng_state ^= (uint16_t)(rng_state >> 9);
     rng_state ^= (uint16_t)(rng_state << 8);
     return (uint8_t)(rng_state & 0xFF);
+}
+
+/* Question payloads are rolled on first hit rather than kept from the level
+ * data.  Mix in the DIV/frame counters so repeated hits do not reuse the same
+ * short xorshift sequence. */
+static uint8_t random_question_payload(void)
+{
+    rng_state ^= (uint16_t)DIV_REG;
+    rng_state ^= (uint16_t)((uint16_t)debug_ticks * 0x9E37u);
+    if (rng_state == 0) rng_state = 0xACE1u;
+    return (uint8_t)(next_rand8() % 11);
 }
 
 static void add_sliding(uint16_t idx)
@@ -549,6 +564,17 @@ static void spawn_payload_explosion(uint16_t idx, uint8_t payload)
 }
 
 /* Question.randomCfg payload order from robboJS/js/objects/Question.js. */
+static uint8_t question_payload(uint16_t idx)
+{
+    uint8_t payload = map_extra[idx];
+
+    if (payload == QUESTION_UNROLLED) {
+        payload = random_question_payload();
+        map_extra[idx] = payload;
+    }
+    return payload;
+}
+
 static void spawn_question_payload(uint16_t idx, uint8_t payload)
 {
     uint8_t x = idx % MAP_W;
@@ -557,9 +583,9 @@ static void spawn_question_payload(uint16_t idx, uint8_t payload)
     uint8_t extra = 0;
 
     switch (payload) {
-        case 0:  /* another Question: roll a fresh payload */
+        case 0:  /* another Question: roll when it is hit */
             type = CT_QUESTION;
-            extra = next_rand8() % 11;
+            extra = QUESTION_UNROLLED;
             break;
         case 1:  /* Spaceship from question */
             type = CT_SPACESHIP;
@@ -602,7 +628,7 @@ static void demolish_cell(uint16_t idx)
     }
 
     if (type == CT_QUESTION) {
-        spawn_payload_explosion(idx, map_extra[idx]);
+        spawn_payload_explosion(idx, question_payload(idx));
         return;
     }
 
@@ -634,7 +660,7 @@ static void blast_cell(uint16_t idx, uint8_t timer)
     }
 
     if (type == CT_QUESTION) {
-        spawn_payload_explosion_timer(idx, map_extra[idx], timer);
+        spawn_payload_explosion_timer(idx, question_payload(idx), timer);
         return;
     }
 

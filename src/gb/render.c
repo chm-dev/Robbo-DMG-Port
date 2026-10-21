@@ -6,7 +6,6 @@
 #include "../gen/tiles.h"
 
 #define MAP_METAROWS 16
-#define HUD_X 0
 #define MAX_DIRTY 64
 
 static uint8_t map_row_level[MAP_METAROWS];
@@ -146,7 +145,7 @@ void render_init(void)
         set_win_tiles(0, y, 20, 1, buf);
     }
 
-    move_win(7, 0);
+    move_win(6, 0);
 
     LCDC_REG |= LCDCF_ON | LCDCF_WINON;
 
@@ -174,25 +173,27 @@ void render_hud(void)
 {
     uint8_t win[40];
     uint8_t g, i, x;
-    uint8_t values[5];
-    uint8_t icons[5] = {
-        MT_HUD_SCREW, MT_HUD_AMMO, MT_HUD_KEY, MT_HUD_LIVES, MT_HUD_PLANET
+    uint8_t values[4];
+    uint8_t icons[4] = {
+        MT_HUD_SCREW, MT_HUD_AMMO, MT_HUD_KEY, MT_HUD_PLANET
     };
 
-    for (i = 0; i < 40; i++) win[i] = empty_tile();
+    for (i = 0; i < 40; i++) win[i] = hud_bg_tile;
 
     if (screws_left > 99) values[0] = 99; else values[0] = screws_left;
     if (ammo > 99) values[1] = 99; else values[1] = ammo;
     if (keys > 99) values[2] = 99; else values[2] = keys;
-    values[3] = 0;
-    values[4] = level_planet;
+    values[3] = level_planet;
 
-    for (g = 0; g < 5; g++) {
+    for (g = 0; g < 4; g++) {
         const uint8_t *icon = &metatile_tiles[icons[g] * 4];
         uint8_t tens = (values[g] / 10) % 10;
         uint8_t ones = values[g] % 10;
 
-        x = HUD_X + g * 4;
+        /* First item is flush left and last item is flush right; the two
+         * spare columns are distributed between the inner gaps. */
+        static const uint8_t hud_x[4] = { 0, 5, 11, 16 };
+        x = hud_x[g];
         win[x] = icon[0];
         win[x + 1] = icon[1];
         win[20 + x] = icon[2];
@@ -227,7 +228,9 @@ void render_pause(void)
 
 void render_flash_set(uint8_t on)
 {
-    BGP_REG = on ? 0xC4 : 0xE4;
+    /* Background is shade 1 now; map only that shade to white so walls stay
+     * dark during the last-bolt flash. */
+    BGP_REG = on ? 0xE0 : 0xE4;
 }
 
 static void draw_bg_text(const char *text, uint8_t x, uint8_t y)

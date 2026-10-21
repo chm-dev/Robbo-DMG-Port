@@ -2,60 +2,61 @@
 #include <stdint.h>
 #include "tiles.h"
 
-const uint8_t tileset_count = 237;
+const uint8_t tileset_count = 233;
+const uint8_t hud_bg_tile = 0;
 
 const uint8_t metatile_tiles[204] = {
-    0, 0, 0, 0,  /* 0 EMPTY */
-    1, 1, 1, 1,  /* 1 WALL */
-    2, 3, 4, 5,  /* 2 GROUND */
-    6, 6, 7, 7,  /* 3 STONE */
-    8, 8, 9, 9,  /* 4 PUSHABLE */
-    10, 11, 12, 13,  /* 5 DOOR */
-    14, 15, 16, 17,  /* 6 SPACESHIP_0 */
-    18, 19, 20, 21,  /* 7 SPACESHIP_1 */
-    22, 23, 24, 25,  /* 8 QUESTION */
-    26, 27, 28, 29,  /* 9 BOMB */
-    30, 31, 32, 33,  /* 10 KEY */
-    34, 35, 36, 37,  /* 11 SCREW */
-    38, 39, 40, 41,  /* 12 AMMO */
-    42, 43, 44, 45,  /* 13 TURRET_R */
-    42, 46, 47, 48,  /* 14 TURRET_D */
-    49, 46, 50, 51,  /* 15 TURRET_L */
-    52, 53, 44, 51,  /* 16 TURRET_U */
-    54, 55, 56, 57,  /* 17 TELEPORT_0 */
-    58, 59, 60, 61,  /* 18 EXPLOSION_0 */
-    62, 63, 64, 65,  /* 19 EXPLOSION_1 */
-    66, 67, 68, 69,  /* 20 EXPLOSION_2 */
-    70, 71, 72, 73,  /* 21 EXPLOSION_3 */
-    74, 74, 75, 75,  /* 22 BULLET_0 */
-    76, 76, 77, 77,  /* 23 BULLET_1 */
-    78, 79, 78, 79,  /* 24 BULLET_2 */
-    80, 81, 80, 81,  /* 25 BULLET_3 */
-    82, 83, 84, 85,  /* 26 MUSTACHE_0 */
-    86, 87, 88, 89,  /* 27 MUSTACHE_1 */
-    90, 91, 92, 93,  /* 28 BUTTERFLY_0 */
-    94, 95, 96, 97,  /* 29 BUTTERFLY_1 */
-    98, 98, 99, 99,  /* 30 LAVA_0 */
-    100, 100, 101, 101,  /* 31 LAVA_1 */
-    102, 103, 104, 105,  /* 32 MAGNET_0 */
-    106, 107, 108, 109,  /* 33 MAGNET_1 */
-    110, 111, 112, 113,  /* 34 HUD_SCREW */
-    114, 115, 116, 117,  /* 35 HUD_AMMO */
-    118, 119, 120, 121,  /* 36 HUD_KEY */
-    122, 123, 124, 125,  /* 37 HUD_LIVES */
-    126, 127, 128, 129,  /* 38 HUD_PLANET */
-    130, 131, 132, 133,  /* 39 BEAR_0 */
-    134, 135, 136, 137,  /* 40 BEAR_1 */
-    138, 139, 140, 141,  /* 41 BEAR_2 */
-    142, 143, 144, 145,  /* 42 BEAR_3 */
-    146, 147, 148, 149,  /* 43 ROBBO_0 */
-    150, 151, 152, 153,  /* 44 ROBBO_1 */
-    154, 155, 156, 157,  /* 45 ROBBO_2 */
-    158, 147, 159, 160,  /* 46 ROBBO_3 */
-    161, 162, 163, 164,  /* 47 ROBBO_4 */
-    165, 166, 167, 168,  /* 48 ROBBO_5 */
-    169, 170, 156, 171,  /* 49 ROBBO_6 */
-    172, 173, 174, 175,  /* 50 ROBBO_7 */
+    1, 1, 1, 1,  /* 0 EMPTY */
+    2, 2, 2, 2,  /* 1 WALL */
+    3, 4, 5, 6,  /* 2 GROUND */
+    7, 7, 8, 8,  /* 3 STONE */
+    9, 9, 10, 10,  /* 4 PUSHABLE */
+    11, 12, 13, 14,  /* 5 DOOR */
+    15, 16, 17, 18,  /* 6 SPACESHIP_0 */
+    19, 20, 21, 22,  /* 7 SPACESHIP_1 */
+    23, 24, 25, 26,  /* 8 QUESTION */
+    27, 28, 29, 30,  /* 9 BOMB */
+    31, 32, 33, 34,  /* 10 KEY */
+    35, 36, 37, 38,  /* 11 SCREW */
+    39, 40, 41, 42,  /* 12 AMMO */
+    43, 44, 45, 46,  /* 13 TURRET_R */
+    43, 47, 48, 49,  /* 14 TURRET_D */
+    50, 47, 51, 52,  /* 15 TURRET_L */
+    53, 54, 45, 52,  /* 16 TURRET_U */
+    55, 56, 57, 58,  /* 17 TELEPORT_0 */
+    59, 60, 61, 62,  /* 18 EXPLOSION_0 */
+    63, 64, 65, 66,  /* 19 EXPLOSION_1 */
+    67, 68, 69, 70,  /* 20 EXPLOSION_2 */
+    71, 72, 73, 74,  /* 21 EXPLOSION_3 */
+    75, 75, 76, 76,  /* 22 BULLET_0 */
+    77, 77, 78, 78,  /* 23 BULLET_1 */
+    79, 80, 79, 80,  /* 24 BULLET_2 */
+    81, 82, 81, 82,  /* 25 BULLET_3 */
+    83, 84, 85, 86,  /* 26 MUSTACHE_0 */
+    87, 88, 89, 90,  /* 27 MUSTACHE_1 */
+    91, 92, 93, 94,  /* 28 BUTTERFLY_0 */
+    95, 96, 97, 98,  /* 29 BUTTERFLY_1 */
+    99, 99, 100, 100,  /* 30 LAVA_0 */
+    101, 101, 102, 102,  /* 31 LAVA_1 */
+    103, 104, 105, 106,  /* 32 MAGNET_0 */
+    107, 108, 109, 110,  /* 33 MAGNET_1 */
+    111, 112, 113, 114,  /* 34 HUD_SCREW */
+    115, 116, 117, 118,  /* 35 HUD_AMMO */
+    119, 120, 121, 122,  /* 36 HUD_KEY */
+    123, 124, 125, 126,  /* 37 HUD_LIVES */
+    127, 128, 129, 130,  /* 38 HUD_PLANET */
+    131, 132, 133, 134,  /* 39 BEAR_0 */
+    135, 136, 137, 138,  /* 40 BEAR_1 */
+    139, 140, 141, 142,  /* 41 BEAR_2 */
+    143, 144, 145, 146,  /* 42 BEAR_3 */
+    147, 148, 149, 150,  /* 43 ROBBO_0 */
+    151, 152, 153, 154,  /* 44 ROBBO_1 */
+    155, 156, 157, 158,  /* 45 ROBBO_2 */
+    159, 148, 160, 161,  /* 46 ROBBO_3 */
+    162, 163, 164, 165,  /* 47 ROBBO_4 */
+    166, 167, 168, 169,  /* 48 ROBBO_5 */
+    170, 171, 157, 172,  /* 49 ROBBO_6 */
+    173, 174, 175, 176,  /* 50 ROBBO_7 */
 };
 
 const uint8_t metatile_count = 51;
@@ -157,25 +158,25 @@ const uint8_t sheet_metatile_tiles[352] = {
 const uint8_t sheet_tile_count = 251;
 
 const uint8_t digit_tiles[10][2] = {
-    { 176, 177 },  /* 0 */
-    { 178, 178 },  /* 1 */
-    { 179, 180 },  /* 2 */
-    { 181, 182 },  /* 3 */
-    { 183, 184 },  /* 4 */
-    { 185, 186 },  /* 5 */
-    { 187, 188 },  /* 6 */
-    { 189, 190 },  /* 7 */
-    { 191, 192 },  /* 8 */
-    { 193, 194 },  /* 9 */
+    { 177, 178 },  /* 0 */
+    { 179, 179 },  /* 1 */
+    { 180, 181 },  /* 2 */
+    { 180, 182 },  /* 3 */
+    { 183, 179 },  /* 4 */
+    { 184, 185 },  /* 5 */
+    { 186, 178 },  /* 6 */
+    { 187, 179 },  /* 7 */
+    { 188, 178 },  /* 8 */
+    { 189, 190 },  /* 9 */
 };
 
 const uint8_t font_tiles[128] = {
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-    0xE7, 0xE8, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xEA, 0xEB, 0xFF,
-    0xDD, 0xDE, 0xDF, 0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xEC, 0xFF, 0xFF, 0xFF, 0xFF, 0xE9,
-    0xFF, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF, 0xD0, 0xD1,
-    0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD7, 0xD8, 0xD9, 0xDA, 0xDB, 0xDC, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+    0xE3, 0xE4, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xE6, 0xE7, 0xFF,
+    0xD9, 0xDA, 0xDB, 0xDC, 0xDD, 0xDE, 0xDF, 0xE0, 0xE1, 0xE2, 0xE8, 0xFF, 0xFF, 0xFF, 0xFF, 0xE5,
+    0xFF, 0xBF, 0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD,
+    0xCE, 0xCF, 0xD0, 0xD1, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD7, 0xD8, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 };
