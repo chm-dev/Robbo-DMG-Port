@@ -1,41 +1,27 @@
 /*
- * sound.c - POKEY -> Game Boy sound-effect player.
+ * sound.c - Robbo sound-effect mixer (Game Boy).
  *
- * The original Atari engine (see tools/gen_sfx.js) stores each effect as 16
- * (AUDC, AUDF) register pairs.  It writes one pair every 4th PAL frame
- * (80 ms), stepping from volume 16 down to volume 1.  AUDC selects the clock
- * (64 kHz / 1.79 MHz), the distortion (polynomial counter type) and the
- * volume; AUDF is the divider.
+ * Two playback engines share three voices:
  *
- * Game Boy mapping:
- *   AUDC distortion 3 (17-bit poly, clean tone) -> pulse, 50% duty
- *   AUDC distortion 0 (5-bit poly, buzzy)       -> pulse, 12.5% duty
- *   AUDC distortion 1 (4-bit poly, buzzy)       -> pulse, 25% duty
- *   AUDC distortion 2 (5+4 poly, noise)         -> noise channel
- *   AUDC volume 0..15                           -> NRx2 volume 0..15
+ *  - PATTERN voices play the sound-port2 effects: the 15 raw POKEY patterns
+ *    on the original 80 ms step grid (4.8 DMG frames per step), using the
+ *    sound-port2 POKEY -> DMG mapping.  This is the game's main sound set.
  *
- * Each SfxDef selects a window into a pattern, a fixed-point pitch
- * multiplier and a step rate.  The multipliers below were chosen from an
- * ear comparison with the real game (the high "ding" effects are perceived
- * roughly two octaves lower than the raw POKEY polynomial rate).
+ *  - LEGACY voices play the few SfxDef effects kept from the previous set
+ *    (explosion, destruct, door open) because the new set removed them.
  *
  * POLYPHONY
  * ---------
- * The original Atari engine also plays one effect at a time, but the port
- * starts effects from many game events per frame (step + pickup + shot...).
- * Rather than restarting a single voice, the player runs three independent
- * voices:
- *
  *   voice 0 -> pulse channel 1 (tone effects)
  *   voice 1 -> pulse channel 2 (tone effects)
- *   voice 2 -> noise channel   (shot, impact, explosion, destroy)
+ *   voice 2 -> noise channel   (shot, impact, ammo, magnet, ...)
  *
- * Every pulse effect takes a free pulse voice; if both are busy it steals the
- * one with the least amount of pattern left, so a footstep cannot cut off a
- * level jingle.  Noise effects share the one noise channel; a short noise
- * hit is dropped while a much longer explosion is still running.  Mixed
- * patterns (Level Start, Door Open) hold a pulse voice but borrow the noise
- * channel for their noisy opening steps, as the original did.
+ * A pattern that contains both noise and tone steps takes a pulse voice: it
+ * borrows the shared noise channel for its noise steps and returns to its own
+ * pulse channel for the tone tail (Level Start does this).  Noise-only
+ * patterns use the noise voice.  When both pulse voices are busy the player
+ * steals the one with the least time left; a short noise hit is dropped while
+ * a much longer noise effect (explosion) is still running.
  */
 #pragma bank 9
 
@@ -55,11 +41,17 @@
 #define VOICE_NOISE  2
 #define VOICE_COUNT  3
 
+#define VOICE_KIND_PATTERN 1
+#define VOICE_KIND_LEGACY  2
+
 typedef struct {
-    const SfxDef *def;
+    const SfxDef *def;      /* legacy sounds */
+    uint8_t kind;           /* 0 idle, VOICE_KIND_* */
+    uint8_t note;           /* pattern index (pattern sounds) */
     uint8_t playing;
     uint8_t step;
-    uint8_t wait;
+    uint8_t sub;            /* pattern: 0.1-frame accumulator (step at 48) */
+    uint8_t wait;           /* legacy: frames until the next step */
     uint8_t last_type;      /* 0 none, 1 pulse, 2 noise */
     uint16_t last_period;
     uint8_t last_duty;
@@ -68,7 +60,7 @@ typedef struct {
 
 static SfxVoice voices[VOICE_COUNT];
 static uint8_t start_order;
-static uint8_t noise_owner;   /* voice currently driving the noise channel, 0xFF none */
+static uint8_t noise_owner;   /* voice driving the noise channel, 0xFF none */
 
 uint8_t sfx_voice_mask;
 
@@ -77,6 +69,29 @@ static volatile uint8_t *const pulse_duty[2] = { &NR11_REG, &NR21_REG };
 static volatile uint8_t *const pulse_vol[2] = { &NR12_REG, &NR22_REG };
 static volatile uint8_t *const pulse_period_lo[2] = { &NR13_REG, &NR23_REG };
 static volatile uint8_t *const pulse_period_hi[2] = { &NR14_REG, &NR24_REG };
+
+/* Patterns removed from the sound-port2 game set ($00, $06, $0A). */
+static const uint8_t pattern_muted[SFX_PATTERN_COUNT] = {
+    1, /* $00 EXPLOSION  : removed from the set */
+    0, /* $01 SHOT */
+    0, /* $02 HIT WALL */
+    0, /* $03 TELEPORT */
+    0, /* $04 BOLT */
+    0, /* $05 EXTRA LIFE */
+    1, /* $06 DOOR OPEN  : removed (muted in the original) */
+    0, /* $07 AMMO */
+    0, /* $08 PUSH */
+    0, /* $09 KEY */
+    1, /* $0A DESTRUCT  : removed from the set */
+    0, /* $0B LEVEL START */
+    0, /* $0C LEVEL END */
+    0, /* $0D GAME OVER */
+    0, /* $0E MAGNET */
+};
+
+/* ------------------------------------------------------------------ */
+/* Legacy mapping (previous sound set)                                */
+/* ------------------------------------------------------------------ */
 
 static uint8_t pokey_volume(uint8_t audc)
 {
@@ -119,10 +134,8 @@ static uint16_t pulse_period(uint32_t hz)
     return (uint16_t)period;
 }
 
-/* Pick the closest Game Boy noise frequency.  This used to search 16x8
- * candidates with a 32-bit division in the loop, which cost several frames
- * per step on the SM83 and made noise effects run many times too long.  The
- * rate table is precomputed at build time, so the runtime work is a scan. */
+/* Pick the closest Game Boy noise frequency.  The rate table is precomputed
+ * at build time, so the runtime work is a scan. */
 static uint8_t noise_period(uint32_t hz)
 {
     uint8_t best = 0;
@@ -143,10 +156,83 @@ static uint8_t noise_period(uint32_t hz)
     return best;
 }
 
+/* ------------------------------------------------------------------ */
+/* Pattern mapping (sound-port2)                                      */
+/* ------------------------------------------------------------------ */
+
+/*
+ * Pattern AUDC layout: bits 7-5 distortion, bit 4 clock, bits 3-0 volume.
+ *   dist 5 / 7 -> pulse, 50% duty, f = clock / (2 * (AUDF + 1))
+ *   dist 6     -> pulse, 25% duty, f = clock / (15 * (AUDF + 1))
+ *   dist 4     -> noise, f = clock / (AUDF + 1)
+ *   dist 0..3  -> noise, f = clock / (AUDF + 1) * 16 / 31
+ *
+ * The `shift << 4` layout below is deliberate: it reproduces the encoder the
+ * sound-port2 ear tests approved.  Do not "fix" it to << 3.
+ */
+static uint8_t pattern_noise_nr43(uint32_t hz)
+{
+    uint8_t best = 0;
+    uint32_t best_err = 0xFFFFFFFFUL;
+    uint8_t shift, code;
+
+    if (hz < 4UL) hz = 4UL;
+    if (hz > 262144UL) hz = 262144UL;
+
+    for (shift = 0; shift < 14; shift++) {
+        for (code = 0; code < 4; code++) {
+            uint32_t f = 524288UL >> shift;
+            uint32_t err;
+
+            f >>= (code + 1);
+            err = (f > hz) ? (f - hz) : (hz - f);
+            if (err < best_err) {
+                best_err = err;
+                best = (uint8_t)((shift << 4) | code);
+            }
+        }
+    }
+    return best;
+}
+
+/* 0 silent, 1 noise step, 2 tone step. */
+static uint8_t pattern_step_kind(uint8_t note, uint8_t index)
+{
+    uint8_t audc = sfx_notes[note][index].audc;
+
+    if (audc == 0 || (audc & 0x0F) == 0) return 0;
+    return ((audc >> 5) <= 4) ? 1 : 2;
+}
+
+static uint8_t pattern_has_sound(uint8_t note, uint8_t from)
+{
+    uint8_t i;
+
+    for (i = from; i < SFX_STEPS; i++) {
+        if (sfx_notes[note][i].audc != 0) return 1;
+    }
+    return 0;
+}
+
+static uint8_t pattern_last_live_step(uint8_t note)
+{
+    uint8_t i = SFX_STEPS;
+
+    while (i != 0) {
+        --i;
+        if (sfx_notes[note][i].audc != 0) return i;
+    }
+    return 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* Voice bookkeeping                                                  */
+/* ------------------------------------------------------------------ */
+
 /* Stop using the channel this voice currently owns.  Pulse channels belong to
  * exactly one voice; the noise channel can be borrowed by a pulse voice for
- * the noisy steps of a mixed effect (Level Start / Door Open), so it is only
- * released by the voice that last wrote it. */
+ * the noisy steps of a mixed pattern, so it is only released by the voice
+ * that last wrote it. */
 static void release_voice(uint8_t vi)
 {
     SfxVoice *v = &voices[vi];
@@ -164,7 +250,7 @@ static void release_voice(uint8_t vi)
     v->last_type = 0;
 }
 
-/* Last step in the pattern that is not a mute entry. */
+/* Last step in a legacy window that is not a mute entry. */
 static uint8_t last_live_step(const SfxDef *def)
 {
     uint8_t i = def->count;
@@ -176,43 +262,53 @@ static uint8_t last_live_step(const SfxDef *def)
     return 0;
 }
 
-/* Rough number of player calls left, used to decide which voice to steal. */
-static uint16_t def_remaining(const SfxDef *def, uint8_t from)
+/* Rough time left, in tenths of a frame, used to decide voice stealing. */
+static uint16_t legacy_remaining10(const SfxDef *def, uint8_t from)
 {
     uint8_t last = last_live_step(def);
     uint8_t rate = def->step_frames ? def->step_frames : 1;
 
     if (last < from) return 0;
-    return (uint16_t)(last - from + 1) * rate;
+    return (uint16_t)(last - from + 1) * rate * 10;
 }
 
-/* True when the effect's first step is a real POKEY noise step, so it can use
- * the dedicated noise voice.  Mixed effects (Level Start, Door Open) start on
- * a pulse voice and borrow the noise channel for their noisy steps. */
-static uint8_t voice_is_noise(const SfxDef *def)
+static uint16_t pattern_remaining10(uint8_t note, uint8_t from)
 {
-    return pokey_distortion(sfx_notes[def->note][def->first].audc) == 2;
+    uint8_t last = pattern_last_live_step(note);
+
+    if (last < from) return 0;
+    return (uint16_t)(last - from + 1) * 48;
+}
+
+static uint16_t voice_remaining10(uint8_t vi)
+{
+    SfxVoice *v = &voices[vi];
+
+    if (v->kind == VOICE_KIND_PATTERN) return pattern_remaining10(v->note, v->step);
+    return legacy_remaining10(v->def, v->step);
 }
 
 /* Pick a voice, or 0xFF when the new sound should be skipped. */
-static uint8_t alloc_voice(const SfxDef *def)
+static uint8_t alloc_noise_voice(uint16_t want)
 {
-    if (voice_is_noise(def)) {
-        if (voices[VOICE_NOISE].playing) {
-            /* Do not chop a long explosion for a short impact blip. */
-            uint16_t have = def_remaining(voices[VOICE_NOISE].def, voices[VOICE_NOISE].step);
-            uint16_t want = def_remaining(def, 0);
-            if (have > (uint16_t)(want * 2)) return 0xFF;
-        }
-        return VOICE_NOISE;
+    if (voices[VOICE_NOISE].playing) {
+        /* Keep a long effect (explosion, destruct) from being chopped by a
+         * short blip, but let short effects replace each other: a bullet
+         * impact must not disappear behind its own firing sound. */
+        uint16_t have = voice_remaining10(VOICE_NOISE);
+        if (have > (uint16_t)(want * 4)) return 0xFF;
     }
+    return VOICE_NOISE;
+}
 
+static uint8_t alloc_pulse_voice(void)
+{
     if (!voices[VOICE_PULSE1].playing) return VOICE_PULSE1;
     if (!voices[VOICE_PULSE2].playing) return VOICE_PULSE2;
 
     {
-        uint16_t left0 = def_remaining(voices[VOICE_PULSE1].def, voices[VOICE_PULSE1].step);
-        uint16_t left1 = def_remaining(voices[VOICE_PULSE2].def, voices[VOICE_PULSE2].step);
+        uint16_t left0 = voice_remaining10(VOICE_PULSE1);
+        uint16_t left1 = voice_remaining10(VOICE_PULSE2);
 
         if (left0 < left1) return VOICE_PULSE1;
         if (left1 < left0) return VOICE_PULSE2;
@@ -222,7 +318,40 @@ static uint8_t alloc_voice(const SfxDef *def)
         ? VOICE_PULSE1 : VOICE_PULSE2;
 }
 
-static void apply_step(uint8_t vi, uint8_t index)
+/* Pattern with only noise steps -> noise voice; anything with tone -> pulse. */
+static uint8_t alloc_pattern_voice(uint8_t note)
+{
+    uint8_t i;
+    uint8_t has_noise = 0;
+    uint8_t has_pulse = 0;
+
+    for (i = 0; i < SFX_STEPS; i++) {
+        uint8_t kind = pattern_step_kind(note, i);
+        if (kind == 1) has_noise = 1;
+        else if (kind == 2) has_pulse = 1;
+    }
+    if (!has_noise && !has_pulse) return 0xFF;
+    if (has_noise && !has_pulse) return alloc_noise_voice(pattern_remaining10(note, 0));
+    return alloc_pulse_voice();
+}
+
+/* Legacy effects are either tone or noise; check the first step. */
+static uint8_t legacy_is_noise(const SfxDef *def)
+{
+    return pokey_distortion(sfx_notes[def->note][def->first].audc) == 2;
+}
+
+static uint8_t alloc_legacy_voice(const SfxDef *def)
+{
+    if (legacy_is_noise(def)) return alloc_noise_voice(legacy_remaining10(def, 0));
+    return alloc_pulse_voice();
+}
+
+/* ------------------------------------------------------------------ */
+/* Step rendering                                                     */
+/* ------------------------------------------------------------------ */
+
+static void apply_legacy_step(uint8_t vi, uint8_t index)
 {
     SfxVoice *v = &voices[vi];
     const SfxDef *def = v->def;
@@ -252,8 +381,7 @@ static void apply_step(uint8_t vi, uint8_t index)
     }
 
     /* A per-sound master used to change NR50 globally; with several voices
-     * that would duck the other effects, so scale this sound's volume instead.
-     * The references use 3, which halves it (NR50 3/15 is 4/8 in the mixer). */
+     * that would duck the other effects, so scale this sound's volume instead. */
     if (def->master >= 1 && def->master < 8) {
         vol = (uint8_t)(((uint16_t)vol * (def->master + 1)) / 8);
         if (vol == 0) vol = 1;
@@ -332,7 +460,7 @@ static void apply_step(uint8_t vi, uint8_t index)
             noise_owner = 0xFF;
         }
 
-        if (def->square)   duty = 2; /* forced 50% square */
+        if (def->square)    duty = 2; /* forced 50% square */
         else if (dist == 3) duty = 2; /* 50%  - clean square */
         else if (dist == 1) duty = 1; /* 25%  - 4-bit poly buzz */
         else                duty = 0; /* 12.5% - 5-bit poly buzz */
@@ -354,6 +482,98 @@ static void apply_step(uint8_t vi, uint8_t index)
     }
 }
 
+static void apply_pattern_step(uint8_t vi, uint8_t index)
+{
+    SfxVoice *v = &voices[vi];
+    const SfxStep *s = &sfx_notes[v->note][index];
+    uint8_t audc = s->audc;
+    uint8_t vol;
+    uint8_t dist;
+    uint32_t clock;
+    uint32_t div;
+    uint32_t hz;
+
+    if (audc == 0) {
+        release_voice(vi);
+        return;
+    }
+
+    vol = (uint8_t)((audc & 0x0F) << 1);
+    if (vol > 15) vol = 15;
+    if (vol == 0) {
+        release_voice(vi);
+        return;
+    }
+
+    dist = (uint8_t)(audc >> 5);
+    clock = (audc & 0x10) ? POKEY_CLOCK_179M : POKEY_CLOCK_64K;
+    div = (uint32_t)s->audf + 1UL;
+
+    if (dist <= 4) {
+        uint8_t nr43;
+
+        hz = clock / div;
+        if (dist <= 3) hz = (hz * 16UL) / 31UL;
+        if (hz < 4UL) hz = 4UL;
+        if (hz > 262144UL) hz = 262144UL;
+
+        /* A tone voice may borrow the noise channel; release its pulse
+         * channel first. */
+        if (v->last_type == 1) {
+            *pulse_vol[vi] = 0x00;
+            *pulse_period_hi[vi] = 0x80;
+        }
+
+        NR41_REG = 0x00;
+        NR42_REG = (uint8_t)(vol << 4);
+        nr43 = pattern_noise_nr43(hz);
+        NR43_REG = nr43;
+        NR44_REG = 0x80;
+        noise_owner = vi;
+        v->last_type = 2;
+    } else {
+        uint16_t period;
+        uint8_t duty;
+
+        /* Back on this voice's pulse channel. */
+        if (v->last_type == 2 && noise_owner == vi) {
+            NR42_REG = 0x00;
+            NR44_REG = 0x80;
+            noise_owner = 0xFF;
+        }
+
+        if (dist == 6) {
+            hz = clock / (15UL * div);
+            duty = 1; /* 25% duty */
+        } else {
+            hz = clock / (2UL * div);
+            duty = 2; /* 50% duty */
+        }
+        if (hz < 31UL) hz = 31UL;
+        if (hz > 65535UL) hz = 65535UL;
+        period = 2048UL - (131072UL / hz);
+        if (period > 2047UL) period = 2047UL;
+
+        *pulse_duty[vi] = (uint8_t)(duty << 6);
+        *pulse_vol[vi] = (uint8_t)(vol << 4);
+        *pulse_period_lo[vi] = (uint8_t)(period & 0xFF);
+        *pulse_period_hi[vi] = (uint8_t)(0x80 | ((period >> 8) & 0x07));
+        v->last_type = 1;
+        v->last_period = period;
+        v->last_duty = duty;
+    }
+}
+
+static void stop_voice(uint8_t vi)
+{
+    release_voice(vi);
+    voices[vi].playing = 0;
+    voices[vi].kind = 0;
+    voices[vi].def = 0;
+    voices[vi].note = 0xFF;
+    sfx_voice_mask &= (uint8_t)~(1u << vi);
+}
+
 static uint8_t only_silence_left(const SfxDef *def, uint8_t from)
 {
     uint8_t i;
@@ -364,13 +584,9 @@ static uint8_t only_silence_left(const SfxDef *def, uint8_t from)
     return 1;
 }
 
-static void stop_voice(uint8_t vi)
-{
-    release_voice(vi);
-    voices[vi].playing = 0;
-    voices[vi].def = 0;
-    sfx_voice_mask &= (uint8_t)~(1u << vi);
-}
+/* ------------------------------------------------------------------ */
+/* Public API                                                         */
+/* ------------------------------------------------------------------ */
 
 void sound_init(void) BANKED
 {
@@ -395,8 +611,11 @@ void sound_init(void) BANKED
 
     for (i = 0; i < VOICE_COUNT; i++) {
         voices[i].def = 0;
+        voices[i].kind = 0;
+        voices[i].note = 0xFF;
         voices[i].playing = 0;
         voices[i].step = 0;
+        voices[i].sub = 0;
         voices[i].wait = 0;
         voices[i].last_type = 0;
         voices[i].started = 0;
@@ -408,14 +627,30 @@ void sound_init(void) BANKED
 
 void sfx_play_note(uint8_t note) BANKED
 {
-    static const SfxDef plain = { 0, 0, SFX_STEPS, 256, 5, 0, 0, 0, 0, 0, 0 };
-    static SfxDef def;
+    uint8_t vi;
 
-    if (note >= SFX_NOTE_COUNT) return;
-    sfx_stop();  /* the debug note owns every voice */
-    def = plain;
-    def.note = note;
-    sfx_play_def(&def);
+    if (note >= SFX_PATTERN_COUNT) return;
+    if (pattern_muted[note]) return;
+    if (!pattern_has_sound(note, 0)) return;
+
+    vi = alloc_pattern_voice(note);
+    if (vi >= VOICE_COUNT) return;  /* skipped to protect a longer effect */
+
+    {
+        SfxVoice *v = &voices[vi];
+        release_voice(vi);
+        v->kind = VOICE_KIND_PATTERN;
+        v->note = note;
+        v->def = 0;
+        v->playing = 1;
+        v->step = 0;
+        v->sub = 0;
+        v->wait = 0;
+        v->started = ++start_order;
+    }
+    sfx_voice_mask |= (uint8_t)(1u << vi);
+
+    apply_pattern_step(vi, 0);
 }
 
 void sfx_play_def(const SfxDef *def) BANKED
@@ -426,22 +661,25 @@ void sfx_play_def(const SfxDef *def) BANKED
     if ((uint16_t)(def->first + def->count) > SFX_STEPS) return;
     if (def->pitch_q8 == 0) return;
 
-    vi = alloc_voice(def);
+    vi = alloc_legacy_voice(def);
     if (vi >= VOICE_COUNT) return;  /* skipped to protect a longer effect */
 
     {
         SfxVoice *v = &voices[vi];
         release_voice(vi);
+        v->kind = VOICE_KIND_LEGACY;
         v->def = def;
+        v->note = def->note;
         v->playing = 1;
         v->step = 0;
+        v->sub = 0;
         v->wait = 0;
         v->started = ++start_order;
     }
     sfx_voice_mask |= (uint8_t)(1u << vi);
 
     /* The 6502 engine always starts at the highest-volume table entry. */
-    apply_step(vi, 0);
+    apply_legacy_step(vi, 0);
 }
 
 void sfx_stop(void) BANKED
@@ -450,7 +688,9 @@ void sfx_stop(void) BANKED
 
     for (i = 0; i < VOICE_COUNT; i++) {
         voices[i].playing = 0;
+        voices[i].kind = 0;
         voices[i].def = 0;
+        voices[i].note = 0xFF;
         release_voice(i);
     }
     sfx_voice_mask = 0;
@@ -466,6 +706,21 @@ void sfx_update(void) BANKED
 
         if (!v->playing) continue;
 
+        if (v->kind == VOICE_KIND_PATTERN) {
+            /* sound-port2 grid: one step per 80 ms (4.8 DMG frames). */
+            v->sub = (uint8_t)(v->sub + 10);
+            if (v->sub < 48) continue;
+            v->sub = (uint8_t)(v->sub - 48);
+
+            v->step++;
+            if (v->step >= SFX_STEPS || !pattern_has_sound(v->note, v->step)) {
+                stop_voice(i);
+                continue;
+            }
+            apply_pattern_step(i, v->step);
+            continue;
+        }
+
         rate = v->def->step_frames;
         if (v->step < v->def->noise_steps && v->def->noise_step_frames != 0) {
             rate = v->def->noise_step_frames;
@@ -476,11 +731,12 @@ void sfx_update(void) BANKED
         v->wait = 0;
 
         v->step++;
-        if (v->step >= v->def->count || only_silence_left(v->def, v->step)) {
+        if (v->step >= v->def->count ||
+            only_silence_left(v->def, v->step)) {
             stop_voice(i);
             continue;
         }
-        apply_step(i, v->step);
+        apply_legacy_step(i, v->step);
     }
 }
 
@@ -510,5 +766,7 @@ uint8_t sfx_current(void) BANKED
             best_age = age;
         }
     }
-    return (best == 0xFF) ? 0xFF : voices[best].def->note;
+    if (best == 0xFF) return 0xFF;
+    return (voices[best].kind == VOICE_KIND_PATTERN)
+        ? voices[best].note : voices[best].def->note;
 }

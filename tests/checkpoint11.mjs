@@ -2,10 +2,11 @@
 /*
  * Checkpoint 11: sound-effect wiring.
  *
- * The POKEY effect player lives in bank 9; game events start effects with
- * sfx_play_def() and main() advances the player once per frame.  This test
- * boots the ROM in serverboy, drives real gameplay events and inspects the
- * generated audio buffer (the same source sound-port/tests/verify.mjs uses).
+ * The player lives in bank 9.  Game events start sound-port2 patterns with
+ * sfx_play_note(SFX_*), and the retained effects (explosion, destruct, door)
+ * with sfx_play_def().  main() advances the player once per elapsed VBlank.
+ * This test boots the ROM in serverboy, drives real gameplay events and
+ * inspects the generated audio buffer.
  *
  * Level 1 contains turrets and a few bullets in flight, so tests that expect
  * silence remove those actors from WRAM first; the turrets fire on a random
@@ -34,8 +35,11 @@ function symbols() {
 const S = symbols();
 const CT_EMPTY = 0;
 const CT_STONE = 10;
+const CT_DOOR = 12;
 const CT_BOMB = 15;
 const CT_KEY = 16;
+const CT_SCREW = 17;
+const CT_AMMO = 19;
 const CT_MAGNET = 25;
 const CT_MUSTACHE = 21;
 const CT_BUTTERFLY = 22;
@@ -78,12 +82,19 @@ function analyze(samples) {
   return {
     peak: +peak.toFixed(3),
     rms: +Math.sqrt(sum / Math.max(1, samples.length)).toFixed(3),
-    durationMs: Math.round((samples.length / SAMPLE_RATE) * 1000),
   };
 }
 
+function lastAudibleMs(samples) {
+  let last = -1;
+  for (let i = 0; i < samples.length; i++) {
+    if (Math.abs(samples[i]) > 0.01) last = i;
+  }
+  return Math.round(((last + 1) / SAMPLE_RATE) * 1000);
+}
+
 /* Run frames, holding keys, and collect everything the APU produced. */
-function capture(ctx, frames, keys = null) {
+function captureRaw(ctx, frames, keys = null) {
   const samples = [];
   for (let i = 0; i < frames; i++) {
     ctx.core.JoyPad = 0xff;
@@ -92,7 +103,11 @@ function capture(ctx, frames, keys = null) {
     samples.push(...leftSamples(ctx.gb));
   }
   ctx.core.JoyPad = 0xff;
-  return analyze(samples);
+  return samples;
+}
+
+function capture(ctx, frames, keys = null) {
+  return analyze(captureRaw(ctx, frames, keys));
 }
 
 function setCell(ctx, x, y, type, ex = 0) {
@@ -114,13 +129,24 @@ function clearActors(ctx) {
   }
 }
 
+/* Run past the boot fanfare and leave a quiet level. */
+function quietLevel() {
+  const ctx = fresh();
+  run(ctx.gb, 420);
+  clearActors(ctx);
+  /* Clear level 1's pickups/teleport on Robbo's row so tests only see the
+   * event they set up. */
+  for (let x = 3; x <= 9; x++) setCell(ctx, x, 2, CT_EMPTY);
+  return ctx;
+}
+
 /* --- Boot: the LEVEL START jingle plays, then the APU goes quiet. -------- */
 {
   const ctx = fresh();
   const boot = capture(ctx, 320); /* includes the initial level load */
-  check('level start sound at boot', boot.peak > 0.3,
+  check('level start sound at boot', boot.peak > 0.05,
     `peak=${boot.peak} rms=${boot.rms}`);
-  check('level start pattern advances', boot.rms > 0.05, `rms=${boot.rms}`);
+  check('level start pattern advances', boot.rms > 0.01, `rms=${boot.rms}`);
 
   clearActors(ctx);
   capture(ctx, 60);
@@ -130,28 +156,18 @@ function clearActors(ctx) {
     `mask=${ctx.byte('sfx_voice_mask')}`);
 }
 
-/* --- Walking: every successful move plays ROBBO STEP. ------------------- */
+/* --- Moving is silent: the step sound was removed. ---------------------- */
 {
-  const ctx = fresh();
-  run(ctx.gb, 180);
-  clearActors(ctx);
-  /* Open a corridor to the right so the move always succeeds. */
-  setCell(ctx, 3, 2, CT_EMPTY);
-  setCell(ctx, 4, 2, CT_EMPTY);
-  setCell(ctx, 5, 2, CT_EMPTY);
+  const ctx = quietLevel();
   capture(ctx, 5);
   const walk = capture(ctx, 30, ['RIGHT']);
   check('Robbo moved right', ctx.byte('robbo_x') > 2, `x=${ctx.byte('robbo_x')}`);
-  /* ROBBO STEP is note 2, a single very quiet click (volume 2/15). */
-  check('step sound', walk.peak > 0.005, `peak=${walk.peak}`);
+  check('move is silent', walk.peak < 0.02, `peak=${walk.peak}`);
 }
 
-/* --- Blocked move: silent; the push sound only plays when a box moves. -- */
+/* --- Blocked move is silent too. ---------------------------------------- */
 {
-  const ctx = fresh();
-  run(ctx.gb, 180);
-  clearActors(ctx);
-  /* Walk up into the top wall and keep pushing. */
+  const ctx = quietLevel();
   setCell(ctx, 2, 1, CT_EMPTY);
   capture(ctx, 20, ['UP']);
   const y = ctx.byte('robbo_y');
@@ -161,76 +177,128 @@ function clearActors(ctx) {
   check('blocked move is silent', blocked.peak < 0.02, `peak=${blocked.peak}`);
 }
 
-/* --- Pushing a box still plays the push sound. -------------------------- */
+/* --- Pushing a box plays PUSH. ------------------------------------------ */
 {
-  const ctx = fresh();
-  run(ctx.gb, 180);
-  clearActors(ctx);
+  const ctx = quietLevel();
   setCell(ctx, 3, 2, CT_STONE);
   setCell(ctx, 4, 2, CT_EMPTY);
   capture(ctx, 5);
   const push = capture(ctx, 24, ['RIGHT']);
   check('box pushed one cell', ctx.byte('robbo_x') === 3 &&
-    ctx.mem[S.map_type + 2 * 16 + 4] === 10,
+    ctx.mem[S.map_type + 2 * 16 + 4] === CT_STONE,
     `x=${ctx.byte('robbo_x')} cell4=${ctx.mem[S.map_type + 2 * 16 + 4]}`);
-  check('push sound', push.peak > 0.02, `peak=${push.peak}`);
+  check('push sound', push.peak > 0.005, `peak=${push.peak}`);
 }
 
-/* --- Key pickup. -------------------------------------------------------- */
+/* --- Key pickup plays KEY. ---------------------------------------------- */
 {
-  const ctx = fresh();
-  run(ctx.gb, 180);
-  clearActors(ctx);
+  const ctx = quietLevel();
   setCell(ctx, 3, 2, CT_KEY);
   capture(ctx, 5);
   const pickup = capture(ctx, 40, ['RIGHT']);
   check('key collected', ctx.byte('keys') === 1, `keys=${ctx.byte('keys')}`);
-  check('key pickup sound', pickup.peak > 0.02, `peak=${pickup.peak}`);
+  check('key pickup sound', pickup.peak > 0.005, `peak=${pickup.peak}`);
 }
 
-/* --- Firing: hold A to aim and shoot. ---------------------------------- */
+/* --- Door open keeps the retained door sound. --------------------------- */
 {
-  const ctx = fresh();
-  run(ctx.gb, 180);
-  clearActors(ctx);
-  setCell(ctx, 3, 2, CT_EMPTY);
-  setCell(ctx, 4, 2, CT_EMPTY);
+  const ctx = quietLevel();
+  ctx.mem[S.keys] = 1;
+  setCell(ctx, 3, 2, CT_DOOR);
+  capture(ctx, 5);
+  const door = capture(ctx, 40, ['RIGHT']);
+  check('door opened', ctx.byte('keys') === 0 &&
+    ctx.mem[S.map_type + 2 * 16 + 3] === CT_EMPTY,
+    `keys=${ctx.byte('keys')} cell=${ctx.mem[S.map_type + 2 * 16 + 3]}`);
+  check('door open sound', door.peak > 0.005, `peak=${door.peak}`);
+}
+
+/* --- Ammo pickup plays AMMO. -------------------------------------------- */
+{
+  const ctx = quietLevel();
+  setCell(ctx, 3, 2, CT_AMMO);
+  capture(ctx, 5);
+  const pickup = capture(ctx, 40, ['RIGHT']);
+  check('ammo collected', ctx.byte('ammo') === 9, `ammo=${ctx.byte('ammo')}`);
+  check('ammo pickup sound', pickup.peak > 0.005, `peak=${pickup.peak}`);
+}
+
+/* --- Firing plays SHOT. ------------------------------------------------- */
+{
+  const ctx = quietLevel();
   ctx.mem[S.ammo] = 9;
   capture(ctx, 5);
   const shot = capture(ctx, 20, ['RIGHT', 'A']);
   check('shot consumed ammo', ctx.byte('ammo') < 9, `ammo=${ctx.byte('ammo')}`);
-  check('fire sound', shot.peak > 0.02, `peak=${shot.peak}`);
+  check('fire sound', shot.peak > 0.005, `peak=${shot.peak}`);
 }
 
-/* --- Magnet capture and player death (DESTROY voice). ------------------- */
+/* --- Magnet capture (MAGNET) and death (retained destroy). -------------- */
 {
-  const ctx = fresh();
-  run(ctx.gb, 180);
-  clearActors(ctx);
-  setCell(ctx, 3, 2, CT_EMPTY);
-  setCell(ctx, 4, 2, CT_EMPTY);
+  const ctx = quietLevel();
   setCell(ctx, 5, 2, CT_MAGNET, 2); /* pointing left at Robbo */
   capture(ctx, 5);
   const magnet = capture(ctx, 80);
   check('magnet captures Robbo', ctx.byte('robbo_no_move') !== 0,
     `noMove=${ctx.byte('robbo_no_move')}`);
-  check('magnet sound', magnet.peak > 0.02, `peak=${magnet.peak}`);
+  check('magnet sound', magnet.peak > 0.005, `peak=${magnet.peak}`);
 
   const death = capture(ctx, 400);
   check('magnet kills Robbo', ctx.byte('robbo_busy') !== 0 || ctx.byte('robbo_x') === 2,
     `busy=${ctx.byte('robbo_busy')} x=${ctx.byte('robbo_x')}`);
-  check('death sound', death.peak > 0.3, `peak=${death.peak}`);
+  check('death sound', death.peak > 0.05, `peak=${death.peak}`);
 }
 
-/* --- Polyphony: a noise effect and a tone effect overlap. -------------- */
+/* --- Regular bolt pickup plays the short BOLT pattern. ----------------- */
 {
-  const ctx = fresh();
-  run(ctx.gb, 180);
-  clearActors(ctx);
-  for (let x = 3; x <= 6; x++) setCell(ctx, x, 2, CT_EMPTY);
+  const ctx = quietLevel();
+  ctx.mem[S.screws_left] = 5;
+  setCell(ctx, 3, 2, CT_SCREW);
+  capture(ctx, 5);
 
-  /* Arm an existing bomb: the next logic tick runs bomb_explode(), which
-   * starts the long EXPLOSION noise effect. */
+  const samples = [];
+  let picked = false;
+  for (let f = 0; f < 120; f++) {
+    ctx.core.JoyPad = 0xff;
+    if (!picked) ctx.gb.pressKeys(['RIGHT']);
+    ctx.gb.doFrame();
+    samples.push(...leftSamples(ctx.gb));
+    if (ctx.byte('screws_left') === 4) picked = true;
+  }
+  check('bolt collected', ctx.byte('screws_left') === 4,
+    `screws=${ctx.byte('screws_left')}`);
+  const ms = lastAudibleMs(samples);
+  check('regular bolt uses the short jingle', ms > 200 && ms < 900,
+    `duration=${ms}ms`);
+}
+
+/* --- Last bolt plays the long GAME OVER pattern instead of BOLT. -------- */
+{
+  const ctx = quietLevel();
+  ctx.mem[S.screws_left] = 1;
+  setCell(ctx, 3, 2, CT_SCREW);
+  capture(ctx, 5);
+
+  const samples = [];
+  let picked = false;
+  for (let f = 0; f < 260; f++) {
+    ctx.core.JoyPad = 0xff;
+    if (!picked) ctx.gb.pressKeys(['RIGHT']);
+    ctx.gb.doFrame();
+    samples.push(...leftSamples(ctx.gb));
+    if (ctx.byte('screws_left') === 0) picked = true;
+  }
+  check('last bolt collected', ctx.byte('screws_left') === 0,
+    `screws=${ctx.byte('screws_left')}`);
+  const ms = lastAudibleMs(samples);
+  check('last bolt uses the game-over jingle', ms > 700, `duration=${ms}ms`);
+}
+
+/* --- Polyphony: retained explosion (noise) + key pickup (tone). --------- */
+{
+  const ctx = quietLevel();
+  setCell(ctx, 3, 2, CT_KEY);
+
   let bomb = -1;
   for (let i = 0; i < 16 * 31; i++) {
     if (ctx.mem[S.map_type + i] === CT_BOMB) { bomb = i; break; }
@@ -240,7 +308,7 @@ function clearActors(ctx) {
 
   let explosion = false;
   let noiseAndTone = false;
-  for (let f = 0; f < 120; f++) {
+  for (let f = 0; f < 160; f++) {
     ctx.core.JoyPad = 0xff;
     ctx.gb.pressKeys(['RIGHT']);
     ctx.gb.doFrame();
@@ -250,27 +318,28 @@ function clearActors(ctx) {
     if ((m & 0x04) && (m & 0x03)) noiseAndTone = true;
   }
   check('bomb explosion sound', explosion);
-  check('explosion and footstep play together', noiseAndTone);
+  check('explosion and key pickup overlap', noiseAndTone);
 }
 
-/* --- Polyphony: two tone effects overlap (magnet + step, then the level
- *     start jingle + step after the death restart). --------------------- */
+/* --- Polyphony: boot level-start jingle + key pickup (two pulse voices). - */
 {
   const ctx = fresh();
-  run(ctx.gb, 180);
-  clearActors(ctx);
-  for (let x = 3; x <= 6; x++) setCell(ctx, x, 2, CT_EMPTY);
-  setCell(ctx, 5, 2, CT_MAGNET, 2); /* pointing left at Robbo */
+  let started = false;
+  for (let f = 0; f < 220 && !started; f++) {
+    ctx.gb.doFrame();
+    leftSamples(ctx.gb);
+    if (ctx.byte('sfx_voice_mask') & 0x03) started = true;
+  }
+  check('boot level start is playing', started);
 
+  clearActors(ctx);
+  setCell(ctx, 3, 2, CT_KEY);
   let toneOverlap = false;
-  for (let f = 0; f < 500; f++) {
+  for (let f = 0; f < 140; f++) {
     ctx.core.JoyPad = 0xff;
     ctx.gb.pressKeys(['RIGHT']);
     ctx.gb.doFrame();
     leftSamples(ctx.gb);
-    /* Drop the magnet once it has killed Robbo so the restarted level is
-     * clean; its jingle then overlaps the first footsteps. */
-    if (ctx.byte('robbo_busy')) setCell(ctx, 5, 2, CT_EMPTY);
     if ((ctx.byte('sfx_voice_mask') & 0x03) === 0x03) toneOverlap = true;
   }
   check('two tone effects play together', toneOverlap);

@@ -23,48 +23,55 @@ Symbol Table
     _NR50_REG                                                       ******** GX
     _NR51_REG                                                       ******** GX
     _NR52_REG                                                       ******** GX
-    ___memcpy                                                       ******** GX
-    ___sdcc_bcall_ehl                                               ******** GX
     __divulong                                                      ******** GX
     __mulint                                                        ******** GX
     __mullong                                                       ******** GX
-  8 _alloc_voice                                                    000005F8 R
-  8 _apply_step                                                     000006AD R
-  8 _def_remaining                                                  000005AA R
-  8 _last_live_step                                                 00000561 R
+  8 _alloc_legacy_voice                                             000008E9 R
+  8 _alloc_noise_voice                                              00000807 R
+  8 _alloc_pattern_voice                                            00000872 R
+  8 _alloc_pulse_voice                                              00000823 R
+  8 _apply_legacy_step                                              00000901 R
+  8 _apply_pattern_step                                             00000DBF R
+  8 _last_live_step                                                 00000737 R
+  8 _legacy_is_noise                                                000008C8 R
+  8 _legacy_remaining10                                             00000780 R
   8 _noise_code_table                                               00000203 R
-  2 _noise_owner                                                    0000001F R
-  8 _noise_period                                                   000003ED R
+  2 _noise_owner                                                    00000028 R
+  8 _noise_period                                                   000003FC R
   8 _noise_rate_table                                               00000003 R
-  8 _only_silence_left                                              00000B6A R
-  8 _pokey_distortion                                               00000293 R
-  8 _pokey_rate                                                     00000299 R
+  8 _only_silence_left                                              000011D5 R
+  8 _pattern_has_sound                                              00000690 R
+  8 _pattern_last_live_step                                         000006B6 R
+  8 _pattern_muted                                                  00000293 R
+  8 _pattern_noise_nr43                                             00000518 R
+  8 _pattern_remaining10                                            000007B6 R
+  8 _pattern_step_kind                                              00000663 R
+  8 _pokey_distortion                                               000002A2 R
+  8 _pokey_rate                                                     000002A8 R
   8 _pokey_volume                                                   00000000 R
   8 _pulse_duty                                                     00000283 R
-  8 _pulse_period                                                   000003AB R
+  8 _pulse_period                                                   000003BA R
   8 _pulse_period_hi                                                0000028F R
   8 _pulse_period_lo                                                0000028B R
   8 _pulse_vol                                                      00000287 R
-  8 _release_voice                                                  00000509 R
-  8 _sfx_current                                                    00000EB3 GR
-  8 _sfx_is_playing                                                 00000E8A GR
+  8 _release_voice                                                  000006DE R
+  8 _sfx_current                                                    0000164C GR
+  8 _sfx_is_playing                                                 0000161E GR
     _sfx_notes                                                      ******** GX
-  8 _sfx_play_def                                                   00000CBA GR
-  8 _sfx_play_note                                                  00000C76 GR
-  2 _sfx_play_note_def_10000_241                                    00000021 R
-  8 _sfx_play_note_plain_10000_241                                  00000CA6 R
-  8 _sfx_stop                                                       00000D5C GR
-  8 _sfx_update                                                     00000D83 GR
-  2 _sfx_voice_mask                                                 00000020 GR
-  8 _sound_init                                                     00000BF9 GR
-  2 _start_order                                                    0000001E R
 ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 2
 Hexadecimal [32-Bits]
 
 Symbol Table
 
-  8 _stop_voice                                                     00000BCE R
-  8 _voice_is_noise                                                 000005D7 R
+  8 _sfx_play_def                                                   00001365 GR
+  8 _sfx_play_note                                                  000012C9 GR
+  8 _sfx_stop                                                       0000142C GR
+  8 _sfx_update                                                     00001467 GR
+  2 _sfx_voice_mask                                                 00000029 GR
+  8 _sound_init                                                     00001239 GR
+  2 _start_order                                                    00000027 R
+  8 _stop_voice                                                     00001196 R
+  8 _voice_remaining10                                              000007D5 R
   2 _voices                                                         00000000 R
     b_sfx_current                                               =   00000009 G
     b_sfx_is_playing                                            =   00000009 G
@@ -74,7 +81,6 @@ Symbol Table
     b_sfx_update                                                =   00000009 G
     b_sound_init                                                =   00000009 G
 
-
 ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 3
 Hexadecimal [32-Bits]
 
@@ -82,13 +88,13 @@ Area Table
 
    0 _CODE                                      size        0   flags    0
    1 _HRAM                                      size        0   flags    0
-   2 _DATA                                      size       35   flags    0
+   2 _DATA                                      size       2A   flags    0
    3 _INITIALIZED                               size        0   flags    0
    4 _DABS                                      size        0   flags    8
    5 _HOME                                      size        0   flags    0
    6 _GSINIT                                    size        0   flags    0
    7 _GSFINAL                                   size        0   flags    0
-   8 _CODE_9                                    size      F4C   flags    0
+   8 _CODE_9                                    size     16F6   flags    0
    9 _INITIALIZER                               size        0   flags    0
    A _CABS                                      size        0   flags    8
 

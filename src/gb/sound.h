@@ -5,6 +5,43 @@
 #include <stdint.h>
 
 /*
+ * Two kinds of sound live in this player:
+ *
+ *  1. Pattern effects from sound-port2 (SFX_* below): full 16-step POKEY
+ *     patterns played on the original 80 ms grid.  This is the game's main
+ *     sound set.
+ *  2. Legacy SfxDef effects, kept only for events the new set removed
+ *     (explosion, destruct, door open).  They use the earlier mapping.
+ *
+ * The player mixes three voices (pulse 1, pulse 2, noise) so unrelated
+ * effects play together.  Sounds that need the same hardware channel still
+ * replace each other.
+ */
+
+/* ------------------------------------------------------------------ */
+/* Pattern effects (sound-port2)                                      */
+/* ------------------------------------------------------------------ */
+
+#define SFX_PATTERN_COUNT 15
+
+#define SFX_SHOT         0x01  /* firing the laser (short bright tick)     */
+#define SFX_HIT_WALL     0x02  /* laser hitting a wall (single hiss tick)  */
+#define SFX_TELEPORT     0x03  /* teleport / level-entry warp (tone run)   */
+#define SFX_BOLT         0x04  /* bolt collected                           */
+#define SFX_EXTRA_LIFE   0x05  /* extra life awarded                       */
+#define SFX_AMMO         0x07  /* ammo collected (plus 9 shots)            */
+#define SFX_PUSH         0x08  /* pushing a block                          */
+#define SFX_KEY          0x09  /* key collected                            */
+#define SFX_LEVEL_START  0x0B  /* new level fanfare (noise + tone run)     */
+#define SFX_LEVEL_END    0x0C  /* exit capsule reached / level complete    */
+#define SFX_GAME_OVER    0x0D  /* last bolt collected (overrides SFX_BOLT) */
+#define SFX_MAGNET       0x0E  /* magnet hazard death                      */
+
+/* ------------------------------------------------------------------ */
+/* Legacy SfxDef effects (retained from the previous sound set)        */
+/* ------------------------------------------------------------------ */
+
+/*
  * One playable sound: a window into one of the 15 original POKEY patterns,
  * plus a pitch multiplier and a step rate.  This lets the same hardware table
  * serve several game events (e.g. fire and ammo are two halves of note 7).
@@ -29,13 +66,6 @@ typedef struct {
     uint8_t master;      /* 1..7 = attenuate this sound (3 = half), 0 = full */
 } SfxDef;
 
-/*
- * The player runs three voices: pulse 1, pulse 2 and noise.  Tone effects
- * take a free pulse voice and can play together; noise effects (fire, impact,
- * explosion, destroy) share the noise channel.  A new sound only cuts off
- * another sound that needs the same channel.
- */
-
 /* Bit per active voice (0 = pulse 1, 1 = pulse 2, 2 = noise).  Exposed so the
  * emulator tests can assert that effects really overlap. */
 extern uint8_t sfx_voice_mask;
@@ -43,24 +73,22 @@ extern uint8_t sfx_voice_mask;
 /* Reset the APU and select a sane master volume. */
 void sound_init(void) BANKED;
 
-/* Start a sound.  Takes a free voice; only sounds that need the same
- * channel cut each other off. */
-void sfx_play_def(const SfxDef *def) BANKED;
-
-/* Play a whole POKEY pattern at its original pitch/speed. */
+/* Play a sound-port2 pattern (SFX_*).  Muted patterns do nothing. */
 void sfx_play_note(uint8_t note) BANKED;
 
-/* Silence the effect channels immediately. */
+/* Start a legacy SfxDef sound (retained effects only). */
+void sfx_play_def(const SfxDef *def) BANKED;
+
+/* Silence all effect channels immediately. */
 void sfx_stop(void) BANKED;
 
 /* Advance the player; call once per frame (60 Hz). */
 void sfx_update(void) BANKED;
 
-/* 1 while a pattern is still running. */
+/* 1 while any voice is running. */
 uint8_t sfx_is_playing(void) BANKED;
 
-/* POKEY note index of the most recently started voice, or 0xFF. */
+/* Pattern index / note of the most recently started voice, or 0xFF. */
 uint8_t sfx_current(void) BANKED;
 
 #endif
-

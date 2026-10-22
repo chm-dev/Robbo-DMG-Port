@@ -6,26 +6,15 @@
 #include "../gb/render.h"
 #include "../gb/sound.h"
 
-/* Q8 pitch multipliers used by the POKEY effect table. */
-#define PITCH_ORIGINAL  256
+/* Q8 pitch multiplier used by the retained POKEY effect windows. */
 #define PITCH_DOWN_2OCT 64
 
-/* Sound effects, one SfxDef per game event.  These are windows into the
- * original POKEY patterns (see gb/sound.h); they live in bank 0 because they
- * are tiny, while the player and note data are in bank 9. */
-static const SfxDef sfx_level_start  = { 11, 0, 16, PITCH_DOWN_2OCT, 6, 0, 0, 7, 2, 256, 0, 0, 0, 0 };
-static const SfxDef sfx_robbo_step   = { 2,  0, 16, PITCH_ORIGINAL,  5 };
-static const SfxDef sfx_push         = { 8,  0, 16, PITCH_ORIGINAL,  5 };
-static const SfxDef sfx_fire_shot    = { 15, 0, 16, 1024, 1, 0, 0, 0, 0, 0, 0, 0, 1, 2 };
-static const SfxDef sfx_shot_impact  = { 7,  2,  2, PITCH_ORIGINAL,  5 };
-static const SfxDef sfx_destroy      = { 17, 0, 16, 512, 2, 0, 0, 0, 0, 0, 0, 0, 1, 1, 7, 1, 3 };
-static const SfxDef sfx_bolt_pickup  = { 4,  0,  4, PITCH_DOWN_2OCT, 5 };
-static const SfxDef sfx_key_pickup   = { 9,  0,  6, PITCH_DOWN_2OCT, 5 };
-static const SfxDef sfx_door_open    = { 11, 0,  7, PITCH_DOWN_2OCT, 5, 0, 0, 7, 2, 256, 0, 0, 0, 0 };
-static const SfxDef sfx_exit_capsule = { 12, 0, 15, PITCH_DOWN_2OCT, 5 };
-static const SfxDef sfx_teleport     = { 3,  0, 16, 101, 5 };
-static const SfxDef sfx_magnet       = { 14, 0, 16, PITCH_ORIGINAL,  5 };
-static const SfxDef sfx_explosion    = { 16, 0, 16, 8, 4, 0, 0, 0, 0, 0, 0, 0, 1, 4 };
+/* Retained effects from the previous sound set.  The new sound-port2 set
+ * removed EXPLOSION, DESTRUCT and DOOR OPEN, so these keep the old
+ * SfxDef rendering.  Everything else uses the SFX_* patterns from sound.h. */
+static const SfxDef sfx_destroy   = { 17, 0, 16, 512, 2, 0, 0, 0, 0, 0, 0, 0, 1, 1, 7, 1, 3 };
+static const SfxDef sfx_door_open = { 11, 0,  7, PITCH_DOWN_2OCT, 5, 0, 0, 7, 2, 256, 0, 0, 0, 0 };
+static const SfxDef sfx_explosion = { 16, 0, 16, 8, 4, 0, 0, 0, 0, 0, 0, 0, 1, 4 };
 
 uint8_t map_type[MAP_CELLS];
 uint8_t map_extra[MAP_CELLS];
@@ -173,7 +162,7 @@ void game_load_level(uint8_t level)
     hud_dirty = 0;
     render_camera();
     render_apply_camera();
-    sfx_play_def(&sfx_level_start);
+    sfx_play_note(SFX_LEVEL_START);
 }
 
 static uint8_t is_demolishable(uint8_t type)
@@ -377,7 +366,7 @@ static void game_teleport(uint16_t entry_idx)
         cam_pan_timer = 0;
     }
 
-    sfx_play_def(&sfx_teleport);
+    sfx_play_note(SFX_TELEPORT);
 }
 
 void game_teleport_camera_ready(void)
@@ -470,7 +459,6 @@ uint8_t game_try_move(uint8_t dir)
 
     if (target == CT_EMPTY) {
         robbo_step_to(nx, ny, dir);
-        sfx_play_def(&sfx_robbo_step);
         return 1;
     }
 
@@ -485,7 +473,8 @@ uint8_t game_try_move(uint8_t dir)
             refresh_spaceships();
         }
         robbo_step_to(nx, ny, dir);
-        sfx_play_def(&sfx_bolt_pickup);
+        /* The last bolt uses the special end-of-screws jingle. */
+        sfx_play_note(screws_left == 0 ? SFX_GAME_OVER : SFX_BOLT);
         return 1;
     }
 
@@ -496,8 +485,7 @@ uint8_t game_try_move(uint8_t dir)
         map_extra[new_idx] = 0;
         hud_dirty = 1;
         robbo_step_to(nx, ny, dir);
-        /* The original POKEY table has no ammo sound; keep the step. */
-        sfx_play_def(&sfx_robbo_step);
+        sfx_play_note(SFX_AMMO);
         return 1;
     }
 
@@ -508,7 +496,7 @@ uint8_t game_try_move(uint8_t dir)
         map_extra[new_idx] = 0;
         hud_dirty = 1;
         robbo_step_to(nx, ny, dir);
-        sfx_play_def(&sfx_key_pickup);
+        sfx_play_note(SFX_KEY);
         return 1;
     }
 
@@ -535,7 +523,7 @@ uint8_t game_try_move(uint8_t dir)
             robbo_busy = 1;
             transition_active = 1;
             wipe_col = MAP_W - 1;
-            sfx_play_def(&sfx_exit_capsule);
+            sfx_play_note(SFX_LEVEL_END);
             return 0;
         }
         render_cell(robbo_x, robbo_y);
@@ -578,7 +566,7 @@ uint8_t game_try_move(uint8_t dir)
         render_cell(nx, ny);
         if (target == CT_PUSHABLE) add_sliding(beyond_idx);
         robbo_step_to(nx, ny, dir);
-        sfx_play_def(&sfx_push);
+        sfx_play_note(SFX_PUSH);
         return 1;
     }
 
@@ -674,9 +662,9 @@ static void demolish_cell(uint16_t idx)
         return;
     }
 
-    /* Enemies and turrets use the "destroy" voice, everything else that can
-     * be shot uses the short impact.  Bombs stay silent here: their fuse
-     * ends with sfx_explosion in bomb_explode(). */
+    /* Enemies and turrets keep the retained "destroy" sound; everything else
+     * that can be shot uses the new HIT WALL tick.  Bombs stay silent here:
+     * their fuse ends with the retained explosion in bomb_explode(). */
     if (type == CT_QUESTION) {
         spawn_payload_explosion(idx, question_payload(idx));
     } else if (is_demolishable(type)) {
@@ -687,7 +675,7 @@ static void demolish_cell(uint16_t idx)
         type == CT_TURRET) {
         sfx_play_def(&sfx_destroy);
     } else {
-        sfx_play_def(&sfx_shot_impact);
+        sfx_play_note(SFX_HIT_WALL);
     }
 }
 
@@ -1226,7 +1214,7 @@ static void magnet_tick(void)
         if (!robbo_no_move) {
             robbo_no_move = 1;
             magnet_field = field;
-            sfx_play_def(&sfx_magnet);
+            sfx_play_note(SFX_MAGNET);
             return;
         }
 
@@ -1308,7 +1296,7 @@ uint8_t game_fire(void)
         ammo--;
         hud_dirty = 1;
         fire_delay = 2;
-        sfx_play_def(&sfx_fire_shot);
+        sfx_play_note(SFX_SHOT);
         return 1;
     }
 
@@ -1318,7 +1306,7 @@ uint8_t game_fire(void)
         ammo--;
         hud_dirty = 1;
         fire_delay = 2;
-        sfx_play_def(&sfx_fire_shot);
+        sfx_play_note(SFX_SHOT);
         demolish_cell(idx);  /* replaces the shot with hit/destroy sound */
         return 1;
     }
@@ -1328,7 +1316,7 @@ uint8_t game_fire(void)
         ammo--;
         hud_dirty = 1;
         fire_delay = 2;
-        sfx_play_def(&sfx_shot_impact);
+        sfx_play_note(SFX_HIT_WALL);
         blast_cell(idx, 3);
         return 1;
     }
@@ -1449,7 +1437,7 @@ void game_tick(void)
                 }
 
                 spawn_explosion_timer(bidx, 3);
-                sfx_play_def(&sfx_shot_impact);
+                sfx_play_note(SFX_HIT_WALL);
                 remove_bullet_at(i);
                 continue;
             }
@@ -1457,7 +1445,7 @@ void game_tick(void)
             /* Laser head: extend one cell per tick, then retract. */
             if (nbx >= MAP_W || nby >= level_height) {
                 map_extra[bidx] = (uint8_t)((be & 0x1F) | (BULLET_LASER_RETURN << 5) | 0x80);
-                sfx_play_def(&sfx_shot_impact);
+                sfx_play_note(SFX_HIT_WALL);
                 i++;
                 continue;
             }
@@ -1481,7 +1469,7 @@ void game_tick(void)
             } else if (is_demolishable(target)) {
                 demolish_cell(nidx);
             } else {
-                sfx_play_def(&sfx_shot_impact);
+                sfx_play_note(SFX_HIT_WALL);
             }
             map_extra[bidx] = (uint8_t)((be & 0x1F) | (BULLET_LASER_RETURN << 5) | 0x80);
             i++;
@@ -1489,7 +1477,7 @@ void game_tick(void)
         }
 
         if (nbx >= MAP_W || nby >= level_height) {
-            sfx_play_def(&sfx_shot_impact);
+            sfx_play_note(SFX_HIT_WALL);
             spawn_explosion_timer(bidx, 3);
             remove_bullet_at(i);
             continue;
@@ -1510,7 +1498,7 @@ void game_tick(void)
         } else if (target == CT_BULLET) {
             /* The moving projectile stops; the projectile already in the cell
              * is processed on its own turn. */
-            sfx_play_def(&sfx_shot_impact);
+            sfx_play_note(SFX_HIT_WALL);
             spawn_explosion_timer(bidx, 3);
             remove_bullet_at(i);
         } else if (target == CT_ROBBO && owner) {
@@ -1519,12 +1507,12 @@ void game_tick(void)
             remove_bullet_at(i);
         } else {
             if (btype == 2 && is_explodable(target)) {
-                sfx_play_def(&sfx_shot_impact);
+                sfx_play_note(SFX_HIT_WALL);
                 blast_cell(nidx, 3);
             } else if (is_demolishable(target)) {
                 demolish_cell(nidx);
             } else {
-                sfx_play_def(&sfx_shot_impact);
+                sfx_play_note(SFX_HIT_WALL);
             }
             spawn_explosion_timer(bidx, 3);
             remove_bullet_at(i);
