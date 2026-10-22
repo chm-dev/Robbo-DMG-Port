@@ -86,6 +86,18 @@ for i, coord in enumerate([
 for i in range(8):
     SPRITES[f"ROBBO_{i}"] = (i, 5)
 
+# Hand-tuned 1px HUD tweaks.  The bolt (screw) icon sits one pixel high in its
+# cell; the planet icon needs a blank right column so the level digits have a
+# 1px margin from it.  Fill is shade 3, matching the HUD background.
+SPRITE_SHIFT = {
+    "HUD_SCREW": (0, 1),
+    "HUD_AMMO": (0, 1),
+    "HUD_KEY": (0, 1),
+}
+SPRITE_TRIM_RIGHT = {
+    "HUD_PLANET": 1,
+}
+
 WALL_GLYPHS = "OIo-QqPpSsyYzZJji"
 WALL_SLOT = {
     "Q": 0, "O": 1, "I": 2, "o": 3, "y": 4, "-": 5, "q": 6, "P": 7,
@@ -183,7 +195,24 @@ def outline16(shades: list[list[int]]) -> list[list[int]]:
 
 
 def sprite16(image: Image.Image, name: str) -> list[list[int]]:
-    return crop_source(image, SPRITES[name])
+    cell = crop_source(image, SPRITES[name])
+    dx, dy = SPRITE_SHIFT.get(name, (0, 0))
+    if dx or dy:
+        shifted = [[3] * CELL for _ in range(CELL)]
+        for y in range(CELL):
+            sy = y - dy
+            if 0 <= sy < CELL:
+                for x in range(CELL):
+                    sx = x - dx
+                    if 0 <= sx < CELL:
+                        shifted[y][x] = cell[sy][sx]
+        cell = shifted
+    trim = SPRITE_TRIM_RIGHT.get(name, 0)
+    if trim:
+        for y in range(CELL):
+            for x in range(CELL - trim, CELL):
+                cell[y][x] = 3
+    return cell
 
 
 # 5x7 text font (same glyphs as before), used for title/pause/end screens.
@@ -521,12 +550,20 @@ DIGIT_X = [18, 27, 35, 44, 52, 60, 69, 78, 86, 95]
 
 
 def sheet_digit(image: Image.Image, digit: int) -> tuple[list[list[int]], list[list[int]]]:
-    """Extract one native 8x16 HUD digit from row 6 of the sheet."""
+    """Extract one native 8x16 HUD digit from row 6 of the sheet.
+
+    The source glyphs are 15px tall and sit at the top of their 16px cell.
+    Prepend a blank row so they sit flush with the bottom of the two-row HUD
+    window instead of the top.
+    """
     x0 = DIGIT_X[digit]
     y0 = 1 + 6 * 17
-    top = [[image.getpixel((x0 + x, y0 + y)) for x in range(8)] for y in range(8)]
-    bottom = [[image.getpixel((x0 + x, y0 + 8 + y)) for x in range(8)] for y in range(8)]
-    return top, bottom
+    blank = [image.getpixel((x0 + x, y0 + 15)) for x in range(8)]
+    rows = [blank] + [
+        [image.getpixel((x0 + x, y0 + y)) for x in range(8)]
+        for y in range(15)
+    ]
+    return rows[:8], rows[8:]
 
 
 def main() -> None:

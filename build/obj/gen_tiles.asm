@@ -48,7 +48,7 @@
 	.area _CODE
 	.area _CODE
 _tileset_count:
-	.db #0xed	; 237
+	.db #0xee	; 238
 _hud_bg_tile:
 	.db #0x00	; 0
 _metatile_tiles:
@@ -274,17 +274,17 @@ _digit_tiles:
 	.db #0xb8	; 184
 	.db #0xba	; 186
 	.db #0xbb	; 187
-	.db #0xb7	; 183
 	.db #0xbc	; 188
 	.db #0xbd	; 189
 	.db #0xbe	; 190
-	.db #0xb6	; 182
 	.db #0xbf	; 191
-	.db #0xb7	; 183
 	.db #0xc0	; 192
-	.db #0xb6	; 182
 	.db #0xc1	; 193
+	.db #0xb7	; 183
 	.db #0xc2	; 194
+	.db #0xc0	; 192
+	.db #0xb5	; 181
+	.db #0xc3	; 195
 _font_tiles:
 	.db #0xff	; 255
 	.db #0xff	; 255
@@ -318,8 +318,8 @@ _font_tiles:
 	.db #0xff	; 255
 	.db #0xff	; 255
 	.db #0xff	; 255
-	.db #0xe7	; 231
 	.db #0xe8	; 232
+	.db #0xe9	; 233
 	.db #0xff	; 255
 	.db #0xff	; 255
 	.db #0xff	; 255
@@ -331,10 +331,9 @@ _font_tiles:
 	.db #0xff	; 255
 	.db #0xff	; 255
 	.db #0xff	; 255
-	.db #0xea	; 234
 	.db #0xeb	; 235
+	.db #0xec	; 236
 	.db #0xff	; 255
-	.db #0xdd	; 221
 	.db #0xde	; 222
 	.db #0xdf	; 223
 	.db #0xe0	; 224
@@ -344,14 +343,14 @@ _font_tiles:
 	.db #0xe4	; 228
 	.db #0xe5	; 229
 	.db #0xe6	; 230
-	.db #0xec	; 236
+	.db #0xe7	; 231
+	.db #0xed	; 237
 	.db #0xff	; 255
 	.db #0xff	; 255
 	.db #0xff	; 255
 	.db #0xff	; 255
-	.db #0xe9	; 233
+	.db #0xea	; 234
 	.db #0xff	; 255
-	.db #0xc3	; 195
 	.db #0xc4	; 196
 	.db #0xc5	; 197
 	.db #0xc6	; 198
@@ -377,6 +376,7 @@ _font_tiles:
 	.db #0xda	; 218
 	.db #0xdb	; 219
 	.db #0xdc	; 220
+	.db #0xdd	; 221
 	.db #0xff	; 255
 	.db #0xff	; 255
 	.db #0xff	; 255

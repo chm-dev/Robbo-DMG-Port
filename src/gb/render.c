@@ -97,24 +97,16 @@ static void draw_level_row(uint8_t level_y, uint8_t map_row)
     map_row_level[map_row] = level_y;
 }
 
-static void lcd_isr(void)
-{
-    /* The window covers the whole screen from WY down.  Turn it off as soon as
-     * the 16px HUD has been drawn; the VBlank handler re-enables it. */
-    if (LY_REG == 16) {
-        LCDC_REG &= (uint8_t)~LCDCF_WINON;
-    }
-}
-
 void render_apply_camera(void)
 {
     SCX_REG = (uint8_t)(cam_x * 16);
-    SCY_REG = (uint8_t)(((cam_y & (MAP_METAROWS - 1)) * 16) - 16);
+    /* The HUD window covers the bottom 16px, so the top of the screen is the
+     * first visible map row. */
+    SCY_REG = (uint8_t)((cam_y & (MAP_METAROWS - 1)) * 16);
 }
 
 static void vbl_isr(void)
 {
-    LCDC_REG |= LCDCF_WINON;
     render_apply_camera();
 }
 
@@ -148,15 +140,13 @@ void render_init(void)
         set_win_tiles(0, y, 20, 1, buf);
     }
 
-    move_win(6, 0);
+    /* HUD sits in the bottom 16px of the 144px screen. */
+    move_win(6, 128);
 
     LCDC_REG |= LCDCF_ON | LCDCF_WINON;
 
-    LYC_REG = 16;
-    STAT_REG = STATF_LYC;
-    add_LCD(lcd_isr);
     add_VBL(vbl_isr);
-    set_interrupts(VBL_IFLAG | LCD_IFLAG);
+    set_interrupts(VBL_IFLAG);
 }
 
 void render_level(void)

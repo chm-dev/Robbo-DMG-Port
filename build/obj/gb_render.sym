@@ -9,17 +9,13 @@ Symbol Table
     .__.H$L.                                                    =   00000000 L
     _BGP_REG                                                        ******** GX
     _LCDC_REG                                                       ******** GX
-    _LYC_REG                                                        ******** GX
-    _LY_REG                                                         ******** GX
     _SCX_REG                                                        ******** GX
     _SCY_REG                                                        ******** GX
-    _STAT_REG                                                       ******** GX
     _WX_REG                                                         ******** GX
     _WY_REG                                                         ******** GX
     __current_bank                                                  ******** GX
     __divuchar                                                      ******** GX
     __moduchar                                                      ******** GX
-    _add_LCD                                                        ******** GX
     _add_VBL                                                        ******** GX
     _ammo                                                           ******** GX
     _anim_frame                                                     ******** GX
@@ -33,13 +29,12 @@ Symbol Table
     _digit_tiles                                                    ******** GX
   2 _dirty_any                                                      0000004E R
   2 _dirty_bits                                                     00000010 R
-  0 _draw_cell_now                                                  000004BE R
+  0 _draw_cell_now                                                  0000049D R
   0 _draw_level_row                                                 0000017C R
   0 _draw_metatile                                                  0000015D R
   0 _empty_tile                                                     00000159 R
     _hud_bg_tile                                                    ******** GX
     _keys                                                           ******** GX
-  0 _lcd_isr                                                        000001DA R
     _level_height                                                   ******** GX
     _level_planet                                                   ******** GX
     _map_extra                                                      ******** GX
@@ -48,26 +43,26 @@ Symbol Table
     _metatile_tiles                                                 ******** GX
     _rROMB0                                                         ******** GX
     _rROMB1                                                         ******** GX
-  0 _render_apply_camera                                            000001E6 GR
-  0 _render_camera                                                  000005B0 GR
-  0 _render_cell                                                    00000507 GR
-  0 _render_flash_set                                               00000493 GR
-  0 _render_flush_cells                                             00000539 GR
-  0 _render_hud                                                     000002DF GR
-  0 _render_hud_hud_x_30000_201                                     0000048F R
-  0 _render_init                                                    00000204 GR
-  0 _render_level                                                   000002B9 GR
+  0 _render_apply_camera                                            000001DA GR
+  0 _render_camera                                                  0000058F GR
+  0 _render_cell                                                    000004E6 GR
+  0 _render_flash_set                                               00000472 GR
+  0 _render_flush_cells                                             00000518 GR
+  0 _render_hud                                                     000002BE GR
+  0 _render_hud_hud_x_30000_197                                     0000046E R
+  0 _render_init                                                    000001F0 GR
+  0 _render_level                                                   00000298 GR
   0 _render_metatile_for_cell                                       00000000 GR
+  0 _render_sync_rows                                               0000047C GR
+  0 _robbo_mt_base                                                  00000155 R
+    _robbo_step_anim                                                ******** GX
+    _robbo_x                                                        ******** GX
+    _robbo_y                                                        ******** GX
 ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 2
 Hexadecimal [32-Bits]
 
 Symbol Table
 
-  0 _render_sync_rows                                               0000049D GR
-  0 _robbo_mt_base                                                  00000155 R
-    _robbo_step_anim                                                ******** GX
-    _robbo_x                                                        ******** GX
-    _robbo_y                                                        ******** GX
     _screws_left                                                    ******** GX
     _set_bkg_data                                                   ******** GX
     _set_bkg_tiles                                                  ******** GX
@@ -75,15 +70,14 @@ Symbol Table
     _set_win_tiles                                                  ******** GX
     _tileset_data                                                   ******** GX
   0 _turret_mt                                                      00000151 R
-  0 _vbl_isr                                                        000001FB R
-
+  0 _vbl_isr                                                        000001ED R
 
 ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 3
 Hexadecimal [32-Bits]
 
 Area Table
 
-   0 _CODE                                      size      6E4   flags    0
+   0 _CODE                                      size      6C3   flags    0
    1 _HRAM                                      size        0   flags    0
    2 _DATA                                      size       4F   flags    0
    3 _INITIALIZED                               size        0   flags    0

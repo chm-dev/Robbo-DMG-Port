@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <gb/gb.h>
 
-#define TILESET_COUNT 237
+#define TILESET_COUNT 238
 #define METATILE_COUNT 52
 #define SHEET_COLS 11
 #define SHEET_ROWS 8

@@ -1884,6 +1884,8 @@ _tileset_data:
 	.db #0x00	; 0
 	.db #0xff	; 255
 	.db #0xff	; 255
+	.db #0xff	; 255
+	.db #0xff	; 255
 	.db #0xc0	; 192
 	.db #0xc0	; 192
 	.db #0xca	; 202
@@ -1960,8 +1962,8 @@ _tileset_data:
 	.db #0xf0	; 240
 	.db #0xef	; 239
 	.db #0xef	; 239
-	.db #0xf0	; 240
-	.db #0xf0	; 240
+	.db #0xff	; 255
+	.db #0xff	; 255
 	.db #0xff	; 255
 	.db #0xff	; 255
 	.db #0xff	; 255
@@ -1976,8 +1978,8 @@ _tileset_data:
 	.db #0x01	; 1
 	.db #0xfd	; 253
 	.db #0xfd	; 253
-	.db #0xfd	; 253
-	.db #0xfd	; 253
+	.db #0xf0	; 240
+	.db #0xf0	; 240
 	.db #0xc0	; 192
 	.db #0xc0	; 192
 	.db #0xc2	; 194
@@ -1992,8 +1994,8 @@ _tileset_data:
 	.db #0xff	; 255
 	.db #0xff	; 255
 	.db #0xff	; 255
-	.db #0xff	; 255
-	.db #0xff	; 255
+	.db #0xfd	; 253
+	.db #0xfd	; 253
 	.db #0x01	; 1
 	.db #0x01	; 1
 	.db #0xbf	; 191
@@ -2024,8 +2026,8 @@ _tileset_data:
 	.db #0xe0	; 224
 	.db #0xc4	; 196
 	.db #0xc4	; 196
-	.db #0x8e	; 142
-	.db #0x8e	; 142
+	.db #0xff	; 255
+	.db #0xff	; 255
 	.db #0xff	; 255
 	.db #0xff	; 255
 	.db #0xff	; 255
@@ -2040,8 +2042,8 @@ _tileset_data:
 	.db #0xf5	; 245
 	.db #0x75	; 117	'u'
 	.db #0x75	; 117	'u'
-	.db #0x01	; 1
-	.db #0x01	; 1
+	.db #0x8e	; 142
+	.db #0x8e	; 142
 	.db #0x9f	; 159
 	.db #0x9f	; 159
 	.db #0x8e	; 142
@@ -2056,16 +2058,14 @@ _tileset_data:
 	.db #0xff	; 255
 	.db #0xff	; 255
 	.db #0xff	; 255
-	.db #0xff	; 255
-	.db #0xff	; 255
+	.db #0x01	; 1
+	.db #0x01	; 1
 	.db #0x01	; 1
 	.db #0x01	; 1
 	.db #0x01	; 1
 	.db #0x01	; 1
 	.db #0x7f	; 127
 	.db #0x7f	; 127
-	.db #0xff	; 255
-	.db #0xff	; 255
 	.db #0xff	; 255
 	.db #0xff	; 255
 	.db #0xff	; 255
@@ -2154,22 +2154,22 @@ _tileset_data:
 	.db #0x89	; 137
 	.db #0x82	; 130
 	.db #0x82	; 130
-	.db #0xfc	; 252
-	.db #0xfc	; 252
-	.db #0x0a	; 10
-	.db #0x0a	; 10
-	.db #0x14	; 20
-	.db #0x14	; 20
-	.db #0x28	; 40
-	.db #0x28	; 40
+	.db #0xfd	; 253
+	.db #0xfd	; 253
+	.db #0x0b	; 11
+	.db #0x0b	; 11
+	.db #0x15	; 21
+	.db #0x15	; 21
+	.db #0x29	; 41
+	.db #0x29	; 41
 	.db #0x51	; 81	'Q'
 	.db #0x51	; 81	'Q'
 	.db #0xa3	; 163
 	.db #0xa3	; 163
 	.db #0x45	; 69	'E'
 	.db #0x45	; 69	'E'
-	.db #0x8a	; 138
-	.db #0x8a	; 138
+	.db #0x8b	; 139
+	.db #0x8b	; 139
 	.db #0x15	; 21
 	.db #0x15	; 21
 	.db #0x4a	; 74	'J'
@@ -2188,8 +2188,8 @@ _tileset_data:
 	.db #0x1e	; 30
 	.db #0x15	; 21
 	.db #0x15	; 21
-	.db #0x2a	; 42
-	.db #0x2a	; 42
+	.db #0x2b	; 43
+	.db #0x2b	; 43
 	.db #0x55	; 85	'U'
 	.db #0x55	; 85	'U'
 	.db #0xab	; 171
@@ -2938,6 +2938,8 @@ _tileset_data:
 	.db #0x60	; 96
 	.db #0x87	; 135
 	.db #0x60	; 96
+	.db #0xff	; 255
+	.db #0xff	; 255
 	.db #0x83	; 131
 	.db #0x83	; 131
 	.db #0x45	; 69	'E'
@@ -3016,8 +3018,8 @@ _tileset_data:
 	.db #0x47	; 71	'G'
 	.db #0x83	; 131
 	.db #0x83	; 131
-	.db #0xff	; 255
-	.db #0xff	; 255
+	.db #0x83	; 131
+	.db #0x83	; 131
 	.db #0xf9	; 249
 	.db #0xf9	; 249
 	.db #0xf9	; 249
@@ -3050,6 +3052,22 @@ _tileset_data:
 	.db #0x45	; 69	'E'
 	.db #0x83	; 131
 	.db #0x83	; 131
+	.db #0xfd	; 253
+	.db #0xfd	; 253
+	.db #0xf9	; 249
+	.db #0xf9	; 249
+	.db #0xf9	; 249
+	.db #0xf9	; 249
+	.db #0xf9	; 249
+	.db #0xf9	; 249
+	.db #0xf9	; 249
+	.db #0xf9	; 249
+	.db #0xf9	; 249
+	.db #0xf9	; 249
+	.db #0xfd	; 253
+	.db #0xfd	; 253
+	.db #0xff	; 255
+	.db #0xff	; 255
 	.db #0xc1	; 193
 	.db #0xc1	; 193
 	.db #0xa3	; 163
@@ -3098,6 +3116,22 @@ _tileset_data:
 	.db #0x47	; 71	'G'
 	.db #0x83	; 131
 	.db #0x83	; 131
+	.db #0x7d	; 125
+	.db #0x7d	; 125
+	.db #0x39	; 57	'9'
+	.db #0x39	; 57	'9'
+	.db #0x39	; 57	'9'
+	.db #0x39	; 57	'9'
+	.db #0x39	; 57	'9'
+	.db #0x39	; 57	'9'
+	.db #0x39	; 57	'9'
+	.db #0x39	; 57	'9'
+	.db #0x45	; 69	'E'
+	.db #0x45	; 69	'E'
+	.db #0x83	; 131
+	.db #0x83	; 131
+	.db #0xff	; 255
+	.db #0xff	; 255
 	.db #0x83	; 131
 	.db #0x83	; 131
 	.db #0xc5	; 197
@@ -3130,22 +3164,6 @@ _tileset_data:
 	.db #0x45	; 69	'E'
 	.db #0x83	; 131
 	.db #0x83	; 131
-	.db #0x83	; 131
-	.db #0x83	; 131
-	.db #0x45	; 69	'E'
-	.db #0x45	; 69	'E'
-	.db #0x39	; 57	'9'
-	.db #0x39	; 57	'9'
-	.db #0x39	; 57	'9'
-	.db #0x39	; 57	'9'
-	.db #0x39	; 57	'9'
-	.db #0x39	; 57	'9'
-	.db #0x39	; 57	'9'
-	.db #0x39	; 57	'9'
-	.db #0x7d	; 125
-	.db #0x7d	; 125
-	.db #0x83	; 131
-	.db #0x83	; 131
 	.db #0xc5	; 197
 	.db #0xc5	; 197
 	.db #0xf9	; 249
@@ -3160,8 +3178,6 @@ _tileset_data:
 	.db #0xc5	; 197
 	.db #0x83	; 131
 	.db #0x83	; 131
-	.db #0xff	; 255
-	.db #0xff	; 255
 	.db #0x00	; 0
 	.db #0xc7	; 199
 	.db #0x00	; 0
