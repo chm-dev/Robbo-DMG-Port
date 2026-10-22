@@ -8,7 +8,6 @@
 ; Public variables in this module
 ;--------------------------------------------------------
 	.globl _set_win_tiles
-	.globl _set_bkg_tile_xy
 	.globl _set_bkg_tiles
 	.globl _set_bkg_data
 	.globl _set_interrupts
@@ -34,9 +33,9 @@
 	.area _DATA
 _map_row_level:
 	.ds 16
-_dirty_cells:
-	.ds 128
-_dirty_count:
+_dirty_bits:
+	.ds 62
+_dirty_any:
 	.ds 1
 ;--------------------------------------------------------
 ; ram data
@@ -62,7 +61,7 @@ _dirty_count:
 ; code
 ;--------------------------------------------------------
 	.area _CODE
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:22: uint8_t render_metatile_for_cell(uint8_t type, uint8_t extra)
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:25: uint8_t render_metatile_for_cell(uint8_t type, uint8_t extra)
 ;	---------------------------------
 ; Function render_metatile_for_cell
 ; ---------------------------------
@@ -71,7 +70,7 @@ _render_metatile_for_cell::
 	dec	sp
 	ldhl	sp,	#1
 	ld	(hl-), a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:24: if (IS_WALL(type)) return MT_WALL;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:27: if (IS_WALL(type)) return MT_WALL;
 	ld	a, e
 	ld	(hl+), a
 	ld	a, (hl)
@@ -83,7 +82,7 @@ _render_metatile_for_cell::
 	ld	a, #0x01
 	jp	00132$
 00102$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:26: switch (type) {
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:29: switch (type) {
 	ld	a, #0x1c
 	ldhl	sp,	#1
 	sub	a, (hl)
@@ -128,29 +127,29 @@ _render_metatile_for_cell::
 	.dw	00125$
 	.dw	00126$
 	.dw	00127$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:27: case CT_EMPTY:      return MT_EMPTY;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:30: case CT_EMPTY:      return MT_EMPTY;
 00104$:
 	xor	a, a
 	jp	00132$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:28: case CT_GROUND:     return MT_GROUND;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:31: case CT_GROUND:     return MT_GROUND;
 00105$:
 	ld	a, #0x02
 	jp	00132$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:29: case CT_STONE:      return MT_STONE;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:32: case CT_STONE:      return MT_STONE;
 00106$:
 	ld	a, #0x03
 	jp	00132$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:30: case CT_PUSHABLE:   return MT_PUSHABLE;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:33: case CT_PUSHABLE:   return MT_PUSHABLE;
 00107$:
 	ld	a, #0x04
 	jp	00132$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:31: case CT_DOOR:       return MT_DOOR;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:34: case CT_DOOR:       return MT_DOOR;
 00108$:
 	ld	a, #0x05
 	jp	00132$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:32: case CT_SPACESHIP:
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:35: case CT_SPACESHIP:
 00109$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:33: if (screws_left == 0 || (extra & 1)) {
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:36: if (screws_left == 0 || (extra & 1)) {
 	ld	hl, #_screws_left
 	ld	a, (hl)
 	or	a, a
@@ -161,7 +160,7 @@ _render_metatile_for_cell::
 	pop	hl
 	jr	Z, 00111$
 00110$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:34: return (anim_frame & 1) ? MT_SPACESHIP_1 : MT_SPACESHIP_0;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:37: return (anim_frame & 1) ? MT_SPACESHIP_1 : MT_SPACESHIP_0;
 	ld	a, (_anim_frame)
 	rrca
 	jr	NC, 00134$
@@ -171,30 +170,30 @@ _render_metatile_for_cell::
 	ld	a, #0x06
 	jp	00132$
 00111$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:36: return MT_SPACESHIP_1;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:39: return MT_SPACESHIP_1;
 	ld	a, #0x07
 	jp	00132$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:37: case CT_QUESTION:   return MT_QUESTION;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:40: case CT_QUESTION:   return MT_QUESTION;
 00113$:
 	ld	a, #0x08
 	jp	00132$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:38: case CT_BOMB:       return MT_BOMB;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:41: case CT_BOMB:       return MT_BOMB;
 00114$:
 	ld	a, #0x09
 	jp	00132$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:39: case CT_KEY:        return MT_KEY;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:42: case CT_KEY:        return MT_KEY;
 00115$:
 	ld	a, #0x0a
 	jp	00132$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:40: case CT_SCREW:      return MT_SCREW;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:43: case CT_SCREW:      return MT_SCREW;
 00116$:
 	ld	a, #0x0b
 	jp	00132$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:41: case CT_AMMO:       return MT_AMMO;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:44: case CT_AMMO:       return MT_AMMO;
 00117$:
 	ld	a, #0x0c
 	jp	00132$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:42: case CT_TURRET:     return turret_mt[extra & 3];
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:45: case CT_TURRET:     return turret_mt[extra & 3];
 00118$:
 	ld	bc, #_turret_mt+0
 	ldhl	sp,	#0
@@ -205,25 +204,25 @@ _render_metatile_for_cell::
 	add	hl, bc
 	ld	a, (hl)
 	jp	00132$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:43: case CT_TELEPORT:   return MT_TELEPORT_0 + (anim_frame & 1);
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:46: case CT_TELEPORT:   return MT_TELEPORT_0 + (anim_frame & 1);
 00119$:
 	ld	a, (_anim_frame)
 	and	a, #0x01
 	add	a, #0x11
 	jr	00132$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:44: case CT_MUSTACHE:   return MT_MUSTACHE_0 + (anim_frame & 1);
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:47: case CT_MUSTACHE:   return MT_MUSTACHE_0 + (anim_frame & 1);
 00120$:
 	ld	a, (_anim_frame)
 	and	a, #0x01
 	add	a, #0x1b
 	jr	00132$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:45: case CT_BUTTERFLY:  return MT_BUTTERFLY_0 + (anim_frame & 1);
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:48: case CT_BUTTERFLY:  return MT_BUTTERFLY_0 + (anim_frame & 1);
 00121$:
 	ld	a, (_anim_frame)
 	and	a, #0x01
 	add	a, #0x1d
 	jr	00132$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:46: case CT_BEAR:       return ((extra & 4) ? MT_BEAR_2 : MT_BEAR_0) + (anim_frame & 1);
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:49: case CT_BEAR:       return ((extra & 4) ? MT_BEAR_2 : MT_BEAR_0) + (anim_frame & 1);
 00122$:
 	push	hl
 	ldhl	sp,	#2
@@ -237,11 +236,11 @@ _render_metatile_for_cell::
 	and	a, #0x01
 	add	a, c
 	jr	00132$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:47: case CT_LAVA:       return MT_LAVA_0;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:50: case CT_LAVA:       return MT_LAVA_0;
 00123$:
 	ld	a, #0x1f
 	jr	00132$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:48: case CT_MAGNET:     return (extra & 2) ? MT_MAGNET_1 : MT_MAGNET_0;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:51: case CT_MAGNET:     return (extra & 2) ? MT_MAGNET_1 : MT_MAGNET_0;
 00124$:
 	push	hl
 	ldhl	sp,	#2
@@ -253,7 +252,7 @@ _render_metatile_for_cell::
 00138$:
 	ld	a, #0x21
 	jr	00132$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:49: case CT_ROBBO:      return MT_ROBBO_0 + robbo_mt_base[extra & 3] +
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:52: case CT_ROBBO:      return MT_ROBBO_0 + robbo_mt_base[extra & 3] +
 00125$:
 	ld	bc, #_robbo_mt_base+0
 	ldhl	sp,	#0
@@ -265,17 +264,17 @@ _render_metatile_for_cell::
 	ld	a, (hl)
 	add	a, #0x2c
 	ld	c, a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:50: (robbo_step_anim & 1);
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:53: (robbo_step_anim & 1);
 	ld	a, (_robbo_step_anim)
 	and	a, #0x01
 	add	a, c
 	jr	00132$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:51: case CT_BULLET: {
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:54: case CT_BULLET: {
 00126$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:52: uint8_t dir = extra & 3;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:55: uint8_t dir = extra & 3;
 	ldhl	sp,	#0
 	ld	a, (hl)
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:53: return MT_BULLET_0 + (uint8_t)((dir & 1) * 2) + (anim_frame & 1);
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:56: return MT_BULLET_0 + (uint8_t)((dir & 1) * 2) + (anim_frame & 1);
 	and	a, #0x1
 	add	a, a
 	add	a, #0x17
@@ -284,33 +283,33 @@ _render_metatile_for_cell::
 	and	a, #0x01
 	add	a, c
 	jr	00132$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:55: case CT_EXPLOSION: {
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:58: case CT_EXPLOSION: {
 00127$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:56: uint8_t t = extra & 7;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:59: uint8_t t = extra & 7;
 	ldhl	sp,	#0
 	ld	a, (hl)
 	and	a, #0x07
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:58: if (t > 5) t = 5;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:61: if (t > 5) t = 5;
 	cp	a, #0x06
 	jr	C, 00129$
 	ld	a, #0x05
 00129$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:59: frame = (t >= 3) ? (uint8_t)(6 - t) : t;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:62: frame = (t >= 3) ? (uint8_t)(6 - t) : t;
 	cp	a, #0x03
 	jr	C, 00140$
 	ld	c, a
 	ld	a, #0x06
 	sub	a, c
 00140$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:60: return MT_EXPLOSION_0 + frame;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:63: return MT_EXPLOSION_0 + frame;
 	add	a, #0x13
 	jr	00132$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:62: default:            return MT_EMPTY;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:65: default:            return MT_EMPTY;
 00130$:
 	xor	a, a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:63: }
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:66: }
 00132$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:64: }
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:67: }
 	inc	sp
 	inc	sp
 	ret
@@ -324,95 +323,46 @@ _robbo_mt_base:
 	.db #0x02	; 2
 	.db #0x04	; 4
 	.db #0x06	; 6
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:66: static uint8_t empty_tile(void)
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:69: static uint8_t empty_tile(void)
 ;	---------------------------------
 ; Function empty_tile
 ; ---------------------------------
 _empty_tile:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:68: return metatile_tiles[MT_EMPTY * 4];
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:71: return metatile_tiles[MT_EMPTY * 4];
 	ld	a, (#_metatile_tiles + 0)
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:69: }
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:72: }
 	ret
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:71: static void draw_metatile(uint8_t mt, uint8_t tx, uint8_t ty)
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:74: static void draw_metatile(uint8_t mt, uint8_t tx, uint8_t ty)
 ;	---------------------------------
 ; Function draw_metatile
 ; ---------------------------------
 _draw_metatile:
-	dec	sp
-	ld	d, a
-	ldhl	sp,	#0
-	ld	(hl), e
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:73: const uint8_t *t = &metatile_tiles[mt * 4];
-	ld	bc, #_metatile_tiles+0
-	ld	l, d
+	ld	c, a
+	ld	b, e
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:79: const uint8_t *t = &metatile_tiles[mt << 2];
+	ld	de, #_metatile_tiles+0
+	ld	l, c
 	ld	h, #0x00
 	add	hl, hl
 	add	hl, hl
-	add	hl, bc
-	ld	c, l
-	ld	b, h
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:74: set_bkg_tile_xy(tx, ty, t[0]);
-	ld	a, (bc)
-	push	bc
-	push	af
-	inc	sp
+	add	hl, de
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:80: set_bkg_tiles(tx, ty, 2, 2, t);
+	push	hl
+	ld	hl, #0x202
+	push	hl
 	ldhl	sp,	#6
-	ld	e, (hl)
-	ldhl	sp,	#3
 	ld	a, (hl)
-	call	_set_bkg_tile_xy
-	pop	bc
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:75: set_bkg_tile_xy(tx + 1, ty, t[1]);
-	ld	l, c
-	ld	h, b
-	inc	hl
-	ld	a, (hl)
-	ldhl	sp,	#0
-	ld	d, (hl)
-	inc	d
+	push	af
+	inc	sp
 	push	bc
-	push	de
-	push	af
 	inc	sp
-	ldhl	sp,	#8
-	ld	e, (hl)
-	ld	a, d
-	call	_set_bkg_tile_xy
-	pop	de
-	pop	bc
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:76: set_bkg_tile_xy(tx, ty + 1, t[2]);
-	ld	l, c
-	ld	h, b
-	inc	hl
-	inc	hl
-	ld	a, (hl)
-	ldhl	sp,	#3
-	ld	e, (hl)
-	inc	e
-	push	bc
-	push	de
-	push	af
-	inc	sp
-	ldhl	sp,	#5
-	ld	a, (hl)
-	call	_set_bkg_tile_xy
-	pop	de
-	pop	bc
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:77: set_bkg_tile_xy(tx + 1, ty + 1, t[3]);
-	inc	bc
-	inc	bc
-	inc	bc
-	ld	a, (bc)
-	push	af
-	inc	sp
-	ld	a, d
-	call	_set_bkg_tile_xy
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:78: }
-	inc	sp
+	call	_set_bkg_tiles
+	add	sp, #6
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:81: }
 	pop	hl
 	inc	sp
 	jp	(hl)
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:80: static void draw_level_row(uint8_t level_y, uint8_t map_row)
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:83: static void draw_level_row(uint8_t level_y, uint8_t map_row)
 ;	---------------------------------
 ; Function draw_level_row
 ; ---------------------------------
@@ -421,19 +371,19 @@ _draw_level_row:
 	ld	c, a
 	ldhl	sp,	#2
 	ld	(hl), e
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:84: for (x = 0; x < MAP_W; x++) {
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:87: for (x = 0; x < MAP_W; x++) {
 	ld	a, (hl-)
 	dec	hl
 	add	a, a
 	ld	(hl), a
 	ld	b, #0x00
 00105$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:86: if (level_y < level_height) {
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:89: if (level_y < level_height) {
 	ld	a, c
 	ld	hl, #_level_height
 	sub	a, (hl)
 	jr	NC, 00102$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:87: uint16_t idx = level_y * MAP_W + x;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:90: uint16_t idx = level_y * MAP_W + x;
 	ld	l, c
 	xor	a, a
 	ld	h, a
@@ -446,7 +396,7 @@ _draw_level_row:
 	add	hl, de
 	ld	e, l
 	ld	d, h
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:88: mt = render_metatile_for_cell(map_type[idx], map_extra[idx]);
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:91: mt = render_metatile_for_cell(map_type[idx], map_extra[idx]);
 	ld	hl, #_map_extra
 	add	hl, de
 	ld	a, (hl)
@@ -463,10 +413,10 @@ _draw_level_row:
 	pop	bc
 	jr	00103$
 00102$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:90: mt = MT_EMPTY;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:93: mt = MT_EMPTY;
 	ld	d, #0x00
 00103$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:92: draw_metatile(mt, x * 2, map_row * 2);
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:95: draw_metatile(mt, x * 2, map_row * 2);
 	ld	a, b
 	add	a, a
 	push	bc
@@ -478,12 +428,12 @@ _draw_level_row:
 	ld	a, d
 	call	_draw_metatile
 	pop	bc
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:84: for (x = 0; x < MAP_W; x++) {
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:87: for (x = 0; x < MAP_W; x++) {
 	inc	b
 	ld	a, b
 	sub	a, #0x10
 	jr	C, 00105$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:94: map_row_level[map_row] = level_y;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:97: map_row_level[map_row] = level_y;
 	ld	de, #_map_row_level
 	ldhl	sp,	#2
 	ld	l, (hl)
@@ -493,96 +443,96 @@ _draw_level_row:
 	ld	d, h
 	ld	a, c
 	ld	(de), a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:95: }
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:98: }
 	add	sp, #3
 	ret
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:97: static void lcd_isr(void)
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:100: static void lcd_isr(void)
 ;	---------------------------------
 ; Function lcd_isr
 ; ---------------------------------
 _lcd_isr:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:101: if (LY_REG == 16) {
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:104: if (LY_REG == 16) {
 	ldh	a, (_LY_REG + 0)
 	sub	a, #0x10
 	ret	NZ
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:102: LCDC_REG &= (uint8_t)~LCDCF_WINON;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:105: LCDC_REG &= (uint8_t)~LCDCF_WINON;
 	ldh	a, (_LCDC_REG + 0)
 	and	a, #0xdf
 	ldh	(_LCDC_REG + 0), a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:104: }
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:107: }
 	ret
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:106: void render_apply_camera(void)
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:109: void render_apply_camera(void)
 ;	---------------------------------
 ; Function render_apply_camera
 ; ---------------------------------
 _render_apply_camera::
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:108: SCX_REG = (uint8_t)(cam_x * 16);
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:111: SCX_REG = (uint8_t)(cam_x * 16);
 	ld	a, (_cam_x)
 	swap	a
 	and	a, #0xf0
 	ldh	(_SCX_REG + 0), a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:109: SCY_REG = (uint8_t)(((cam_y & (MAP_METAROWS - 1)) * 16) - 16);
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:112: SCY_REG = (uint8_t)(((cam_y & (MAP_METAROWS - 1)) * 16) - 16);
 	ld	a, (#_cam_y)
 	swap a
 	and	a, #0xf0
 	add	a, #0xf0
 	ldh	(_SCY_REG + 0), a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:110: }
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:113: }
 	ret
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:112: static void vbl_isr(void)
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:115: static void vbl_isr(void)
 ;	---------------------------------
 ; Function vbl_isr
 ; ---------------------------------
 _vbl_isr:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:114: LCDC_REG |= LCDCF_WINON;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:117: LCDC_REG |= LCDCF_WINON;
 	ldh	a, (_LCDC_REG + 0)
 	or	a, #0x20
 	ldh	(_LCDC_REG + 0), a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:115: render_apply_camera();
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:116: }
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:118: render_apply_camera();
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:119: }
 	jp	_render_apply_camera
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:118: void render_init(void)
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:121: void render_init(void)
 ;	---------------------------------
 ; Function render_init
 ; ---------------------------------
 _render_init::
 	add	sp, #-32
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:122: uint8_t empty = empty_tile();
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:125: uint8_t empty = empty_tile();
 	call	_empty_tile
 	ld	c, a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:124: BGP_REG = 0xE4;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:127: BGP_REG = 0xE4;
 	ld	a, #0xe4
 	ldh	(_BGP_REG + 0), a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:125: SCX_REG = 0;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:128: SCX_REG = 0;
 	xor	a, a
 	ldh	(_SCX_REG + 0), a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:126: SCY_REG = 0;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:129: SCY_REG = 0;
 	xor	a, a
 	ldh	(_SCY_REG + 0), a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:130: LCDC_REG = LCDCF_WIN9C00 | LCDCF_BG8000 | LCDCF_BGON;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:133: LCDC_REG = LCDCF_WIN9C00 | LCDCF_BG8000 | LCDCF_BGON;
 	ld	a, #0x51
 	ldh	(_LCDC_REG + 0), a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:133: SWITCH_ROM_MBC5(1);
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:136: SWITCH_ROM_MBC5(1);
 	ld	a, #0x01
 	ldh	(__current_bank + 0), a
 	xor	a, a
 	ld	(#_rROMB1),a
 	ld	hl, #_rROMB0
 	ld	(hl), #0x01
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:134: set_bkg_data(0, TILESET_COUNT, tileset_data);
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:137: set_bkg_data(0, TILESET_COUNT, tileset_data);
 	ld	de, #_tileset_data
 	push	de
 	ld	hl, #0xed00
 	push	hl
 	call	_set_bkg_data
 	add	sp, #4
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:135: SWITCH_ROM_MBC5(0);
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:138: SWITCH_ROM_MBC5(0);
 	xor	a, a
 	ldh	(__current_bank + 0), a
 	xor	a, a
 	ld	(#_rROMB1), a
 	ld	(#_rROMB0),a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:138: for (x = 0; x < 32; x++) buf[x] = empty;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:141: for (x = 0; x < 32; x++) buf[x] = empty;
 	ldhl	sp,	#0
 	ld	e, l
 	ld	d, h
@@ -596,10 +546,10 @@ _render_init::
 	ld	a, b
 	sub	a, #0x20
 	jr	C, 00106$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:139: for (y = 0; y < 32; y++) {
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:142: for (y = 0; y < 32; y++) {
 	ld	b, #0x00
 00108$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:140: set_bkg_tiles(0, y, 32, 1, buf);
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:143: set_bkg_tiles(0, y, 32, 1, buf);
 	ld	l, e
 	ld	h, d
 	push	de
@@ -614,12 +564,12 @@ _render_init::
 	call	_set_bkg_tiles
 	add	sp, #6
 	pop	de
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:139: for (y = 0; y < 32; y++) {
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:142: for (y = 0; y < 32; y++) {
 	inc	b
 	ld	a, b
 	sub	a, #0x20
 	jr	C, 00108$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:143: for (x = 0; x < 20; x++) buf[x] = empty;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:146: for (x = 0; x < 20; x++) buf[x] = empty;
 	ld	b, #0x00
 00110$:
 	ld	l, b
@@ -630,10 +580,10 @@ _render_init::
 	ld	a, b
 	sub	a, #0x14
 	jr	C, 00110$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:144: for (y = 0; y < 2; y++) {
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:147: for (y = 0; y < 2; y++) {
 	ld	b, #0x00
 00112$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:145: set_win_tiles(0, y, 20, 1, buf);
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:148: set_win_tiles(0, y, 20, 1, buf);
 	ld	l, e
 	ld	h, d
 	push	de
@@ -648,7 +598,7 @@ _render_init::
 	call	_set_win_tiles
 	add	sp, #6
 	pop	de
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:144: for (y = 0; y < 2; y++) {
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:147: for (y = 0; y < 2; y++) {
 	inc	b
 	ld	a, b
 	sub	a, #0x02
@@ -658,59 +608,71 @@ _render_init::
 	ldh	(_WX_REG + 0), a
 	xor	a, a
 	ldh	(_WY_REG + 0), a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:150: LCDC_REG |= LCDCF_ON | LCDCF_WINON;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:153: LCDC_REG |= LCDCF_ON | LCDCF_WINON;
 	ldh	a, (_LCDC_REG + 0)
 	or	a, #0xa0
 	ldh	(_LCDC_REG + 0), a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:152: LYC_REG = 16;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:155: LYC_REG = 16;
 	ld	a, #0x10
 	ldh	(_LYC_REG + 0), a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:153: STAT_REG = STATF_LYC;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:156: STAT_REG = STATF_LYC;
 	ld	a, #0x40
 	ldh	(_STAT_REG + 0), a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:154: add_LCD(lcd_isr);
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:157: add_LCD(lcd_isr);
 	ld	de, #_lcd_isr
 	call	_add_LCD
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:155: add_VBL(vbl_isr);
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:158: add_VBL(vbl_isr);
 	ld	de, #_vbl_isr
 	call	_add_VBL
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:156: set_interrupts(VBL_IFLAG | LCD_IFLAG);
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:159: set_interrupts(VBL_IFLAG | LCD_IFLAG);
 	ld	a, #0x03
 	call	_set_interrupts
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:157: }
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:160: }
 	add	sp, #32
 	ret
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:159: void render_level(void)
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:162: void render_level(void)
 ;	---------------------------------
 ; Function render_level
 ; ---------------------------------
 _render_level::
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:163: dirty_count = 0;
-	xor	a, a
-	ld	(#_dirty_count),a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:165: for (row = 0; row < MAP_METAROWS; row++) {
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:166: for (row = 0; row < DIRTY_WORDS; row++) dirty_bits[row] = 0;
+	ld	bc, #_dirty_bits+0
 	ld	e, #0x00
-00102$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:166: draw_level_row(row, row);
+00103$:
+	ld	l, e
+	ld	h, #0x00
+	add	hl, bc
+	ld	(hl), #0x00
+	inc	e
+	ld	a, e
+	sub	a, #0x3e
+	jr	C, 00103$
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:167: dirty_any = 0;
+	xor	a, a
+	ld	(#_dirty_any),a
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:169: for (row = 0; row < MAP_METAROWS; row++) {
+	ld	e, #0x00
+00105$:
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:170: draw_level_row(row, row);
 	push	de
 	ld	a, e
 	call	_draw_level_row
 	pop	de
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:165: for (row = 0; row < MAP_METAROWS; row++) {
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:169: for (row = 0; row < MAP_METAROWS; row++) {
 	inc	e
 	ld	a, e
 	sub	a, #0x10
-	jr	C, 00102$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:169: render_hud();
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:170: }
+	jr	C, 00105$
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:173: render_hud();
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:174: }
 	jp	_render_hud
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:172: void render_hud(void)
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:176: void render_hud(void)
 ;	---------------------------------
 ; Function render_hud
 ; ---------------------------------
 _render_hud::
 	add	sp, #-56
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:177: uint8_t icons[4] = {
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:181: uint8_t icons[4] = {
 	ldhl	sp,	#46
 	ld	a, #0x23
 	ld	(hl+), a
@@ -719,7 +681,7 @@ _render_hud::
 	ld	a, #0x25
 	ld	(hl+), a
 	ld	(hl), #0x27
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:181: for (i = 0; i < 40; i++) win[i] = hud_bg_tile;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:185: for (i = 0; i < 40; i++) win[i] = hud_bg_tile;
 	ldhl	sp,	#2
 	ld	c, l
 	ld	b, h
@@ -734,7 +696,7 @@ _render_hud::
 	ld	a, e
 	sub	a, #0x28
 	jr	C, 00112$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:183: if (screws_left > 99) values[0] = 99; else values[0] = screws_left;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:187: if (screws_left > 99) values[0] = 99; else values[0] = screws_left;
 	ld	a, #0x63
 	ld	hl, #_screws_left
 	sub	a, (hl)
@@ -747,7 +709,7 @@ _render_hud::
 	ldhl	sp,	#42
 	ld	(hl), a
 00104$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:184: if (ammo > 99) values[1] = 99; else values[1] = ammo;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:188: if (ammo > 99) values[1] = 99; else values[1] = ammo;
 	ld	a, #0x63
 	ld	hl, #_ammo
 	sub	a, (hl)
@@ -760,7 +722,7 @@ _render_hud::
 	ldhl	sp,	#43
 	ld	(hl), a
 00107$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:185: if (keys > 99) values[2] = 99; else values[2] = keys;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:189: if (keys > 99) values[2] = 99; else values[2] = keys;
 	ld	a, #0x63
 	ld	hl, #_keys
 	sub	a, (hl)
@@ -773,15 +735,15 @@ _render_hud::
 	ldhl	sp,	#44
 	ld	(hl), a
 00110$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:186: values[3] = level_planet;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:190: values[3] = level_planet;
 	ld	a, (#_level_planet)
 	ldhl	sp,	#45
 	ld	(hl), a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:188: for (g = 0; g < 4; g++) {
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:192: for (g = 0; g < 4; g++) {
 	ldhl	sp,	#55
 	ld	(hl), #0x00
 00114$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:189: const uint8_t *icon = &metatile_tiles[icons[g] * 4];
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:193: const uint8_t *icon = &metatile_tiles[icons[g] * 4];
 	push	hl
 	ld	hl, #48
 	add	hl, sp
@@ -808,7 +770,7 @@ _render_hud::
 	ld	(hl), e
 	inc	hl
 	ld	(hl), a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:190: uint8_t tens = (values[g] / 10) % 10;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:194: uint8_t tens = (values[g] / 10) % 10;
 	push	hl
 	ld	hl, #44
 	add	hl, sp
@@ -834,7 +796,7 @@ _render_hud::
 	ld	a, c
 	pop	bc
 	ldhl	sp,	#52
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:191: uint8_t ones = values[g] % 10;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:195: uint8_t ones = values[g] % 10;
 	ld	(hl+), a
 	inc	hl
 	push	bc
@@ -844,10 +806,10 @@ _render_hud::
 	ld	a, c
 	pop	bc
 	ldhl	sp,	#53
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:196: x = hud_x[g];
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:200: x = hud_x[g];
 	ld	(hl+), a
 	inc	hl
-	ld	de, #_render_hud_hud_x_30000_200
+	ld	de, #_render_hud_hud_x_30000_201
 	ld	l, (hl)
 	ld	h, #0x00
 	add	hl, de
@@ -856,7 +818,7 @@ _render_hud::
 	ld	a, (de)
 	ldhl	sp,	#54
 	ld	(hl), a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:197: win[x] = icon[0];
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:201: win[x] = icon[0];
 	ld	l, (hl)
 	ld	h, #0x00
 	add	hl, bc
@@ -871,7 +833,7 @@ _render_hud::
 	pop	hl
 	push	hl
 	ld	(hl), a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:198: win[x + 1] = icon[1];
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:202: win[x + 1] = icon[1];
 	ldhl	sp,	#54
 	ld	a, (hl)
 	inc	a
@@ -889,7 +851,7 @@ _render_hud::
 	inc	hl
 	ld	a, (hl)
 	ld	(de), a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:199: win[20 + x] = icon[2];
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:203: win[20 + x] = icon[2];
 	ldhl	sp,	#54
 	ld	a, (hl)
 	add	a, #0x14
@@ -908,7 +870,7 @@ _render_hud::
 	inc	hl
 	ld	a, (hl)
 	ld	(de), a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:200: win[20 + x + 1] = icon[3];
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:204: win[20 + x + 1] = icon[3];
 	ldhl	sp,	#54
 	ld	a, (hl)
 	add	a, #0x15
@@ -928,7 +890,7 @@ _render_hud::
 	inc	hl
 	ld	a, (hl)
 	ld	(de), a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:202: win[x + 2] = digit_tiles[tens][0];
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:206: win[x + 2] = digit_tiles[tens][0];
 	ldhl	sp,	#54
 	ld	a, (hl)
 	inc	a
@@ -967,7 +929,7 @@ _render_hud::
 	ld	h, (hl)
 	ld	l, e
 	ld	(hl), a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:203: win[20 + x + 2] = digit_tiles[tens][1];
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:207: win[20 + x + 2] = digit_tiles[tens][1];
 	ldhl	sp,	#54
 	ld	a, (hl)
 	add	a, #0x16
@@ -983,7 +945,7 @@ _render_hud::
 	inc	hl
 	ld	a, (hl)
 	ld	(de), a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:204: win[x + 3] = digit_tiles[ones][0];
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:208: win[x + 3] = digit_tiles[ones][0];
 	ldhl	sp,	#54
 	ld	a, (hl)
 	inc	a
@@ -1023,7 +985,7 @@ _render_hud::
 	ld	h, (hl)
 	ld	l, e
 	ld	(hl), a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:205: win[20 + x + 3] = digit_tiles[ones][1];
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:209: win[20 + x + 3] = digit_tiles[ones][1];
 	ldhl	sp,	#54
 	ld	a, (hl)
 	add	a, #0x17
@@ -1039,13 +1001,13 @@ _render_hud::
 	inc	hl
 	ld	a, (hl)
 	ld	(de), a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:188: for (g = 0; g < 4; g++) {
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:192: for (g = 0; g < 4; g++) {
 	ldhl	sp,	#55
 	inc	(hl)
 	ld	a, (hl)
 	sub	a, #0x04
 	jp	C, 00114$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:208: set_win_tiles(0, 0, 20, 2, win);
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:212: set_win_tiles(0, 0, 20, 2, win);
 	push	bc
 	ld	hl, #0x214
 	push	hl
@@ -1053,64 +1015,64 @@ _render_hud::
 	rrca
 	push	af
 	call	_set_win_tiles
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:209: }
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:213: }
 	add	sp, #62
 	ret
-_render_hud_hud_x_30000_200:
+_render_hud_hud_x_30000_201:
 	.db #0x00	; 0
 	.db #0x05	; 5
 	.db #0x0b	; 11
 	.db #0x10	; 16
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:211: void render_flash_set(uint8_t on)
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:215: void render_flash_set(uint8_t on)
 ;	---------------------------------
 ; Function render_flash_set
 ; ---------------------------------
 _render_flash_set::
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:215: BGP_REG = on ? 0xE0 : 0xE4;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:219: BGP_REG = on ? 0xE0 : 0xE4;
 	or	a, a
 	ld	a, #0xe0
 	jr	NZ, 00104$
 	ld	a, #0xe4
 00104$:
 	ldh	(_BGP_REG + 0), a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:216: }
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:220: }
 	ret
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:218: void render_sync_rows(void)
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:222: void render_sync_rows(void)
 ;	---------------------------------
 ; Function render_sync_rows
 ; ---------------------------------
 _render_sync_rows::
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:221: for (i = 0; i < VIEW_ROWS; i++) {
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:225: for (i = 0; i < VIEW_ROWS; i++) {
 	ld	c, #0x00
 00104$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:222: uint8_t level_y = cam_y + i;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:226: uint8_t level_y = cam_y + i;
 	ld	a, (#_cam_y)
 	add	a, c
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:223: uint8_t map_row = level_y & (MAP_METAROWS - 1);
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:227: uint8_t map_row = level_y & (MAP_METAROWS - 1);
 	ld	b, a
 	and	a, #0x0f
 	ld	e, a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:224: if (map_row_level[map_row] != level_y) {
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:228: if (map_row_level[map_row] != level_y) {
 	ld	hl, #_map_row_level
 	ld	d, #0x00
 	add	hl, de
 	ld	a, (hl)
 	sub	a, b
 	jr	Z, 00105$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:225: draw_level_row(level_y, map_row);
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:229: draw_level_row(level_y, map_row);
 	push	bc
 	ld	a, b
 	call	_draw_level_row
 	pop	bc
 00105$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:221: for (i = 0; i < VIEW_ROWS; i++) {
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:225: for (i = 0; i < VIEW_ROWS; i++) {
 	inc	c
 	ld	a, c
 	sub	a, #0x08
 	jr	C, 00104$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:228: }
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:232: }
 	ret
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:230: static void draw_cell_now(uint8_t x, uint8_t y)
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:234: static void draw_cell_now(uint8_t x, uint8_t y)
 ;	---------------------------------
 ; Function draw_cell_now
 ; ---------------------------------
@@ -1119,18 +1081,18 @@ _draw_cell_now:
 	ldhl	sp,	#2
 	ld	(hl), a
 	ld	c, e
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:232: uint8_t map_row = y & (MAP_METAROWS - 1);
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:236: uint8_t map_row = y & (MAP_METAROWS - 1);
 	ld	a, c
 	and	a, #0x0f
 	ld	e, a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:235: if (map_row_level[map_row] != y) return;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:239: if (map_row_level[map_row] != y) return;
 	ld	hl, #_map_row_level
 	ld	d, #0x00
 	add	hl, de
 	ld	a, (hl)
 	sub	a, c
 	jr	NZ, 00103$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:236: idx = (uint16_t)y * MAP_W + x;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:240: idx = (uint16_t)y * MAP_W + x;
 	ld	l, c
 	ld	h, #0x00
 	add	hl, hl
@@ -1145,7 +1107,7 @@ _draw_cell_now:
 	add	hl, bc
 	ld	c, l
 	ld	b, h
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:238: x * 2, map_row * 2);
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:242: x * 2, map_row * 2);
 	ld	a, e
 	add	a, a
 	ldhl	sp,	#0
@@ -1154,7 +1116,7 @@ _draw_cell_now:
 	ld	a, (hl-)
 	add	a, a
 	ld	(hl), a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:237: draw_metatile(render_metatile_for_cell(map_type[idx], map_extra[idx]),
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:241: draw_metatile(render_metatile_for_cell(map_type[idx], map_extra[idx]),
 	ld	hl, #_map_extra
 	add	hl, bc
 	ld	e, (hl)
@@ -1170,110 +1132,166 @@ _draw_cell_now:
 	ld	e, (hl)
 	call	_draw_metatile
 00103$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:239: }
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:243: }
 	add	sp, #3
 	ret
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:241: void render_cell(uint8_t x, uint8_t y)
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:245: void render_cell(uint8_t x, uint8_t y)
 ;	---------------------------------
 ; Function render_cell
 ; ---------------------------------
 _render_cell::
-	dec	sp
-	ld	c, a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:244: uint16_t idx = ((uint16_t)y << 8) | x;
-	ld	b, e
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:246: for (i = 0; i < dirty_count; i++) {
-	ldhl	sp,	#0
-	ld	(hl), #0x00
-00107$:
-	ldhl	sp,	#0
-	ld	a, (hl)
-	ld	hl, #_dirty_count
-	sub	a, (hl)
-	jr	NC, 00103$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:247: if (dirty_cells[i] == idx) return;
-	ldhl	sp,	#0
-	ld	e, (hl)
-	xor	a, a
-	ld	l, e
-	ld	h, a
-	add	hl, hl
-	ld	de, #_dirty_cells
-	add	hl, de
-	ld	a,	(hl+)
-	ld	h, (hl)
-	sub	a, c
-	jr	NZ, 00108$
-	ld	a, h
-	sub	a, b
-	jr	Z, 00109$
-00108$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:246: for (i = 0; i < dirty_count; i++) {
-	ldhl	sp,	#0
-	inc	(hl)
-	jr	00107$
-00103$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:249: if (dirty_count < MAX_DIRTY) {
-	ld	hl, #_dirty_count
-	ld	a, (hl)
-	sub	a, #0x40
-	jr	NC, 00109$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:250: dirty_cells[dirty_count++] = idx;
-	ld	e, (hl)
-	inc	(hl)
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:247: uint16_t idx = ((uint16_t)y << 4) | x;
 	ld	l, e
 	ld	h, #0x00
 	add	hl, hl
-	ld	de, #_dirty_cells
-	add	hl, de
-	ld	a, c
-	ld	(hl+), a
-	ld	(hl), b
-00109$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:252: }
-	inc	sp
+	add	hl, hl
+	add	hl, hl
+	add	hl, hl
+	or	a, l
+	ld	e, a
+	ld	d, h
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:249: dirty_bits[idx >> 3] |= (uint8_t)(1u << (idx & 7));
+	ld	bc, #_dirty_bits+0
+	ld	l, e
+	ld	h, d
+	srl	h
+	rr	l
+	srl	h
+	rr	l
+	srl	h
+	rr	l
+	add	hl, bc
+	ld	c, (hl)
+	ld	a, e
+	and	a, #0x07
+	ld	b, a
+	ld	a, #0x01
+	inc	b
+	jr	00104$
+00103$:
+	add	a, a
+00104$:
+	dec	b
+	jr	NZ,00103$
+	or	a, c
+	ld	(hl), a
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:250: dirty_any = 1;
+	ld	hl, #_dirty_any
+	ld	(hl), #0x01
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:251: }
 	ret
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:254: void render_flush_cells(void)
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:253: void render_flush_cells(void)
 ;	---------------------------------
 ; Function render_flush_cells
 ; ---------------------------------
 _render_flush_cells::
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:257: for (i = 0; i < dirty_count; i++) {
+	add	sp, #-3
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:258: if (!dirty_any) return;
+	ld	a, (#_dirty_any)
+	or	a, a
+	jr	Z, 00113$
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:259: dirty_any = 0;
+	xor	a, a
+	ld	(#_dirty_any),a
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:260: for (i = 0; i < DIRTY_WORDS; i++) {
 	ld	c, #0x00
-00103$:
-	ld	a, c
-	ld	hl, #_dirty_count
-	sub	a, (hl)
-	jr	NC, 00101$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:258: draw_cell_now(dirty_cells[i] & 0xFF, dirty_cells[i] >> 8);
-	ld	l, c
-	xor	a, a
-	ld	h, a
-	add	hl, hl
-	ld	de, #_dirty_cells
-	add	hl, de
-	ld	a, (hl+)
+00112$:
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:261: uint8_t b = dirty_bits[i];
+	ld	hl, #_dirty_bits
+	ld	b, #0x00
+	add	hl, bc
+	ld	a, (hl)
+	ld	d, a
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:262: if (!b) continue;
+	or	a, a
+	jr	Z, 00109$
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:263: dirty_bits[i] = 0;
+	ld	(hl), #0x00
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:264: for (p = 0; p < 8; p++) {
+	ldhl	sp,	#2
+	ld	(hl), #0x00
+00111$:
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:265: if (!(b & (uint8_t)(1u << p))) continue;
+	ldhl	sp,	#2
 	ld	b, (hl)
-	ld	e, b
-	push	bc
-	call	_draw_cell_now
-	pop	bc
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:257: for (i = 0; i < dirty_count; i++) {
-	inc	c
-	jr	00103$
-00101$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:260: dirty_count = 0;
+	ld	a, #0x01
+	inc	b
+	jr	00153$
+00152$:
+	add	a, a
+00153$:
+	dec	b
+	jr	NZ,00152$
+	and	a, d
+	jr	Z, 00107$
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:266: idx = (uint16_t)((i << 3) | p);
+	dec	hl
+	dec	hl
+	ld	b, c
 	xor	a, a
-	ld	(#_dirty_count),a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:261: }
+	sla	b
+	adc	a, a
+	sla	b
+	adc	a, a
+	sla	b
+	adc	a, a
+	ld	(hl), b
+	inc	hl
+	ld	(hl+), a
+	ld	a, (hl-)
+	dec	hl
+	ld	e, a
+	ld	a, (hl+)
+	or	a, e
+	ld	b, (hl)
+	dec	hl
+	ld	(hl+), a
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:267: draw_cell_now((uint8_t)(idx & 0x0F), (uint8_t)(idx >> 4));
+	ld	a, b
+	ld	(hl-), a
+	ld	a, (hl+)
+	ld	e, a
+	ld	a, (hl-)
+	ld	b, a
+	srl	b
+	rr	e
+	srl	b
+	rr	e
+	srl	b
+	rr	e
+	srl	b
+	rr	e
+	ld	a, (hl)
+	and	a, #0x0f
+	push	bc
+	push	de
+	call	_draw_cell_now
+	pop	de
+	pop	bc
+00107$:
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:264: for (p = 0; p < 8; p++) {
+	ldhl	sp,	#2
+	inc	(hl)
+	ld	a, (hl)
+	sub	a, #0x08
+	jr	C, 00111$
+00109$:
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:260: for (i = 0; i < DIRTY_WORDS; i++) {
+	inc	c
+	ld	a, c
+	sub	a, #0x3e
+	jr	C, 00112$
+00113$:
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:270: }
+	add	sp, #3
 	ret
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:263: void render_camera(void)
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:272: void render_camera(void)
 ;	---------------------------------
 ; Function render_camera
 ; ---------------------------------
 _render_camera::
 	add	sp, #-7
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:266: uint8_t max_y = (level_height > VIEW_ROWS) ? (level_height - VIEW_ROWS) : 0;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:275: uint8_t max_y = (level_height > VIEW_ROWS) ? (level_height - VIEW_ROWS) : 0;
 	ld	a, #0x08
 	ld	hl, #_level_height
 	sub	a, (hl)
@@ -1287,24 +1305,24 @@ _render_camera::
 00132$:
 	ldhl	sp,	#0
 	ld	(hl), c
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:268: if (cam_override) {
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:277: if (cam_override) {
 	ld	a, (#_cam_override)
 	or	a, a
 	jr	Z, 00114$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:270: if (cam_pan_timer < 2) {
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:279: if (cam_pan_timer < 2) {
 	ld	hl, #_cam_pan_timer
 	ld	a, (hl)
 	sub	a, #0x02
 	jr	NC, 00102$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:271: cam_pan_timer++;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:280: cam_pan_timer++;
 	inc	(hl)
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:272: return;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:281: return;
 	jp	00129$
 00102$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:274: cam_pan_timer = 0;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:283: cam_pan_timer = 0;
 	xor	a, a
 	ld	(#_cam_pan_timer),a
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:276: if (cam_x < cam_target_x) cam_x++;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:285: if (cam_x < cam_target_x) cam_x++;
 	ld	a, (#_cam_x)
 	ld	hl, #_cam_target_x
 	sub	a, (hl)
@@ -1313,14 +1331,14 @@ _render_camera::
 	inc	(hl)
 	jr	00107$
 00106$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:277: else if (cam_x > cam_target_x) cam_x--;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:286: else if (cam_x > cam_target_x) cam_x--;
 	ld	a, (#_cam_target_x)
 	ld	hl, #_cam_x
 	sub	a, (hl)
 	jr	NC, 00107$
 	dec	(hl)
 00107$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:278: if (cam_y < cam_target_y) cam_y++;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:287: if (cam_y < cam_target_y) cam_y++;
 	ld	a, (#_cam_y)
 	ld	hl, #_cam_target_y
 	sub	a, (hl)
@@ -1329,16 +1347,16 @@ _render_camera::
 	inc	(hl)
 	jp	00129$
 00111$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:279: else if (cam_y > cam_target_y) cam_y--;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:288: else if (cam_y > cam_target_y) cam_y--;
 	ld	a, (#_cam_target_y)
 	ld	hl, #_cam_y
 	sub	a, (hl)
 	jp	NC, 00129$
 	dec	(hl)
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:280: return;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:289: return;
 	jp	00129$
 00114$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:283: if (robbo_x < cam_x + 2) {
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:292: if (robbo_x < cam_x + 2) {
 	ld	a, (#_cam_x)
 	ldhl	sp,	#1
 	ld	(hl+), a
@@ -1372,7 +1390,7 @@ _render_camera::
 	ld	a, (de)
 	sbc	a, (hl)
 	jr	NC, 00118$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:284: cam_x = (robbo_x >= 2) ? (robbo_x - 2) : 0;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:293: cam_x = (robbo_x >= 2) ? (robbo_x - 2) : 0;
 	ld	a, (#_robbo_x)
 	cp	a,#0x02
 	jr	C, 00133$
@@ -1397,7 +1415,7 @@ _render_camera::
 	ld	(#_cam_x),a
 	jr	00119$
 00118$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:285: } else if (robbo_x > cam_x + 7) {
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:294: } else if (robbo_x > cam_x + 7) {
 	ldhl	sp,#1
 	ld	a, (hl+)
 	ld	e, a
@@ -1413,19 +1431,19 @@ _render_camera::
 	ld	a, b
 	sbc	a, (hl)
 	jr	NC, 00119$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:286: cam_x = robbo_x - 7;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:295: cam_x = robbo_x - 7;
 	ld	a, (_robbo_x)
 	add	a, #0xf9
 	ld	(#_cam_x),a
 00119$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:288: if (cam_x > max_x) cam_x = max_x;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:297: if (cam_x > max_x) cam_x = max_x;
 	ld	a, #0x06
 	ld	hl, #_cam_x
 	sub	a, (hl)
 	jr	NC, 00121$
 	ld	(hl), #0x06
 00121$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:290: if (robbo_y < cam_y + 2) {
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:299: if (robbo_y < cam_y + 2) {
 	ld	a, (#_cam_y)
 	ldhl	sp,	#3
 	ld	(hl+), a
@@ -1445,7 +1463,7 @@ _render_camera::
 	ld	a, (hl)
 	sbc	a, b
 	jr	NC, 00125$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:291: cam_y = (robbo_y >= 2) ? (robbo_y - 2) : 0;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:300: cam_y = (robbo_y >= 2) ? (robbo_y - 2) : 0;
 	ld	a, (#_robbo_y)
 	cp	a,#0x02
 	jr	C, 00135$
@@ -1460,7 +1478,7 @@ _render_camera::
 	ld	(hl), e
 	jr	00126$
 00125$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:292: } else if (robbo_y > cam_y + 5) {
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:301: } else if (robbo_y > cam_y + 5) {
 	ldhl	sp,#3
 	ld	a, (hl+)
 	ld	e, a
@@ -1476,12 +1494,12 @@ _render_camera::
 	ld	a, b
 	sbc	a, (hl)
 	jr	NC, 00126$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:293: cam_y = robbo_y - 5;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:302: cam_y = robbo_y - 5;
 	ld	a, (_robbo_y)
 	add	a, #0xfb
 	ld	(#_cam_y),a
 00126$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:295: if (cam_y > max_y) cam_y = max_y;
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:304: if (cam_y > max_y) cam_y = max_y;
 	ldhl	sp,	#0
 	ld	a, (hl)
 	ld	hl, #_cam_y
@@ -1491,7 +1509,7 @@ _render_camera::
 	ld	a, (hl)
 	ld	(#_cam_y),a
 00129$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:296: }
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:305: }
 	add	sp, #7
 	ret
 	.area _CODE

@@ -6,12 +6,15 @@
 #include "../gen/tiles.h"
 
 #define MAP_METAROWS 16
-#define MAX_DIRTY 64
 
 static uint8_t map_row_level[MAP_METAROWS];
 
-static uint16_t dirty_cells[MAX_DIRTY];
-static uint8_t dirty_count;
+/* Dirty-cell bitmap (one bit per map cell).  Insertion is O(1); the old
+ * 64-entry list cost a linear de-dup scan per mark and silently dropped
+ * updates past 64 during large cascades. */
+#define DIRTY_WORDS ((MAP_CELLS + 7) / 8)
+static uint8_t dirty_bits[DIRTY_WORDS];
+static uint8_t dirty_any;
 
 static const uint8_t turret_mt[4] = {
     MT_TURRET_R, MT_TURRET_D, MT_TURRET_L, MT_TURRET_U
@@ -70,11 +73,11 @@ static uint8_t empty_tile(void)
 
 static void draw_metatile(uint8_t mt, uint8_t tx, uint8_t ty)
 {
-    const uint8_t *t = &metatile_tiles[mt * 4];
-    set_bkg_tile_xy(tx, ty, t[0]);
-    set_bkg_tile_xy(tx + 1, ty, t[1]);
-    set_bkg_tile_xy(tx, ty + 1, t[2]);
-    set_bkg_tile_xy(tx + 1, ty + 1, t[3]);
+    /* One library copy for the whole 2x2 metatile.  set_bkg_tile_xy() per
+     * tile is ~400 cycles each here; this keeps the tested address path but
+     * makes the cost a single call. */
+    const uint8_t *t = &metatile_tiles[mt << 2];
+    set_bkg_tiles(tx, ty, 2, 2, t);
 }
 
 static void draw_level_row(uint8_t level_y, uint8_t map_row)
@@ -160,7 +163,8 @@ void render_level(void)
 {
     uint8_t row;
 
-    dirty_count = 0;
+    for (row = 0; row < DIRTY_WORDS; row++) dirty_bits[row] = 0;
+    dirty_any = 0;
 
     for (row = 0; row < MAP_METAROWS; row++) {
         draw_level_row(row, row);
@@ -240,24 +244,29 @@ static void draw_cell_now(uint8_t x, uint8_t y)
 
 void render_cell(uint8_t x, uint8_t y)
 {
-    uint8_t i;
-    uint16_t idx = ((uint16_t)y << 8) | x;
+    uint16_t idx = ((uint16_t)y << 4) | x;
 
-    for (i = 0; i < dirty_count; i++) {
-        if (dirty_cells[i] == idx) return;
-    }
-    if (dirty_count < MAX_DIRTY) {
-        dirty_cells[dirty_count++] = idx;
-    }
+    dirty_bits[idx >> 3] |= (uint8_t)(1u << (idx & 7));
+    dirty_any = 1;
 }
 
 void render_flush_cells(void)
 {
-    uint8_t i;
-    for (i = 0; i < dirty_count; i++) {
-        draw_cell_now(dirty_cells[i] & 0xFF, dirty_cells[i] >> 8);
+    uint8_t i, p;
+    uint16_t idx;
+
+    if (!dirty_any) return;
+    dirty_any = 0;
+    for (i = 0; i < DIRTY_WORDS; i++) {
+        uint8_t b = dirty_bits[i];
+        if (!b) continue;
+        dirty_bits[i] = 0;
+        for (p = 0; p < 8; p++) {
+            if (!(b & (uint8_t)(1u << p))) continue;
+            idx = (uint16_t)((i << 3) | p);
+            draw_cell_now((uint8_t)(idx & 0x0F), (uint8_t)(idx >> 4));
+        }
     }
-    dirty_count = 0;
 }
 
 void render_camera(void)

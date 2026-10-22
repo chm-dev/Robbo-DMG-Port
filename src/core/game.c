@@ -14,7 +14,7 @@
  * SfxDef rendering.  Everything else uses the SFX_* patterns from sound.h. */
 static const SfxDef sfx_destroy   = { 17, 0, 16, 512, 2, 0, 0, 0, 0, 0, 0, 0, 1, 1, 7, 1, 3 };
 static const SfxDef sfx_door_open = { 11, 0,  7, PITCH_DOWN_2OCT, 5, 0, 0, 7, 2, 256, 0, 0, 0, 0 };
-static const SfxDef sfx_explosion = { 16, 0, 16, 8, 4, 0, 0, 0, 0, 0, 0, 0, 1, 4 };
+static const SfxDef sfx_explosion = { 16, 0, 16, 16, 4, 0, 0, 0, 0, 0, 0, 0, 1, 4 };
 
 uint8_t map_type[MAP_CELLS];
 uint8_t map_extra[MAP_CELLS];
@@ -162,6 +162,12 @@ void game_load_level(uint8_t level)
     hud_dirty = 0;
     render_camera();
     render_apply_camera();
+
+    /* Fill the legacy SFX conversion cache while the display is off: the
+     * first explosion must not pay those divisions mid-gameplay.  Re-loading
+     * a level is nearly free because the memo entries are already present. */
+    sfx_prewarm_def(&sfx_explosion);
+
     sfx_play_note(SFX_LEVEL_START);
 }
 
@@ -1102,9 +1108,46 @@ static uint16_t mustache_step(uint16_t idx, uint8_t state)
     return cur;
 }
 
+/* Category lookup for collect_actors(): 0 = not tracked, else which list.
+ * A table probe beats the 7-way type compare chain in the per-tick scan;
+ * walls/ground/empty (the bulk of the map) exit the loop body in two loads. */
+#define CAT_NONE 0
+#define CAT_TURRET 1
+#define CAT_ENEMY 2
+#define CAT_BOMB 3
+#define CAT_EXPLOSION 4
+#define CAT_MAGNET 5
+#define CAT_SPACESHIP 6
+#define CAT_TELEPORT 7
+static const uint8_t type_cat[29] = {
+    CAT_NONE,       /* CT_EMPTY */
+    CAT_NONE, CAT_NONE, CAT_NONE, CAT_NONE, CAT_NONE, CAT_NONE, CAT_NONE, CAT_NONE,
+    CAT_NONE,       /* CT_GROUND */
+    CAT_NONE,       /* CT_STONE */
+    CAT_NONE,       /* CT_PUSHABLE */
+    CAT_NONE,       /* CT_DOOR */
+    CAT_SPACESHIP,  /* CT_SPACESHIP */
+    CAT_NONE,       /* CT_QUESTION */
+    CAT_BOMB,       /* CT_BOMB */
+    CAT_NONE,       /* CT_KEY */
+    CAT_NONE,       /* CT_SCREW */
+    CAT_TURRET,     /* CT_TURRET */
+    CAT_NONE,       /* CT_AMMO */
+    CAT_TELEPORT,   /* CT_TELEPORT */
+    CAT_ENEMY,      /* CT_MUSTACHE */
+    CAT_ENEMY,      /* CT_BUTTERFLY */
+    CAT_ENEMY,      /* CT_BEAR */
+    CAT_NONE,       /* CT_LAVA */
+    CAT_MAGNET,     /* CT_MAGNET */
+    CAT_NONE,       /* CT_ROBBO */
+    CAT_NONE,       /* CT_BULLET */
+    CAT_EXPLOSION,  /* CT_EXPLOSION */
+};
+
 static void collect_actors(void)
 {
-    uint16_t idx;
+    const uint8_t *p = map_type;
+    const uint8_t *end = map_type + MAP_CELLS;
 
     turret_count = 0;
     enemy_count = 0;
@@ -1114,23 +1157,35 @@ static void collect_actors(void)
     spaceship_count = 0;
     teleport_count = 0;
 
-    for (idx = 0; idx < MAP_CELLS; idx++) {
-        uint8_t type = map_type[idx];
+    while (p != end) {
+        uint8_t cat = type_cat[*p++];
 
-        if (type == CT_TURRET) {
+        if (cat == CAT_NONE) continue;
+        {
+            uint16_t idx = (uint16_t)(p - map_type) - 1;
+            switch (cat) {
+        case CAT_TURRET:
             if (turret_count < MAX_TURRET_LIST) turret_list[turret_count++] = idx;
-        } else if (type == CT_BEAR || type == CT_BUTTERFLY || type == CT_MUSTACHE) {
+            break;
+        case CAT_ENEMY:
             if (enemy_count < MAX_ENEMY_LIST) enemy_list[enemy_count++] = idx;
-        } else if (type == CT_BOMB) {
+            break;
+        case CAT_BOMB:
             if (bomb_count < MAX_BOMB_LIST) bomb_list[bomb_count++] = idx;
-        } else if (type == CT_EXPLOSION) {
+            break;
+        case CAT_EXPLOSION:
             if (explosion_count < MAX_EXPLOSION_LIST) explosion_list[explosion_count++] = idx;
-        } else if (type == CT_MAGNET) {
+            break;
+        case CAT_MAGNET:
             if (magnet_count < MAX_MAGNET_LIST) magnet_list[magnet_count++] = idx;
-        } else if (type == CT_SPACESHIP) {
+            break;
+        case CAT_SPACESHIP:
             if (spaceship_count < MAX_SPACESHIP_LIST) spaceship_list[spaceship_count++] = idx;
-        } else if (type == CT_TELEPORT) {
+            break;
+        default:    /* CAT_TELEPORT */
             if (teleport_count < MAX_TELEPORT_LIST) teleport_list[teleport_count++] = idx;
+            break;
+            }
         }
     }
 }

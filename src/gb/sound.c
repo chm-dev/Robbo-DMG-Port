@@ -134,23 +134,35 @@ static uint16_t pulse_period(uint32_t hz)
     return (uint16_t)period;
 }
 
-/* Pick the closest Game Boy noise frequency.  The rate table is precomputed
- * at build time, so the runtime work is a scan. */
+/* Pick the closest Game Boy noise frequency.  The rate table is 16 descending
+ * groups of 8 entries, so only the entries inside [hz/4, hz*4] can win: any
+ * entry outside is at least 3x farther than the nearest neighbour inside.
+ * Skipping them keeps the scan exact (same order, same tie-break) but avoids
+ * the 32-bit subtractions for 100+ entries. */
 static uint8_t noise_period(uint32_t hz)
 {
-    uint8_t best = 0;
-    uint8_t i;
+    uint8_t g, c, best = 0;
     uint32_t best_diff = 0xFFFFFFFFUL;
+    uint32_t lo, hi;
 
     if (hz < 400UL) hz = 400UL;
     if (hz > 200000UL) hz = 200000UL;
+    lo = hz >> 2;
+    hi = hz << 2;
 
-    for (i = 0; i < 128; i++) {
-        uint32_t f = noise_rate_table[i];
-        uint32_t diff = (f > hz) ? (f - hz) : (hz - f);
-        if (diff < best_diff) {
-            best_diff = diff;
-            best = noise_code_table[i];
+    for (g = 0; g < 16; g++) {
+        for (c = 0; c < 8; c++) {
+            uint8_t i = (uint8_t)((g << 3) | c);
+            uint32_t f = noise_rate_table[i];
+            uint32_t diff;
+
+            if (f > hi) continue;
+            if (f < lo) break;          /* rest of this group is smaller */
+            diff = (f > hz) ? (f - hz) : (hz - f);
+            if (diff < best_diff) {
+                best_diff = diff;
+                best = noise_code_table[i];
+            }
         }
     }
     return best;
@@ -172,27 +184,36 @@ static uint8_t noise_period(uint32_t hz)
  */
 static uint8_t pattern_noise_nr43(uint32_t hz)
 {
-    uint8_t best = 0;
+    /* NR43 f = 524288 / (2^shift * 2^(code+1)), so every (shift,code) pair is
+     * really one total divide exponent t in 1..17 with f = 2^(19 - t).  The
+     * original 56-iteration double loop visits those frequencies in t order
+     * and keeps the first strict improvement, so this 17-step scan picks the
+     * identical entry and tie.  The shift<<4 byte layout is preserved. */
+    uint8_t t, best_t = 1, shift, code;
     uint32_t best_err = 0xFFFFFFFFUL;
-    uint8_t shift, code;
 
     if (hz < 4UL) hz = 4UL;
     if (hz > 262144UL) hz = 262144UL;
 
-    for (shift = 0; shift < 14; shift++) {
-        for (code = 0; code < 4; code++) {
-            uint32_t f = 524288UL >> shift;
-            uint32_t err;
-
-            f >>= (code + 1);
-            err = (f > hz) ? (f - hz) : (hz - f);
-            if (err < best_err) {
-                best_err = err;
-                best = (uint8_t)((shift << 4) | code);
-            }
+    for (t = 1; t <= 17; t++) {
+        uint32_t f = 0x80000UL >> t;
+        uint32_t err = (f > hz) ? (f - hz) : (hz - f);
+        if (err < best_err) {
+            best_err = err;
+            best_t = t;
         }
     }
-    return best;
+
+    /* Byte-identical to the original first-improvement pair: (0, t-1) for
+     * t <= 4, otherwise (t-4, 3). */
+    if (best_t <= 4u) {
+        shift = 0;
+        code = (uint8_t)(best_t - 1u);
+    } else {
+        shift = (uint8_t)(best_t - 4u);
+        code = 3;
+    }
+    return (uint8_t)((shift << 4) | code);
 }
 
 /* 0 silent, 1 noise step, 2 tone step. */
@@ -351,31 +372,132 @@ static uint8_t alloc_legacy_voice(const SfxDef *def)
 /* Step rendering                                                     */
 /* ------------------------------------------------------------------ */
 
-static void apply_legacy_step(uint8_t vi, uint8_t index)
+/* Cache of converted legacy step values.  pokey_rate() does two 32-bit
+ * divisions and noise_period() a 128-entry 32-bit scan; a bomb chain
+ * re-triggers the explosion definition dozens of times, always with the same
+ * per-step (audc, audf) pairs.  Keyed by (def, step index) because every
+ * input to the conversion is derived from those. */
+typedef struct {
+    const SfxDef *def;
+    uint8_t index;
+    uint8_t vol;
+    uint8_t dist;
+    uint8_t nr43;
+    uint16_t period;
+    uint8_t duty;
+} SfxStepMemo;
+
+#define SFX_STEP_MEMO 48    /* explosion 16 + destroy 17 + door 7 steps */
+static SfxStepMemo step_memo[SFX_STEP_MEMO];
+static uint8_t step_memo_next;
+
+static void apply_legacy_noise(uint8_t vi, uint8_t index, uint8_t vol,
+                               uint8_t dist, uint8_t nr43)
 {
     SfxVoice *v = &voices[vi];
     const SfxDef *def = v->def;
+    uint8_t envbits = (uint8_t)(def->env & 0x07);
+
+    (void)dist;
+    /* A tone voice may borrow the noise channel for the noisy steps of a
+     * mixed pattern; release its pulse channel first. */
+    if (v->last_type == 1) {
+        *pulse_vol[vi] = 0x00;
+        *pulse_period_hi[vi] = 0x80;
+    }
+
+    if (def->attack_steps != 0 && index < def->attack_steps) {
+        /* Fade-in phase: start at volume 0 and let the amplifying
+         * hardware envelope raise it. */
+        if (v->last_type != 2) {
+            NR41_REG = 0x00;
+            NR42_REG = (uint8_t)(0x08 | (def->attack_env & 0x07));
+            NR43_REG = nr43;
+            NR44_REG = 0x80;
+        } else {
+            NR43_REG = nr43;
+        }
+    } else if (def->attack_steps != 0 && index == def->attack_steps) {
+        /* Peak reached: retrigger at full volume with a decaying
+         * envelope for the fade-out. */
+        NR42_REG = (uint8_t)(0xF0 | envbits);
+        NR43_REG = nr43;
+        NR44_REG = 0x80;
+    } else if (!def->smooth || v->last_type != 2) {
+        /* Start the noise channel. */
+        NR41_REG = 0x00;
+        NR42_REG = (uint8_t)((vol << 4) | envbits);
+        NR43_REG = nr43;
+        NR44_REG = 0x80;
+    } else {
+        /* Smooth pitch/rate update without restarting the LFSR. */
+        if (envbits == 0) NR42_REG = (uint8_t)(vol << 4);
+        NR43_REG = nr43;
+    }
+    noise_owner = vi;
+    v->last_type = 2;
+}
+
+static void apply_legacy_pulse(uint8_t vi, uint8_t vol, uint8_t dist,
+                               uint16_t period, uint8_t duty)
+{
+    SfxVoice *v = &voices[vi];
+    const SfxDef *def = v->def;
+
+    /* Back on this voice's own pulse channel: release the shared noise
+     * channel if this voice was the one using it. */
+    if (v->last_type == 2 && noise_owner == vi) {
+        NR42_REG = 0x00;
+        NR44_REG = 0x80;
+        noise_owner = 0xFF;
+    }
+
+    if (def->square)    duty = 2; /* forced 50% square */
+    else if (dist == 3) duty = 2; /* 50%  - clean square */
+    else if (dist == 1) duty = 1; /* 25%  - 4-bit poly buzz */
+    else                duty = 0; /* 12.5% - 5-bit poly buzz */
+
+    if (def->smooth && v->last_type == 1 &&
+        v->last_period == period && v->last_duty == duty) {
+        if (def->env == 0) *pulse_vol[vi] = (uint8_t)(vol << 4);
+    } else {
+        *pulse_duty[vi] = (uint8_t)(duty << 6);
+        *pulse_vol[vi] = (uint8_t)((vol << 4) | (def->env & 0x07));
+        *pulse_period_lo[vi] = (uint8_t)(period & 0xFF);
+        *pulse_period_hi[vi] = (uint8_t)(0x80 | ((period >> 8) & 0x07));
+    }
+    v->last_type = 1;
+    v->last_period = period;
+    v->last_duty = duty;
+}
+
+static uint8_t memo_find(const SfxDef *def, uint8_t index)
+{
+    uint8_t i;
+
+    for (i = 0; i < SFX_STEP_MEMO; i++) {
+        if (step_memo[i].def == def && step_memo[i].index == index) return i;
+    }
+    return 0xFF;
+}
+
+/* Convert one legacy step into the memo.  Pure: no APU writes.  Shared by
+ * playback and by sfx_prewarm_def(), which fills the memo during level load
+ * so the first explosion does not stall gameplay. */
+static uint8_t memo_convert(const SfxDef *def, uint8_t index)
+{
     const SfxStep *s = &sfx_notes[def->note][def->first + index];
     uint8_t audc = s->audc;
     uint8_t vol = pokey_volume(audc);
     uint8_t dist = pokey_distortion(audc);
+    uint8_t slot = step_memo_next;
+    SfxStepMemo *m = &step_memo[slot];
     uint32_t hz;
-
-    if (def->gap && (index & 1)) {
-        /* Muted step: keeps the timing grid but leaves a gap between bursts. */
-        release_voice(vi);
-        return;
-    }
-
-    if (vol == 0) {
-        release_voice(vi);
-        return;
-    }
 
     /* POKEY table volumes are conservative; double them (clamped) so the
      * converted effects are audible on real DMG hardware.  Synthesized
      * notes (15..17) keep their authored volume. */
-    if (def->note < 15 && vol != 0) {
+    if (def->note < 15) {
         vol = (uint8_t)(vol << 1);
         if (vol > 15) vol = 15;
     }
@@ -407,78 +529,54 @@ static void apply_legacy_step(uint8_t vi, uint8_t index)
         hz = (hz * def->pitch_q8) / 256UL;
     }
 
-    if (vi == VOICE_NOISE || dist == 2) {
-        uint8_t nr43 = noise_period(hz);
-        uint8_t envbits = (uint8_t)(def->env & 0x07);
-
-        /* A tone voice may borrow the noise channel for the noisy steps of a
-         * mixed pattern; release its pulse channel first. */
-        if (v->last_type == 1) {
-            *pulse_vol[vi] = 0x00;
-            *pulse_period_hi[vi] = 0x80;
-        }
-
-        if (def->attack_steps != 0 && index < def->attack_steps) {
-            /* Fade-in phase: start at volume 0 and let the amplifying
-             * hardware envelope raise it. */
-            if (v->last_type != 2) {
-                NR41_REG = 0x00;
-                NR42_REG = (uint8_t)(0x08 | (def->attack_env & 0x07));
-                NR43_REG = nr43;
-                NR44_REG = 0x80;
-            } else {
-                NR43_REG = nr43;
-            }
-        } else if (def->attack_steps != 0 && index == def->attack_steps) {
-            /* Peak reached: retrigger at full volume with a decaying
-             * envelope for the fade-out. */
-            NR42_REG = (uint8_t)(0xF0 | envbits);
-            NR43_REG = nr43;
-            NR44_REG = 0x80;
-        } else if (!def->smooth || v->last_type != 2) {
-            /* Start the noise channel. */
-            NR41_REG = 0x00;
-            NR42_REG = (uint8_t)((vol << 4) | envbits);
-            NR43_REG = nr43;
-            NR44_REG = 0x80;
-        } else {
-            /* Smooth pitch/rate update without restarting the LFSR. */
-            if (envbits == 0) NR42_REG = (uint8_t)(vol << 4);
-            NR43_REG = nr43;
-        }
-        noise_owner = vi;
-        v->last_type = 2;
+    m->def = def;
+    m->index = index;
+    m->vol = vol;
+    m->period = 0;
+    m->nr43 = 0;
+    m->duty = 0;
+    /* The voice a legacy def runs on is fixed by its first step, so the memo
+     * can record the noise/pulse choice for every step. */
+    if (legacy_is_noise(def) || dist == 2) {
+        m->dist = 2;
+        m->nr43 = noise_period(hz);
     } else {
-        uint16_t period;
-        uint8_t duty;
+        m->dist = dist;
+        m->period = pulse_period(hz);
+    }
+    step_memo_next = (uint8_t)((step_memo_next + 1) % SFX_STEP_MEMO);
+    return slot;
+}
 
-        /* Back on this voice's own pulse channel: release the shared noise
-         * channel if this voice was the one using it. */
-        if (v->last_type == 2 && noise_owner == vi) {
-            NR42_REG = 0x00;
-            NR44_REG = 0x80;
-            noise_owner = 0xFF;
-        }
+static void apply_legacy_step(uint8_t vi, uint8_t index)
+{
+    SfxVoice *v = &voices[vi];
+    const SfxDef *def = v->def;
+    const SfxStep *s = &sfx_notes[def->note][def->first + index];
+    uint8_t audc = s->audc;
+    uint8_t vol = pokey_volume(audc);
+    uint8_t slot;
 
-        if (def->square)    duty = 2; /* forced 50% square */
-        else if (dist == 3) duty = 2; /* 50%  - clean square */
-        else if (dist == 1) duty = 1; /* 25%  - 4-bit poly buzz */
-        else                duty = 0; /* 12.5% - 5-bit poly buzz */
+    if (def->gap && (index & 1)) {
+        /* Muted step: keeps the timing grid but leaves a gap between bursts. */
+        release_voice(vi);
+        return;
+    }
 
-        period = pulse_period(hz);
+    if (vol == 0) {
+        release_voice(vi);
+        return;
+    }
 
-        if (def->smooth && v->last_type == 1 &&
-            v->last_period == period && v->last_duty == duty) {
-            if (def->env == 0) *pulse_vol[vi] = (uint8_t)(vol << 4);
-        } else {
-            *pulse_duty[vi] = (uint8_t)(duty << 6);
-            *pulse_vol[vi] = (uint8_t)((vol << 4) | (def->env & 0x07));
-            *pulse_period_lo[vi] = (uint8_t)(period & 0xFF);
-            *pulse_period_hi[vi] = (uint8_t)(0x80 | ((period >> 8) & 0x07));
-        }
-        v->last_type = 1;
-        v->last_period = period;
-        v->last_duty = duty;
+    slot = memo_find(def, index);
+    if (slot == 0xFF) slot = memo_convert(def, index);
+
+    if (step_memo[slot].dist == 2) {
+        apply_legacy_noise(vi, index, step_memo[slot].vol,
+                           step_memo[slot].dist, step_memo[slot].nr43);
+    } else {
+        apply_legacy_pulse(vi, step_memo[slot].vol, step_memo[slot].dist,
+                           step_memo[slot].period, step_memo[slot].duty);
     }
 }
 
@@ -655,11 +753,21 @@ void sfx_play_note(uint8_t note) BANKED
 
 void sfx_play_def(const SfxDef *def) BANKED
 {
-    uint8_t vi;
+    uint8_t vi, i;
 
     if (!def || def->count == 0 || def->note >= SFX_NOTE_COUNT) return;
     if ((uint16_t)(def->first + def->count) > SFX_STEPS) return;
     if (def->pitch_q8 == 0) return;
+
+    /* Same effect already sounding (a bomb chain retriggering the explosion):
+     * let the running voice finish instead of paying the voice-allocation and
+     * frequency-mapping cost again and chopping it back to the first step. */
+    for (i = 0; i < VOICE_COUNT; i++) {
+        if (voices[i].playing && voices[i].kind == VOICE_KIND_LEGACY &&
+            voices[i].def == def) {
+            return;
+        }
+    }
 
     vi = alloc_legacy_voice(def);
     if (vi >= VOICE_COUNT) return;  /* skipped to protect a longer effect */
@@ -694,6 +802,22 @@ void sfx_stop(void) BANKED
         release_voice(i);
     }
     sfx_voice_mask = 0;
+}
+
+void sfx_prewarm_def(const SfxDef *def) BANKED
+{
+    uint8_t i;
+
+    if (!def || def->count == 0 || def->note >= SFX_NOTE_COUNT) return;
+    if ((uint16_t)(def->first + def->count) > SFX_STEPS) return;
+
+    for (i = 0; i < def->count; i++) {
+        uint8_t audc = sfx_notes[def->note][def->first + i].audc;
+
+        if (def->gap && (i & 1)) continue;   /* silenced when played */
+        if (pokey_volume(audc) == 0) continue;
+        if (memo_find(def, i) == 0xFF) memo_convert(def, i);
+    }
 }
 
 void sfx_update(void) BANKED

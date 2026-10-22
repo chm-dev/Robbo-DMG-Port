@@ -79,6 +79,11 @@ void sfx_play_note(uint8_t note) BANKED;
 /* Start a legacy SfxDef sound (retained effects only). */
 void sfx_play_def(const SfxDef *def) BANKED;
 
+/* Fill the legacy step cache for one effect without playing it.  Call once
+ * after a level load so the first explosion does not pay the POKEY -> DMG
+ * conversion (32-bit divisions) during gameplay. */
+void sfx_prewarm_def(const SfxDef *def) BANKED;
+
 /* Silence all effect channels immediately. */
 void sfx_stop(void) BANKED;
 
