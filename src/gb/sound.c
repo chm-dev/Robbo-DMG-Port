@@ -790,6 +790,29 @@ void sfx_play_def(const SfxDef *def) BANKED
     apply_legacy_step(vi, 0);
 }
 
+/* Restart a legacy effect instead of treating it as a duplicate.  Explosions
+ * use this for both bomb blasts and the death wipe, so each new blast is
+ * audible even while an earlier one is still running.  Other legacy effects
+ * keep sfx_play_def()'s duplicate guard. */
+void sfx_restart_def(const SfxDef *def) BANKED
+{
+    uint8_t i;
+
+    for (i = 0; i < VOICE_COUNT; i++) {
+        if (voices[i].playing && voices[i].kind == VOICE_KIND_LEGACY &&
+            voices[i].def == def) {
+            release_voice(i);
+            voices[i].playing = 0;
+            voices[i].kind = 0;
+            voices[i].def = 0;
+            voices[i].note = 0xFF;
+            sfx_voice_mask &= (uint8_t)~(1u << i);
+        }
+    }
+
+    sfx_play_def(def);
+}
+
 void sfx_stop(void) BANKED
 {
     uint8_t i;

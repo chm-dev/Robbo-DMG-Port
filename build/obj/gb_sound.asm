@@ -14,6 +14,8 @@
 	.globl _sfx_play_note
 	.globl b_sfx_play_def
 	.globl _sfx_play_def
+	.globl b_sfx_restart_def
+	.globl _sfx_restart_def
 	.globl b_sfx_stop
 	.globl _sfx_stop
 	.globl b_sfx_prewarm_def
@@ -4716,16 +4718,178 @@ _sfx_play_def::
 ;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:791: }
 	add	sp, #5
 	ret
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:793: void sfx_stop(void) BANKED
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:797: void sfx_restart_def(const SfxDef *def) BANKED
+;	---------------------------------
+; Function sfx_restart_def
+; ---------------------------------
+	b_sfx_restart_def	= 9
+_sfx_restart_def::
+	add	sp, #-9
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:801: for (i = 0; i < VOICE_COUNT; i++) {
+	ldhl	sp,	#8
+	ld	(hl), #0x00
+00106$:
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:802: if (voices[i].playing && voices[i].kind == VOICE_KIND_LEGACY &&
+	ldhl	sp,	#8
+	ld	c, (hl)
+	ld	b, #0x00
+	ld	l, c
+	ld	h, b
+	add	hl, hl
+	add	hl, bc
+	add	hl, hl
+	add	hl, hl
+	add	hl, bc
+	ld	bc, #_voices
+	add	hl, bc
+	inc	sp
+	inc	sp
+	ld	e, l
+	ld	d, h
+	push	de
+	ld	hl, #0x0004
+	add	hl, de
+	push	hl
+	ld	a, l
+	ldhl	sp,	#4
+	ld	(hl), a
+	pop	hl
+	ld	a, h
+	ldhl	sp,	#3
+	ld	(hl-), a
+	ld	a, (hl+)
+	ld	e, a
+	ld	d, (hl)
+	ld	a, (de)
+	ldhl	sp,	#7
+	ld	(hl), a
+	or	a, a
+	jr	Z, 00107$
+	pop	bc
+	push	bc
+	inc	bc
+	inc	bc
+	ld	a, (bc)
+	sub	a, #0x02
+	jr	NZ, 00107$
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:803: voices[i].def == def) {
+	ldhl	sp,	#0
+	ld	a, (hl)
+	ldhl	sp,	#4
+	ld	(hl), a
+	ldhl	sp,	#1
+	ld	a, (hl)
+	ldhl	sp,	#5
+	ld	(hl-), a
+	ld	a, (hl+)
+	ld	e, a
+	ld	a, (hl+)
+	ld	d, a
+	ld	a, (de)
+	ld	(hl+), a
+	inc	de
+	ld	a, (de)
+	ld	(hl), a
+	ldhl	sp,	#15
+	ld	a, (hl)
+	ldhl	sp,	#6
+	sub	a, (hl)
+	jr	NZ, 00107$
+	ldhl	sp,	#16
+	ld	a, (hl)
+	ldhl	sp,	#7
+	sub	a, (hl)
+	jr	NZ, 00107$
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:804: release_voice(i);
+	push	bc
+	ldhl	sp,	#10
+	ld	a, (hl)
+	call	_release_voice
+	pop	bc
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:805: voices[i].playing = 0;
+	ldhl	sp,	#2
+	ld	a, (hl+)
+	ld	h, (hl)
+	ld	l, a
+	ld	(hl), #0x00
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:806: voices[i].kind = 0;
+	xor	a, a
+	ld	(bc), a
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:807: voices[i].def = 0;
+	ldhl	sp,	#4
+	ld	a, (hl+)
+	ld	h, (hl)
+	ld	l, a
+	xor	a, a
+	ld	(hl+), a
+	ld	(hl), a
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:808: voices[i].note = 0xFF;
+	pop	de
+	push	de
+	ld	hl, #0x0003
+	add	hl, de
+	push	hl
+	ld	a, l
+	ldhl	sp,	#8
+	ld	(hl), a
+	pop	hl
+	ld	a, h
+	ldhl	sp,	#7
+	ld	(hl-), a
+	ld	a, (hl+)
+	ld	h, (hl)
+	ld	l, a
+	ld	(hl), #0xff
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:809: sfx_voice_mask &= (uint8_t)~(1u << i);
+	ldhl	sp,	#8
+	ld	a, (hl-)
+	push	af
+	ld	(hl), #0x01
+	pop	af
+	inc	a
+	jr	00151$
+00150$:
+	ldhl	sp,	#7
+	sla	(hl)
+00151$:
+	dec	a
+	jr	NZ,00150$
+	ldhl	sp,	#7
+	ld	a, (hl)
+	cpl
+	ld	hl, #_sfx_voice_mask
+	and	a, (hl)
+	ld	(hl), a
+00107$:
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:801: for (i = 0; i < VOICE_COUNT; i++) {
+	ldhl	sp,	#8
+	inc	(hl)
+	ld	a, (hl)
+	sub	a, #0x03
+	jp	C, 00106$
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:813: sfx_play_def(def);
+	ldhl	sp,	#15
+	ld	e, (hl)
+	inc	hl
+	ld	d, (hl)
+	push	de
+	ld	e, #b_sfx_play_def
+	ld	hl, #_sfx_play_def
+	call	___sdcc_bcall_ehl
+	pop	hl
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:814: }
+	add	sp, #9
+	ret
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:816: void sfx_stop(void) BANKED
 ;	---------------------------------
 ; Function sfx_stop
 ; ---------------------------------
 	b_sfx_stop	= 9
 _sfx_stop::
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:797: for (i = 0; i < VOICE_COUNT; i++) {
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:820: for (i = 0; i < VOICE_COUNT; i++) {
 	ld	c, #0x00
 00102$:
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:798: voices[i].playing = 0;
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:821: voices[i].playing = 0;
 	ld	b, #0x00
 	ld	l, c
 	ld	h, b
@@ -4743,47 +4907,47 @@ _sfx_stop::
 	ld	hl, #0x0004
 	add	hl, de
 	ld	(hl), #0x00
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:799: voices[i].kind = 0;
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:822: voices[i].kind = 0;
 	ld	l, e
 	ld	h, d
 	inc	hl
 	inc	hl
 	ld	(hl), #0x00
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:800: voices[i].def = 0;
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:823: voices[i].def = 0;
 	ld	l, e
 	ld	h, d
 	xor	a, a
 	ld	(hl+), a
 	ld	(hl), a
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:801: voices[i].note = 0xFF;
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:824: voices[i].note = 0xFF;
 	inc	de
 	inc	de
 	inc	de
 	ld	a, #0xff
 	ld	(de), a
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:802: release_voice(i);
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:825: release_voice(i);
 	push	bc
 	ld	a, c
 	call	_release_voice
 	pop	bc
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:797: for (i = 0; i < VOICE_COUNT; i++) {
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:820: for (i = 0; i < VOICE_COUNT; i++) {
 	inc	c
 	ld	a, c
 	sub	a, #0x03
 	jr	C, 00102$
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:804: sfx_voice_mask = 0;
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:827: sfx_voice_mask = 0;
 	xor	a, a
 	ld	(#_sfx_voice_mask),a
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:805: }
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:828: }
 	ret
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:807: void sfx_prewarm_def(const SfxDef *def) BANKED
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:830: void sfx_prewarm_def(const SfxDef *def) BANKED
 ;	---------------------------------
 ; Function sfx_prewarm_def
 ; ---------------------------------
 	b_sfx_prewarm_def	= 9
 _sfx_prewarm_def::
 	add	sp, #-10
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:811: if (!def || def->count == 0 || def->note >= SFX_NOTE_COUNT) return;
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:834: if (!def || def->count == 0 || def->note >= SFX_NOTE_COUNT) return;
 	ldhl	sp,	#17
 	ld	a, (hl-)
 	or	a, (hl)
@@ -4829,7 +4993,7 @@ _sfx_prewarm_def::
 	ld	a, (de)
 	sub	a, #0x12
 	jp	NC, 00118$
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:812: if ((uint16_t)(def->first + def->count) > SFX_STEPS) return;
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:835: if ((uint16_t)(def->first + def->count) > SFX_STEPS) return;
 	pop	bc
 	push	bc
 	inc	bc
@@ -4852,7 +5016,7 @@ _sfx_prewarm_def::
 	cp	a, e
 	ld	a, #0x00
 	sbc	a, d
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:814: for (i = 0; i < def->count; i++) {
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:837: for (i = 0; i < def->count; i++) {
 	jp	C, 00118$
 	pop	de
 	push	de
@@ -4879,7 +5043,7 @@ _sfx_prewarm_def::
 	ld	a, (hl-)
 	sub	a, (hl)
 	jr	NC, 00118$
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:815: uint8_t audc = sfx_notes[def->note][def->first + i].audc;
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:838: uint8_t audc = sfx_notes[def->note][def->first + i].audc;
 	ldhl	sp,#4
 	ld	a, (hl+)
 	ld	e, a
@@ -4908,7 +5072,7 @@ _sfx_prewarm_def::
 	ld	a, (hl)
 	ldhl	sp,	#8
 	ld	(hl), a
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:817: if (def->gap && (i & 1)) continue;   /* silenced when played */
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:840: if (def->gap && (i & 1)) continue;   /* silenced when played */
 	ldhl	sp,#6
 	ld	a, (hl+)
 	ld	e, a
@@ -4923,7 +5087,7 @@ _sfx_prewarm_def::
 	pop	hl
 	jr	NZ, 00114$
 00108$:
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:818: if (pokey_volume(audc) == 0) continue;
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:841: if (pokey_volume(audc) == 0) continue;
 	push	bc
 	ldhl	sp,	#10
 	ld	a, (hl)
@@ -4931,7 +5095,7 @@ _sfx_prewarm_def::
 	pop	bc
 	or	a, a
 	jr	Z, 00114$
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:819: if (memo_find(def, i) == 0xFF) memo_convert(def, i);
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:842: if (memo_find(def, i) == 0xFF) memo_convert(def, i);
 	push	bc
 	ldhl	sp,	#11
 	ld	a, (hl)
@@ -4953,26 +5117,26 @@ _sfx_prewarm_def::
 	call	_memo_convert
 	pop	bc
 00114$:
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:814: for (i = 0; i < def->count; i++) {
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:837: for (i = 0; i < def->count; i++) {
 	ldhl	sp,	#9
 	inc	(hl)
 	jr	00117$
 00118$:
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:821: }
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:844: }
 	add	sp, #10
 	ret
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:823: void sfx_update(void) BANKED
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:846: void sfx_update(void) BANKED
 ;	---------------------------------
 ; Function sfx_update
 ; ---------------------------------
 	b_sfx_update	= 9
 _sfx_update::
 	add	sp, #-10
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:827: for (i = 0; i < VOICE_COUNT; i++) {
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:850: for (i = 0; i < VOICE_COUNT; i++) {
 	ldhl	sp,	#9
 	ld	(hl), #0x00
 00122$:
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:828: SfxVoice *v = &voices[i];
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:851: SfxVoice *v = &voices[i];
 	ldhl	sp,	#9
 	ld	c, (hl)
 	ld	b, #0x00
@@ -4992,7 +5156,7 @@ _sfx_update::
 	ld	(hl), c
 	inc	hl
 	ld	(hl), a
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:831: if (!v->playing) continue;
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:854: if (!v->playing) continue;
 	pop	de
 	push	de
 	ld	hl, #0x0004
@@ -5004,7 +5168,7 @@ _sfx_update::
 	ld	(hl), a
 	or	a, a
 	jp	Z, 00120$
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:833: if (v->kind == VOICE_KIND_PATTERN) {
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:856: if (v->kind == VOICE_KIND_PATTERN) {
 	pop	de
 	push	de
 	ld	hl, #0x0002
@@ -5023,7 +5187,7 @@ _sfx_update::
 	ld	a, (de)
 	dec	a
 	jp	NZ, 00109$
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:835: v->sub = (uint8_t)(v->sub + 10);
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:858: v->sub = (uint8_t)(v->sub + 10);
 	pop	de
 	push	de
 	ld	hl, #0x0006
@@ -5051,10 +5215,10 @@ _sfx_update::
 	ld	h, (hl)
 	ld	l, e
 	ld	(hl), a
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:836: if (v->sub < 48) continue;
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:859: if (v->sub < 48) continue;
 	sub	a, #0x30
 	jp	C, 00120$
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:837: v->sub = (uint8_t)(v->sub - 48);
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:860: v->sub = (uint8_t)(v->sub - 48);
 	ldhl	sp,#6
 	ld	a, (hl+)
 	ld	e, a
@@ -5070,7 +5234,7 @@ _sfx_update::
 	ld	d, a
 	ld	a, (hl)
 	ld	(de), a
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:839: v->step++;
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:862: v->step++;
 	pop	de
 	push	de
 	ld	hl, #0x0005
@@ -5094,7 +5258,7 @@ _sfx_update::
 	ld	h, (hl)
 	ld	l, e
 	ld	(hl), a
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:840: if (v->step >= SFX_STEPS || !pattern_has_sound(v->note, v->step)) {
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:863: if (v->step >= SFX_STEPS || !pattern_has_sound(v->note, v->step)) {
 	sub	a, #0x10
 	jr	NC, 00105$
 	ldhl	sp,#4
@@ -5127,14 +5291,14 @@ _sfx_update::
 	or	a, a
 	jr	NZ, 00106$
 00105$:
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:841: stop_voice(i);
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:864: stop_voice(i);
 	ldhl	sp,	#9
 	ld	a, (hl)
 	call	_stop_voice
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:842: continue;
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:865: continue;
 	jp	00120$
 00106$:
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:844: apply_pattern_step(i, v->step);
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:867: apply_pattern_step(i, v->step);
 	ldhl	sp,#4
 	ld	a, (hl+)
 	ld	e, a
@@ -5144,10 +5308,10 @@ _sfx_update::
 	ldhl	sp,	#9
 	ld	a, (hl)
 	call	_apply_pattern_step
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:845: continue;
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:868: continue;
 	jp	00120$
 00109$:
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:848: rate = v->def->step_frames;
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:871: rate = v->def->step_frames;
 	ldhl	sp,	#0
 	ld	a, (hl)
 	ldhl	sp,	#7
@@ -5174,7 +5338,7 @@ _sfx_update::
 	ld	b, h
 	ld	a, (bc)
 	ld	b, a
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:849: if (v->step < v->def->noise_steps && v->def->noise_step_frames != 0) {
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:872: if (v->step < v->def->noise_steps && v->def->noise_step_frames != 0) {
 	pop	de
 	push	de
 	ld	hl, #0x0005
@@ -5216,16 +5380,16 @@ _sfx_update::
 	ld	a, (de)
 	or	a, a
 	jr	Z, 00111$
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:850: rate = v->def->noise_step_frames;
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:873: rate = v->def->noise_step_frames;
 	ld	b, a
 00111$:
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:852: if (rate == 0) rate = 1;
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:875: if (rate == 0) rate = 1;
 	ld	a, b
 	or	a, a
 	jr	NZ, 00114$
 	ld	b, #0x01
 00114$:
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:854: if (++v->wait < rate) continue;
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:877: if (++v->wait < rate) continue;
 	pop	de
 	push	de
 	ld	hl, #0x0007
@@ -5237,10 +5401,10 @@ _sfx_update::
 	ld	(de), a
 	sub	a, b
 	jr	C, 00120$
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:855: v->wait = 0;
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:878: v->wait = 0;
 	xor	a, a
 	ld	(de), a
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:857: v->step++;
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:880: v->step++;
 	ldhl	sp,#2
 	ld	a, (hl+)
 	ld	e, a
@@ -5256,7 +5420,7 @@ _sfx_update::
 	ld	d, a
 	ld	a, (hl)
 	ld	(de), a
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:858: if (v->step >= v->def->count ||
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:881: if (v->step >= v->def->count ||
 	ldhl	sp,#7
 	ld	a, (hl+)
 	ld	e, a
@@ -5290,7 +5454,7 @@ _sfx_update::
 	ldhl	sp,	#8
 	sub	a, (hl)
 	jr	NC, 00117$
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:859: only_silence_left(v->def, v->step)) {
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:882: only_silence_left(v->def, v->step)) {
 	ldhl	sp,#2
 	ld	a, (hl+)
 	ld	e, a
@@ -5307,14 +5471,14 @@ _sfx_update::
 	or	a, a
 	jr	Z, 00118$
 00117$:
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:860: stop_voice(i);
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:883: stop_voice(i);
 	ldhl	sp,	#9
 	ld	a, (hl)
 	call	_stop_voice
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:861: continue;
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:884: continue;
 	jr	00120$
 00118$:
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:863: apply_legacy_step(i, v->step);
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:886: apply_legacy_step(i, v->step);
 	ldhl	sp,#2
 	ld	a, (hl+)
 	ld	e, a
@@ -5327,28 +5491,28 @@ _sfx_update::
 	ld	a, (hl)
 	call	_apply_legacy_step
 00120$:
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:827: for (i = 0; i < VOICE_COUNT; i++) {
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:850: for (i = 0; i < VOICE_COUNT; i++) {
 	ldhl	sp,	#9
 	inc	(hl)
 	ld	a, (hl)
 	sub	a, #0x03
 	jp	C, 00122$
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:865: }
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:888: }
 	add	sp, #10
 	ret
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:867: uint8_t sfx_is_playing(void) BANKED
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:890: uint8_t sfx_is_playing(void) BANKED
 ;	---------------------------------
 ; Function sfx_is_playing
 ; ---------------------------------
 	b_sfx_is_playing	= 9
 _sfx_is_playing::
 	dec	sp
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:871: for (i = 0; i < VOICE_COUNT; i++) {
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:894: for (i = 0; i < VOICE_COUNT; i++) {
 	ld	bc, #_voices+0
 	ldhl	sp,	#0
 	ld	(hl), #0x00
 00104$:
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:872: if (voices[i].playing) return 1;
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:895: if (voices[i].playing) return 1;
 	ldhl	sp,	#0
 	ld	e, (hl)
 	ld	d, #0x00
@@ -5370,34 +5534,34 @@ _sfx_is_playing::
 	ld	a, #0x01
 	jr	00106$
 00105$:
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:871: for (i = 0; i < VOICE_COUNT; i++) {
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:894: for (i = 0; i < VOICE_COUNT; i++) {
 	ldhl	sp,	#0
 	inc	(hl)
 	ld	a, (hl)
 	sub	a, #0x03
 	jr	C, 00104$
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:874: return 0;
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:897: return 0;
 	xor	a, a
 00106$:
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:875: }
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:898: }
 	inc	sp
 	ret
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:877: uint8_t sfx_current(void) BANKED
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:900: uint8_t sfx_current(void) BANKED
 ;	---------------------------------
 ; Function sfx_current
 ; ---------------------------------
 	b_sfx_current	= 9
 _sfx_current::
 	add	sp, #-5
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:880: uint8_t best = 0xFF;
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:903: uint8_t best = 0xFF;
 	ld	c, #0xff
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:881: int8_t best_age = 0;
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:904: int8_t best_age = 0;
 	ldhl	sp,	#0
 	ld	(hl), #0x00
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:883: for (i = 0; i < VOICE_COUNT; i++) {
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:906: for (i = 0; i < VOICE_COUNT; i++) {
 	ld	b, #0x00
 00110$:
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:886: if (!voices[i].playing) continue;
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:909: if (!voices[i].playing) continue;
 	ld	e, b
 	ld	d, #0x00
 	ld	l, e
@@ -5438,7 +5602,7 @@ _sfx_current::
 	ld	a, (de)
 	or	a, a
 	jr	Z, 00106$
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:887: age = (int8_t)(voices[i].started - start_order);
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:910: age = (int8_t)(voices[i].started - start_order);
 	ldhl	sp,#3
 	ld	a, (hl+)
 	ld	e, a
@@ -5452,7 +5616,7 @@ _sfx_current::
 	sub	a, (hl)
 	ldhl	sp,	#4
 	ld	(hl), a
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:888: if (best == 0xFF || age > best_age) {
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:911: if (best == 0xFF || age > best_age) {
 	ld	a, c
 	inc	a
 	jr	Z, 00103$
@@ -5475,27 +5639,27 @@ _sfx_current::
 00160$:
 	jr	NC, 00106$
 00103$:
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:889: best = i;
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:912: best = i;
 	ld	c, b
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:890: best_age = age;
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:913: best_age = age;
 	ldhl	sp,	#4
 	ld	a, (hl)
 	ldhl	sp,	#0
 	ld	(hl), a
 00106$:
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:883: for (i = 0; i < VOICE_COUNT; i++) {
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:906: for (i = 0; i < VOICE_COUNT; i++) {
 	inc	b
 	ld	a, b
 	sub	a, #0x03
 	jr	C, 00110$
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:893: if (best == 0xFF) return 0xFF;
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:916: if (best == 0xFF) return 0xFF;
 	ld	a, c
 	inc	a
 	jr	NZ, 00109$
 	ld	a, #0xff
 	jr	00111$
 00109$:
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:894: return (voices[best].kind == VOICE_KIND_PATTERN)
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:917: return (voices[best].kind == VOICE_KIND_PATTERN)
 	ld	b, #0x00
 	ld	l, c
 	ld	h, b
@@ -5517,7 +5681,7 @@ _sfx_current::
 	ld	a, (hl)
 	dec	a
 	jr	NZ, 00113$
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:895: ? voices[best].note : voices[best].def->note;
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:918: ? voices[best].note : voices[best].def->note;
 	inc	bc
 	inc	bc
 	inc	bc
@@ -5532,7 +5696,7 @@ _sfx_current::
 	ld	a, (bc)
 00114$:
 00111$:
-;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:896: }
+;C:\dev\AI\robbo-port2\gb\src\gb\sound.c:919: }
 	add	sp, #5
 	ret
 	.area _CODE_9

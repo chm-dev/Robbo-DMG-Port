@@ -23,6 +23,7 @@ Symbol Table
     _NR50_REG                                                       ******** GX
     _NR51_REG                                                       ******** GX
     _NR52_REG                                                       ******** GX
+    ___sdcc_bcall_ehl                                               ******** GX
     __divulong                                                      ******** GX
     __modsint                                                       ******** GX
     __mulint                                                        ******** GX
@@ -57,22 +58,23 @@ Symbol Table
   8 _pulse_duty                                                     00000283 R
   8 _pulse_period                                                   000003BA R
   8 _pulse_period_hi                                                0000028F R
-  8 _pulse_period_lo                                                0000028B R
 ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 2
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+  8 _pulse_period_lo                                                0000028B R
   8 _pulse_vol                                                      00000287 R
   8 _release_voice                                                  0000076A R
-  8 _sfx_current                                                    00001989 GR
-  8 _sfx_is_playing                                                 0000195B GR
+  8 _sfx_current                                                    00001A4D GR
+  8 _sfx_is_playing                                                 00001A1F GR
     _sfx_notes                                                      ******** GX
   8 _sfx_play_def                                                   00001577 GR
   8 _sfx_play_note                                                  000014DB GR
-  8 _sfx_prewarm_def                                                000016C0 GR
-  8 _sfx_stop                                                       00001685 GR
-  8 _sfx_update                                                     000017A4 GR
+  8 _sfx_prewarm_def                                                00001784 GR
+  8 _sfx_restart_def                                                00001685 GR
+  8 _sfx_stop                                                       00001749 GR
+  8 _sfx_update                                                     00001868 GR
   2 _sfx_voice_mask                                                 00000029 GR
   8 _sound_init                                                     0000144B GR
   2 _start_order                                                    00000027 R
@@ -86,6 +88,7 @@ Symbol Table
     b_sfx_play_def                                              =   00000009 G
     b_sfx_play_note                                             =   00000009 G
     b_sfx_prewarm_def                                           =   00000009 G
+    b_sfx_restart_def                                           =   00000009 G
     b_sfx_stop                                                  =   00000009 G
     b_sfx_update                                                =   00000009 G
     b_sound_init                                                =   00000009 G
@@ -103,7 +106,7 @@ Area Table
    5 _HOME                                      size        0   flags    0
    6 _GSINIT                                    size        0   flags    0
    7 _GSFINAL                                   size        0   flags    0
-   8 _CODE_9                                    size     1A33   flags    0
+   8 _CODE_9                                    size     1AF7   flags    0
    9 _INITIALIZER                               size        0   flags    0
    A _CABS                                      size        0   flags    8
 

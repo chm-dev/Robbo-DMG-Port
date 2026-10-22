@@ -78,11 +78,13 @@ static uint8_t bullet_count;
 #define BULLET_LASER_WAIT   1
 #define BULLET_LASER_RETURN 2
 static uint8_t fire_delay = 0;
+static uint8_t explosion_sfx_started = 0;
 static uint8_t teleport_phase = 0; /* 0 idle, 1 panning, 2 arriving */
 static uint16_t teleport_to = 0;
 
 static uint8_t robbo_dead = 0;
 static uint8_t death_timer = 0;
+static uint8_t death_wipe_timer = 0;
 static uint8_t screen_flash_ticks = 0;
 static uint8_t transition_active = 0;
 static int8_t wipe_col = 0;
@@ -140,6 +142,7 @@ void game_load_level(uint8_t level)
     sliding_count = 0;
     bullet_count = 0;
     fire_delay = 0;
+    explosion_sfx_started = 0;
     robbo_busy = 0;
     robbo_no_move = 0;
     magnet_field = 0;
@@ -149,6 +152,7 @@ void game_load_level(uint8_t level)
     cam_pan_timer = 0;
     robbo_dead = 0;
     death_timer = 0;
+    death_wipe_timer = 0;
     game_restart_requested = 0;
     game_level_advance_requested = 0;
     screen_flash_ticks = 0;
@@ -722,6 +726,16 @@ static void blast_cell(uint16_t idx, uint8_t timer)
     }
 }
 
+/* A chain can detonate several bombs in the same logic tick. Restarting the
+ * effect repeatedly within that tick only replays step 0, so coalesce it to
+ * one restart. A later tick still restarts, keeping every new blast audible. */
+static void play_explosion_sfx(void)
+{
+    if (explosion_sfx_started) return;
+    explosion_sfx_started = 1;
+    sfx_restart_def(&sfx_explosion);
+}
+
 /* Bomb.exploding(): a 3x3 blast, with neighbouring bombs chained. */
 static void bomb_explode(uint16_t idx)
 {
@@ -751,7 +765,7 @@ static void bomb_explode(uint16_t idx)
         }
     }
 
-    sfx_play_def(&sfx_explosion);
+    play_explosion_sfx();
 }
 
 static uint8_t bullet_make_extra(uint8_t dir, uint8_t type, uint8_t owner)
@@ -786,6 +800,28 @@ static uint8_t player_bullet_active(void)
     return 0;
 }
 
+/* Source restart(): after Robbo's own explosion has played, every map cell
+ * that is neither Empty nor Walls is replaced by an Explosion.  The level is
+ * reloaded six ticks later, so this is a visual wipe rather than loot or
+ * bomb-chain logic.  Ground, teleports, the spaceship and live actors are all
+ * consumed just like in the original.  The explosion effect restarts once for
+ * the whole wipe; re-triggering it per cell would just restart it again. */
+static void destroy_all_items(void)
+{
+    uint16_t idx;
+
+    for (idx = 0; idx < MAP_CELLS; idx++) {
+        uint8_t type = map_type[idx];
+
+        if (type != CT_EMPTY && !IS_WALL(type)) {
+            map_obj[idx] = 0;
+            spawn_explosion_timer(idx, (uint8_t)(2 + (next_rand8() & 1)));
+        }
+    }
+
+    play_explosion_sfx();
+}
+
 static void kill_robbo(void)
 {
     uint16_t idx;
@@ -795,6 +831,7 @@ static void kill_robbo(void)
     robbo_dead = 1;
     robbo_busy = 1;
     death_timer = 6;
+    death_wipe_timer = 0;
 
     idx = (uint16_t)robbo_y * MAP_W + robbo_x;
     map_type[idx] = CT_EXPLOSION;
@@ -1387,11 +1424,18 @@ void game_tick(void)
 
     if (fire_delay != 0) fire_delay--;
     anim_frame = (anim_frame + 1) & 1;
+    explosion_sfx_started = 0;
 
     if (robbo_dead) {
         if (death_timer != 0) {
             death_timer--;
-            if (death_timer == 0) game_restart_requested = 1;
+            if (death_timer == 0) {
+                destroy_all_items();
+                death_wipe_timer = 6;
+            }
+        } else if (death_wipe_timer != 0) {
+            death_wipe_timer--;
+            if (death_wipe_timer == 0) game_restart_requested = 1;
         }
     }
 
