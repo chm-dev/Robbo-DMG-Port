@@ -1404,16 +1404,9 @@ uint8_t game_fire(void)
         return 1;
     }
 
-    /* Point-blank shots also clear stones and pushable boxes. */
-    if (target == CT_STONE || target == CT_PUSHABLE) {
-        ammo--;
-        hud_dirty = 1;
-        fire_delay = 2;
-        sfx_play_note(SFX_HIT_WALL);
-        blast_cell(idx, 3);
-        return 1;
-    }
-
+    /* Stones and pushable boxes are explodable but not demolishable: a
+     * point-blank shot must leave them intact, just like a bullet fired from
+     * farther away.  The original fire() returns false for these cells. */
     return 0;
 }
 

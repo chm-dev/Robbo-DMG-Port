@@ -77,7 +77,7 @@ Symbol Table
   3 _game_restart_requested                                         0000000B GR
   0 _game_teleport                                                  0000050C R
   0 _game_teleport_camera_ready                                     000005F5 GR
-  0 _game_tick                                                      00002186 GR
+  0 _game_tick                                                      00002158 GR
   0 _game_try_move                                                  0000074D GR
   2 _hud_dirty                                                      0000065F GR
   0 _is_demolishable                                                0000018A R
@@ -172,7 +172,7 @@ Hexadecimal [32-Bits]
 
 Area Table
 
-   0 _CODE                                      size     29E8   flags    0
+   0 _CODE                                      size     29BA   flags    0
    1 _HRAM                                      size        0   flags    0
    2 _DATA                                      size      D65   flags    0
    3 _INITIALIZED                               size        F   flags    0

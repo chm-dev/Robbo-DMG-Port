@@ -7105,61 +7105,28 @@ _game_fire::
 	ld	a, #0x01
 	ret
 00134$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1408: if (target == CT_STONE || target == CT_PUSHABLE) {
-	ld	a,c
-	cp	a,#0x0a
-	jr	Z, 00135$
-	sub	a, #0x0b
-	jr	NZ, 00136$
-00135$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1409: ammo--;
-	ld	hl, #_ammo
-	dec	(hl)
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1410: hud_dirty = 1;
-	ld	hl, #_hud_dirty
-	ld	(hl), #0x01
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1411: fire_delay = 2;
-	ld	hl, #_fire_delay
-	ld	(hl), #0x02
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1412: sfx_play_note(SFX_HIT_WALL);
-	push	de
-	ld	a, #0x02
-	push	af
-	inc	sp
-	ld	e, #b_sfx_play_note
-	ld	hl, #_sfx_play_note
-	call	___sdcc_bcall_ehl
-	inc	sp
-	pop	de
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1413: blast_cell(idx, 3);
-	ld	a, #0x03
-	call	_blast_cell
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1414: return 1;
-	ld	a, #0x01
-	ret
-00136$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1417: return 0;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1410: return 0;
 	xor	a, a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1418: }
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1411: }
 	ret
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1420: void game_tick(void)
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1413: void game_tick(void)
 ;	---------------------------------
 ; Function game_tick
 ; ---------------------------------
 _game_tick::
 	add	sp, #-17
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1426: if (fire_delay != 0) fire_delay--;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1419: if (fire_delay != 0) fire_delay--;
 	ld	hl, #_fire_delay
 	ld	a, (hl)
 	or	a, a
 	jr	Z, 00102$
 	dec	(hl)
 00102$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1427: anim_frame = (anim_frame + 1) & 1;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1420: anim_frame = (anim_frame + 1) & 1;
 	ld	a, (_anim_frame)
 	inc	a
 	and	a, #0x01
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1429: if (anim_frame == 0) anim_slow ^= 1;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1422: if (anim_frame == 0) anim_slow ^= 1;
 	ld	(#_anim_frame),a
 	or	a, a
 	jr	NZ, 00104$
@@ -7168,69 +7135,69 @@ _game_tick::
 	xor	a, #0x01
 	ld	(hl), a
 00104$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1430: explosion_sfx_started = 0;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1423: explosion_sfx_started = 0;
 	xor	a, a
 	ld	(#_explosion_sfx_started),a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1432: if (robbo_dead) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1425: if (robbo_dead) {
 	ld	a, (#_robbo_dead)
 	or	a, a
 	jr	Z, 00115$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1433: if (death_timer != 0) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1426: if (death_timer != 0) {
 	ld	hl, #_death_timer
 	ld	a, (hl)
 	or	a, a
 	jr	Z, 00112$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1434: death_timer--;
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1435: if (death_timer == 0) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1427: death_timer--;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1428: if (death_timer == 0) {
 	dec	(hl)
 	jr	NZ, 00115$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1436: destroy_all_items();
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1429: destroy_all_items();
 	call	_destroy_all_items
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1437: death_wipe_timer = 6;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1430: death_wipe_timer = 6;
 	ld	hl, #_death_wipe_timer
 	ld	(hl), #0x06
 	jr	00115$
 00112$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1439: } else if (death_wipe_timer != 0) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1432: } else if (death_wipe_timer != 0) {
 	ld	hl, #_death_wipe_timer
 	ld	a, (hl)
 	or	a, a
 	jr	Z, 00115$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1440: death_wipe_timer--;
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1441: if (death_wipe_timer == 0) game_restart_requested = 1;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1433: death_wipe_timer--;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1434: if (death_wipe_timer == 0) game_restart_requested = 1;
 	dec	(hl)
 	jr	NZ, 00115$
 	ld	hl, #_game_restart_requested
 	ld	(hl), #0x01
 00115$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1445: if (screen_flash_ticks != 0) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1438: if (screen_flash_ticks != 0) {
 	ld	hl, #_screen_flash_ticks
 	ld	a, (hl)
 	or	a, a
 	jr	Z, 00119$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1446: screen_flash_ticks--;
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1447: if (screen_flash_ticks == 0) render_flash_set(0);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1439: screen_flash_ticks--;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1440: if (screen_flash_ticks == 0) render_flash_set(0);
 	dec	(hl)
 	jr	NZ, 00119$
 	ld	a, (hl)
 	call	_render_flash_set
 00119$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1450: if (transition_active) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1443: if (transition_active) {
 	ld	a, (#_transition_active)
 	or	a, a
 	jr	Z, 00275$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1451: if (wipe_col >= 0) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1444: if (wipe_col >= 0) {
 	ld	a, (#_wipe_col)
 	bit	7, a
 	jr	NZ, 00122$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1453: for (y = 0; y < level_height; y++) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1446: for (y = 0; y < level_height; y++) {
 	ld	e, #0x00
 00247$:
 	ld	a, e
 	ld	hl, #_level_height
 	sub	a, (hl)
 	jr	NC, 00120$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1454: uint16_t widx = (uint16_t)y * MAP_W + (uint8_t)wipe_col;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1447: uint16_t widx = (uint16_t)y * MAP_W + (uint8_t)wipe_col;
 	ld	c, e
 	ld	b, #0x00
 	sla	c
@@ -7254,37 +7221,37 @@ _game_tick::
 	add	hl, bc
 	ld	c, l
 	ld	b, h
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1455: map_type[widx] = CT_WALL_0;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1448: map_type[widx] = CT_WALL_0;
 	ld	hl, #_map_type
 	add	hl, bc
 	ld	(hl), #0x01
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1456: map_extra[widx] = 0;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1449: map_extra[widx] = 0;
 	ld	hl, #_map_extra
 	add	hl, bc
 	ld	(hl), #0x00
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1457: render_cell((uint8_t)wipe_col, y);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1450: render_cell((uint8_t)wipe_col, y);
 	ld	a, (_wipe_col)
 	push	de
 	call	_render_cell
 	pop	de
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1453: for (y = 0; y < level_height; y++) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1446: for (y = 0; y < level_height; y++) {
 	inc	e
 	jr	00247$
 00120$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1459: wipe_col--;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1452: wipe_col--;
 	ld	hl, #_wipe_col
 	dec	(hl)
 	jp	00258$
 00122$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1461: transition_active = 0;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1454: transition_active = 0;
 	xor	a, a
 	ld	(#_transition_active),a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1462: game_level_advance_requested = 1;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1455: game_level_advance_requested = 1;
 	ld	hl, #_game_level_advance_requested
 	ld	(hl), #0x01
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1464: return;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1457: return;
 	jp	00258$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1468: for (i = 0; i < bullet_count; i++) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1461: for (i = 0; i < bullet_count; i++) {
 00275$:
 	ld	c, #0x00
 00250$:
@@ -7292,7 +7259,7 @@ _game_tick::
 	ld	hl, #_bullet_count
 	sub	a, (hl)
 	jr	NC, 00128$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1469: uint16_t c = bullet_cells[i];
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1462: uint16_t c = bullet_cells[i];
 	ld	l, c
 	xor	a, a
 	ld	h, a
@@ -7301,7 +7268,7 @@ _game_tick::
 	add	hl, de
 	ld	a,	(hl+)
 	ld	h, (hl)
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1470: if (map_type[c] == CT_BULLET) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1463: if (map_type[c] == CT_BULLET) {
 	ld	l, a
 	add	a,#<(_map_type)
 	ld	e, a
@@ -7311,26 +7278,26 @@ _game_tick::
 	ld	a, (de)
 	sub	a, #0x1b
 	jr	NZ, 00251$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1471: map_extra[c] &= 0x7F;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1464: map_extra[c] &= 0x7F;
 	ld	de, #_map_extra
 	add	hl, de
 	res	7, (hl)
 00251$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1468: for (i = 0; i < bullet_count; i++) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1461: for (i = 0; i < bullet_count; i++) {
 	inc	c
 	jr	00250$
 00128$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1474: i = 0;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1467: i = 0;
 	ldhl	sp,	#16
 	ld	(hl), #0x00
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1477: while (i < bullet_count) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1470: while (i < bullet_count) {
 00198$:
 	ldhl	sp,	#16
 	ld	a, (hl)
 	ld	hl, #_bullet_count
 	sub	a, (hl)
 	jp	NC, 00200$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1478: uint16_t bidx = bullet_cells[i];
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1471: uint16_t bidx = bullet_cells[i];
 	ldhl	sp,	#16
 	ld	c, (hl)
 	xor	a, a
@@ -7353,7 +7320,7 @@ _game_tick::
 	ld	(hl+), a
 	inc	de
 	ld	a, (de)
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1484: if (map_type[bidx] != CT_BULLET) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1477: if (map_type[bidx] != CT_BULLET) {
 	ld	(hl-), a
 	ld	a, (hl+)
 	ld	e, a
@@ -7365,14 +7332,14 @@ _game_tick::
 	ld	a, (bc)
 	sub	a, #0x1b
 	jr	Z, 00130$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1485: remove_bullet_at(i);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1478: remove_bullet_at(i);
 	ldhl	sp,	#16
 	ld	a, (hl)
 	call	_remove_bullet_at
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1486: continue;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1479: continue;
 	jr	00198$
 00130$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1489: if (map_extra[bidx] & 0x80) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1482: if (map_extra[bidx] & 0x80) {
 	ldhl	sp,#2
 	ld	a, (hl+)
 	ld	e, a
@@ -7393,13 +7360,13 @@ _game_tick::
 	ld	a, (de)
 	bit	7, a
 	jr	Z, 00132$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1490: i++;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1483: i++;
 	ldhl	sp,	#16
 	inc	(hl)
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1491: continue;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1484: continue;
 	jr	00198$
 00132$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1493: map_extra[bidx] |= 0x80;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1486: map_extra[bidx] |= 0x80;
 	set	7, a
 	ldhl	sp,	#4
 	ld	e, (hl)
@@ -7407,27 +7374,27 @@ _game_tick::
 	ld	h, (hl)
 	ld	l, e
 	ld	(hl), a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1495: be = map_extra[bidx];
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1488: be = map_extra[bidx];
 	ldhl	sp,	#6
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1496: bdir = be & 3;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1489: bdir = be & 3;
 	ld	(hl), a
 	and	a, #0x03
 	ldhl	sp,	#15
 	ld	(hl), a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1497: btype = (be >> 2) & 3;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1490: btype = (be >> 2) & 3;
 	ldhl	sp,	#6
 	ld	a, (hl+)
 	rrca
 	rrca
 	and	a, #0x3
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1498: owner = (be >> 4) & 1;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1491: owner = (be >> 4) & 1;
 	ld	(hl-), a
 	ld	a, (hl+)
 	inc	hl
 	swap	a
 	and	a, #0x01
 	ld	(hl), a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1499: bx = bidx % MAP_W;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1492: bx = bidx % MAP_W;
 	ldhl	sp,	#2
 	ld	a, (hl)
 	ldhl	sp,	#13
@@ -7445,7 +7412,7 @@ _game_tick::
 	ld	a, (hl-)
 	dec	hl
 	ld	(hl), a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1500: by = bidx / MAP_W;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1493: by = bidx / MAP_W;
 	ldhl	sp,	#14
 	srl	(hl)
 	dec	hl
@@ -7464,16 +7431,16 @@ _game_tick::
 	rr	(hl)
 	ld	a, (hl)
 	ldhl	sp,	#10
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1501: nbx = bx;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1494: nbx = bx;
 	ld	(hl-), a
 	ld	a, (hl+)
 	inc	hl
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1502: nby = by;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1495: nby = by;
 	ld	(hl-), a
 	ld	a, (hl+)
 	inc	hl
 	ld	(hl), a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1504: if (bdir == 0) nbx++;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1497: if (bdir == 0) nbx++;
 	ldhl	sp,	#15
 	ld	a, (hl)
 	or	a, a
@@ -7485,7 +7452,7 @@ _game_tick::
 	ld	(hl), a
 	jr	00145$
 00144$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1505: else if (bdir == 1) nby++;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1498: else if (bdir == 1) nby++;
 	ldhl	sp,	#15
 	ld	a, (hl)
 	dec	a
@@ -7497,7 +7464,7 @@ _game_tick::
 	ld	(hl), a
 	jr	00145$
 00141$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1506: else if (bdir == 2) { if (nbx > 0) nbx--; }
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1499: else if (bdir == 2) { if (nbx > 0) nbx--; }
 	ldhl	sp,	#15
 	ld	a, (hl)
 	sub	a, #0x02
@@ -7512,7 +7479,7 @@ _game_tick::
 	ld	(hl), a
 	jr	00145$
 00138$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1507: else { if (nby > 0) nby--; }
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1500: else { if (nby > 0) nby--; }
 	ldhl	sp,	#10
 	ld	a, (hl)
 	or	a, a
@@ -7522,40 +7489,40 @@ _game_tick::
 	dec	a
 	ld	(hl), a
 00145$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1509: if (btype == 1) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1502: if (btype == 1) {
 	ldhl	sp,	#7
 	ld	a, (hl)
 	dec	a
 	jp	NZ, 00177$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1510: uint8_t lstate = (be >> 5) & 3;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1503: uint8_t lstate = (be >> 5) & 3;
 	ldhl	sp,	#6
 	ld	a, (hl)
 	swap	a
 	rrca
 	and	a, #0x3
 	ldhl	sp,	#14
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1512: if (lstate == BULLET_LASER_WAIT) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1505: if (lstate == BULLET_LASER_WAIT) {
 	ld	(hl), a
 	dec	a
 	jr	NZ, 00147$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1513: render_cell(bx, by);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1506: render_cell(bx, by);
 	ldhl	sp,	#10
 	ld	a, (hl-)
 	ld	e, a
 	ld	a, (hl)
 	call	_render_cell
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1514: i++;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1507: i++;
 	ldhl	sp,	#16
 	inc	(hl)
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1515: continue;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1508: continue;
 	jp	00198$
 00147$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1518: if (lstate == BULLET_LASER_RETURN) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1511: if (lstate == BULLET_LASER_RETURN) {
 	ldhl	sp,	#14
 	ld	a, (hl)
 	sub	a, #0x02
 	jp	NZ, 00160$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1519: int16_t px = (int16_t)bx - tp_dx[bdir];
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1512: int16_t px = (int16_t)bx - tp_dx[bdir];
 	ldhl	sp,	#9
 	ld	c, (hl)
 	ld	de, #_tp_dx
@@ -7579,7 +7546,7 @@ _game_tick::
 	ld	(hl), c
 	inc	hl
 	ld	(hl), a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1520: int16_t py = (int16_t)by - tp_dy[bdir];
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1513: int16_t py = (int16_t)by - tp_dy[bdir];
 	ldhl	sp,	#10
 	ld	c, (hl)
 	ld	de, #_tp_dy
@@ -7603,7 +7570,7 @@ _game_tick::
 	ld	(hl), c
 	inc	hl
 	ld	(hl), a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1523: map_type[bidx] = CT_EMPTY;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1516: map_type[bidx] = CT_EMPTY;
 	ld	de, #_map_type
 	ldhl	sp,	#2
 	ld	a,	(hl+)
@@ -7614,19 +7581,19 @@ _game_tick::
 	ld	b, h
 	xor	a, a
 	ld	(bc), a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1524: map_extra[bidx] = 0;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1517: map_extra[bidx] = 0;
 	ldhl	sp,	#4
 	ld	a, (hl+)
 	ld	h, (hl)
 	ld	l, a
 	ld	(hl), #0x00
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1525: render_cell(bx, by);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1518: render_cell(bx, by);
 	ldhl	sp,	#10
 	ld	a, (hl-)
 	ld	e, a
 	ld	a, (hl)
 	call	_render_cell
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1527: if (px >= 0 && py >= 0 && px < MAP_W && py < level_height) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1520: if (px >= 0 && py >= 0 && px < MAP_W && py < level_height) {
 	ldhl	sp,	#13
 	ld	a, (hl)
 	ldhl	sp,	#6
@@ -7675,7 +7642,7 @@ _game_tick::
 	scf
 00786$:
 	jr	NC, 00155$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1528: pidx = (uint16_t)py * MAP_W + (uint8_t)px;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1521: pidx = (uint16_t)py * MAP_W + (uint8_t)px;
 	ldhl	sp,	#11
 	ld	a, (hl+)
 	ld	c, (hl)
@@ -7693,26 +7660,26 @@ _game_tick::
 	add	hl, bc
 	ld	c, l
 	ld	b, h
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1529: if (map_type[pidx] == CT_BULLET) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1522: if (map_type[pidx] == CT_BULLET) {
 	ld	hl, #_map_type
 	add	hl, bc
 	ld	a, (hl)
 	sub	a, #0x1b
 	jr	NZ, 00155$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1530: uint8_t pe = map_extra[pidx];
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1523: uint8_t pe = map_extra[pidx];
 	ld	hl, #_map_extra
 	add	hl, bc
 	ld	c, l
 	ld	b, h
 	ld	a, (bc)
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1531: if (((pe >> 5) & 3) == BULLET_LASER_WAIT &&
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1524: if (((pe >> 5) & 3) == BULLET_LASER_WAIT &&
 	ld	d, a
 	swap	a
 	rrca
 	and	a, #0x3
 	dec	a
 	jr	NZ, 00155$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1532: ((pe >> 4) & 1) == owner &&
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1525: ((pe >> 4) & 1) == owner &&
 	ld	a, d
 	swap	a
 	and	a, #0x01
@@ -7721,33 +7688,33 @@ _game_tick::
 	ld	a, (hl)
 	sub	a, e
 	jr	NZ, 00155$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1533: ((pe >> 2) & 3) == 1) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1526: ((pe >> 2) & 3) == 1) {
 	ld	a, d
 	rrca
 	rrca
 	and	a, #0x3
 	dec	a
 	jr	NZ, 00155$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1534: map_extra[pidx] = (uint8_t)((pe & 0x1F) | (BULLET_LASER_RETURN << 5) | 0x80);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1527: map_extra[pidx] = (uint8_t)((pe & 0x1F) | (BULLET_LASER_RETURN << 5) | 0x80);
 	ld	a, d
 	and	a, #0x1f
 	or	a, #0xc0
 	ld	(bc), a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1535: remove_bullet_at(i);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1528: remove_bullet_at(i);
 	ldhl	sp,	#16
 	ld	a, (hl)
 	call	_remove_bullet_at
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1536: continue;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1529: continue;
 	jp	00198$
 00155$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1541: spawn_explosion_timer(bidx, 3);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1534: spawn_explosion_timer(bidx, 3);
 	ld	a, #0x03
 	ldhl	sp,	#2
 	ld	e, (hl)
 	inc	hl
 	ld	d, (hl)
 	call	_spawn_explosion_timer
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1542: sfx_play_note(SFX_HIT_WALL);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1535: sfx_play_note(SFX_HIT_WALL);
 	ld	a, #0x02
 	push	af
 	inc	sp
@@ -7755,23 +7722,23 @@ _game_tick::
 	ld	hl, #_sfx_play_note
 	call	___sdcc_bcall_ehl
 	inc	sp
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1543: remove_bullet_at(i);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1536: remove_bullet_at(i);
 	ldhl	sp,	#16
 	ld	a, (hl)
 	call	_remove_bullet_at
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1544: continue;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1537: continue;
 	jp	00198$
 00160$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1490: i++;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1483: i++;
 	ldhl	sp,	#16
 	inc	(hl)
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1549: map_extra[bidx] = (uint8_t)((be & 0x1F) | (BULLET_LASER_RETURN << 5) | 0x80);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1542: map_extra[bidx] = (uint8_t)((be & 0x1F) | (BULLET_LASER_RETURN << 5) | 0x80);
 	ldhl	sp,	#6
 	ld	a, (hl)
 	and	a, #0x1f
 	ldhl	sp,	#14
 	ld	(hl), a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1548: if (nbx >= MAP_W || nby >= level_height) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1541: if (nbx >= MAP_W || nby >= level_height) {
 	ldhl	sp,	#11
 	ld	a, (hl)
 	sub	a, #0x10
@@ -7782,7 +7749,7 @@ _game_tick::
 	sub	a, (hl)
 	jr	C, 00162$
 00161$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1549: map_extra[bidx] = (uint8_t)((be & 0x1F) | (BULLET_LASER_RETURN << 5) | 0x80);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1542: map_extra[bidx] = (uint8_t)((be & 0x1F) | (BULLET_LASER_RETURN << 5) | 0x80);
 	ldhl	sp,	#14
 	ld	a, (hl)
 	or	a, #0xc0
@@ -7792,7 +7759,7 @@ _game_tick::
 	ld	h, (hl)
 	ld	l, e
 	ld	(hl), a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1550: sfx_play_note(SFX_HIT_WALL);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1543: sfx_play_note(SFX_HIT_WALL);
 	ld	a, #0x02
 	push	af
 	inc	sp
@@ -7800,11 +7767,11 @@ _game_tick::
 	ld	hl, #_sfx_play_note
 	call	___sdcc_bcall_ehl
 	inc	sp
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1551: i++;
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1552: continue;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1544: i++;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1545: continue;
 	jp	00198$
 00162$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1555: nidx = (uint16_t)nby * MAP_W + nbx;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1548: nidx = (uint16_t)nby * MAP_W + nbx;
 	ldhl	sp,	#12
 	ld	a, (hl-)
 	ld	c, a
@@ -7828,7 +7795,7 @@ _game_tick::
 	ld	b, a
 	ld	a, c
 	ld	(hl+), a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1556: target = map_type[nidx];
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1549: target = map_type[nidx];
 	ld	a, b
 	ld	(hl-), a
 	ld	a, (hl+)
@@ -7839,11 +7806,11 @@ _game_tick::
 	ld	c, l
 	ld	b, h
 	ld	a, (bc)
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1558: if (target == CT_EMPTY) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1551: if (target == CT_EMPTY) {
 	ld	c, a
 	or	a, a
 	jr	NZ, 00168$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1559: map_extra[bidx] = (uint8_t)((be & 0x1F) | (BULLET_LASER_WAIT << 5) | 0x80);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1552: map_extra[bidx] = (uint8_t)((be & 0x1F) | (BULLET_LASER_WAIT << 5) | 0x80);
 	ldhl	sp,	#14
 	ld	a, (hl)
 	or	a, #0xa0
@@ -7853,7 +7820,7 @@ _game_tick::
 	ld	h, (hl)
 	ld	l, e
 	ld	(hl), a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1560: if (add_bullet(nidx, bdir, 1, owner)) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1553: if (add_bullet(nidx, bdir, 1, owner)) {
 	ldhl	sp,	#8
 	ld	h, (hl)
 	ld	l, #0x01
@@ -7869,7 +7836,7 @@ _game_tick::
 	ld	(hl), a
 	or	a, a
 	jr	Z, 00165$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1561: map_extra[nidx] |= 0x80;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1554: map_extra[nidx] |= 0x80;
 	dec	hl
 	dec	hl
 	dec	hl
@@ -7901,7 +7868,7 @@ _game_tick::
 	ld	(hl), a
 	jp	00198$
 00165$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1563: map_extra[bidx] = (uint8_t)((be & 0x1F) | (BULLET_LASER_RETURN << 5) | 0x80);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1556: map_extra[bidx] = (uint8_t)((be & 0x1F) | (BULLET_LASER_RETURN << 5) | 0x80);
 	ldhl	sp,	#14
 	ld	a, (hl+)
 	or	a, #0xc0
@@ -7913,11 +7880,11 @@ _game_tick::
 	ldhl	sp,	#15
 	ld	a, (hl)
 	ld	(de), a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1565: i++;
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1566: continue;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1558: i++;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1559: continue;
 	jp	00198$
 00168$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1569: if (target == CT_ROBBO && owner) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1562: if (target == CT_ROBBO && owner) {
 	ld	a, c
 	sub	a, #0x1a
 	jr	NZ, 00173$
@@ -7925,16 +7892,16 @@ _game_tick::
 	ld	a, (hl)
 	or	a, a
 	jr	Z, 00173$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1570: kill_robbo();
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1563: kill_robbo();
 	call	_kill_robbo
 	jr	00174$
 00173$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1571: } else if (is_demolishable(target)) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1564: } else if (is_demolishable(target)) {
 	ld	a, c
 	call	_is_demolishable
 	or	a, a
 	jr	Z, 00170$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1572: demolish_cell(nidx);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1565: demolish_cell(nidx);
 	ldhl	sp,	#12
 	ld	a, (hl+)
 	ld	e, a
@@ -7942,7 +7909,7 @@ _game_tick::
 	call	_demolish_cell
 	jr	00174$
 00170$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1574: sfx_play_note(SFX_HIT_WALL);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1567: sfx_play_note(SFX_HIT_WALL);
 	ld	a, #0x02
 	push	af
 	inc	sp
@@ -7951,7 +7918,7 @@ _game_tick::
 	call	___sdcc_bcall_ehl
 	inc	sp
 00174$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1576: map_extra[bidx] = (uint8_t)((be & 0x1F) | (BULLET_LASER_RETURN << 5) | 0x80);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1569: map_extra[bidx] = (uint8_t)((be & 0x1F) | (BULLET_LASER_RETURN << 5) | 0x80);
 	ldhl	sp,	#14
 	ld	a, (hl)
 	or	a, #0xc0
@@ -7961,11 +7928,11 @@ _game_tick::
 	ld	h, (hl)
 	ld	l, e
 	ld	(hl), a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1577: i++;
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1578: continue;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1570: i++;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1571: continue;
 	jp	00198$
 00177$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1581: if (nbx >= MAP_W || nby >= level_height) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1574: if (nbx >= MAP_W || nby >= level_height) {
 	ldhl	sp,	#11
 	ld	a, (hl)
 	sub	a, #0x10
@@ -7976,7 +7943,7 @@ _game_tick::
 	sub	a, (hl)
 	jr	C, 00179$
 00178$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1582: sfx_play_note(SFX_HIT_WALL);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1575: sfx_play_note(SFX_HIT_WALL);
 	ld	a, #0x02
 	push	af
 	inc	sp
@@ -7984,21 +7951,21 @@ _game_tick::
 	ld	hl, #_sfx_play_note
 	call	___sdcc_bcall_ehl
 	inc	sp
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1583: spawn_explosion_timer(bidx, 3);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1576: spawn_explosion_timer(bidx, 3);
 	ld	a, #0x03
 	ldhl	sp,	#2
 	ld	e, (hl)
 	inc	hl
 	ld	d, (hl)
 	call	_spawn_explosion_timer
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1584: remove_bullet_at(i);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1577: remove_bullet_at(i);
 	ldhl	sp,	#16
 	ld	a, (hl)
 	call	_remove_bullet_at
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1585: continue;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1578: continue;
 	jp	00198$
 00179$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1588: nidx = (uint16_t)nby * MAP_W + nbx;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1581: nidx = (uint16_t)nby * MAP_W + nbx;
 	ldhl	sp,	#12
 	ld	a, (hl-)
 	ld	e, #0x00
@@ -8021,7 +7988,7 @@ _game_tick::
 	ld	b, a
 	ld	a, c
 	ld	(hl+), a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1589: target = map_type[nidx];
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1582: target = map_type[nidx];
 	ld	a, b
 	ld	(hl-), a
 	ld	a, (hl+)
@@ -8033,12 +8000,12 @@ _game_tick::
 	ld	b, h
 	ld	a, (bc)
 	ldhl	sp,	#15
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1591: if (target == CT_EMPTY) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1584: if (target == CT_EMPTY) {
 	ld	(hl), a
 	or	a, a
 	jr	NZ, 00196$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1592: map_type[nidx] = CT_BULLET;
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1593: map_extra[nidx] = be;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1585: map_type[nidx] = CT_BULLET;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1586: map_extra[nidx] = be;
 	dec	hl
 	ld	a, #0x1b
 	ld	(bc), a
@@ -8052,7 +8019,7 @@ _game_tick::
 	ldhl	sp,	#6
 	ld	a, (hl)
 	ld	(bc), a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1594: map_type[bidx] = CT_EMPTY;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1587: map_type[bidx] = CT_EMPTY;
 	ld	de, #_map_type
 	ldhl	sp,	#2
 	ld	a,	(hl+)
@@ -8063,25 +8030,25 @@ _game_tick::
 	ld	b, h
 	xor	a, a
 	ld	(bc), a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1595: map_extra[bidx] = 0;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1588: map_extra[bidx] = 0;
 	ldhl	sp,	#4
 	ld	a, (hl+)
 	ld	h, (hl)
 	ld	l, a
 	ld	(hl), #0x00
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1596: render_cell(bx, by);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1589: render_cell(bx, by);
 	ldhl	sp,	#10
 	ld	a, (hl-)
 	ld	e, a
 	ld	a, (hl)
 	call	_render_cell
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1597: render_cell(nbx, nby);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1590: render_cell(nbx, nby);
 	ldhl	sp,	#12
 	ld	a, (hl-)
 	ld	e, a
 	ld	a, (hl)
 	call	_render_cell
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1598: bullet_cells[i] = nidx;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1591: bullet_cells[i] = nidx;
 	ld	de, #_bullet_cells
 	pop	hl
 	push	hl
@@ -8092,19 +8059,19 @@ _game_tick::
 	ld	a, (hl+)
 	ld	(bc), a
 	inc	bc
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1599: i++;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1592: i++;
 	ld	a, (hl+)
 	inc	hl
 	ld	(bc), a
 	inc	(hl)
 	jp	00198$
 00196$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1600: } else if (target == CT_BULLET) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1593: } else if (target == CT_BULLET) {
 	ldhl	sp,	#15
 	ld	a, (hl)
 	sub	a, #0x1b
 	jr	NZ, 00193$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1603: sfx_play_note(SFX_HIT_WALL);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1596: sfx_play_note(SFX_HIT_WALL);
 	ld	a, #0x02
 	push	af
 	inc	sp
@@ -8112,20 +8079,20 @@ _game_tick::
 	ld	hl, #_sfx_play_note
 	call	___sdcc_bcall_ehl
 	inc	sp
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1604: spawn_explosion_timer(bidx, 3);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1597: spawn_explosion_timer(bidx, 3);
 	ld	a, #0x03
 	ldhl	sp,	#2
 	ld	e, (hl)
 	inc	hl
 	ld	d, (hl)
 	call	_spawn_explosion_timer
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1605: remove_bullet_at(i);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1598: remove_bullet_at(i);
 	ldhl	sp,	#16
 	ld	a, (hl)
 	call	_remove_bullet_at
 	jp	00198$
 00193$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1606: } else if (target == CT_ROBBO && owner) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1599: } else if (target == CT_ROBBO && owner) {
 	ldhl	sp,	#15
 	ld	a, (hl)
 	sub	a, #0x1a
@@ -8134,22 +8101,22 @@ _game_tick::
 	ld	a, (hl)
 	or	a, a
 	jr	Z, 00189$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1607: kill_robbo();
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1600: kill_robbo();
 	call	_kill_robbo
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1608: spawn_explosion_timer(bidx, 3);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1601: spawn_explosion_timer(bidx, 3);
 	ld	a, #0x03
 	ldhl	sp,	#2
 	ld	e, (hl)
 	inc	hl
 	ld	d, (hl)
 	call	_spawn_explosion_timer
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1609: remove_bullet_at(i);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1602: remove_bullet_at(i);
 	ldhl	sp,	#16
 	ld	a, (hl)
 	call	_remove_bullet_at
 	jp	00198$
 00189$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1611: if (btype == 2 && is_explodable(target)) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1604: if (btype == 2 && is_explodable(target)) {
 	ldhl	sp,	#7
 	ld	a, (hl)
 	sub	a, #0x02
@@ -8159,7 +8126,7 @@ _game_tick::
 	call	_is_explodable
 	or	a, a
 	jr	Z, 00185$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1612: sfx_play_note(SFX_HIT_WALL);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1605: sfx_play_note(SFX_HIT_WALL);
 	ld	a, #0x02
 	push	af
 	inc	sp
@@ -8167,7 +8134,7 @@ _game_tick::
 	ld	hl, #_sfx_play_note
 	call	___sdcc_bcall_ehl
 	inc	sp
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1613: blast_cell(nidx, 3);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1606: blast_cell(nidx, 3);
 	ld	a, #0x03
 	ldhl	sp,	#13
 	ld	e, (hl)
@@ -8176,13 +8143,13 @@ _game_tick::
 	call	_blast_cell
 	jr	00186$
 00185$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1614: } else if (is_demolishable(target)) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1607: } else if (is_demolishable(target)) {
 	ldhl	sp,	#15
 	ld	a, (hl)
 	call	_is_demolishable
 	or	a, a
 	jr	Z, 00182$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1615: demolish_cell(nidx);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1608: demolish_cell(nidx);
 	ldhl	sp,	#13
 	ld	a, (hl+)
 	ld	e, a
@@ -8190,7 +8157,7 @@ _game_tick::
 	call	_demolish_cell
 	jr	00186$
 00182$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1617: sfx_play_note(SFX_HIT_WALL);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1610: sfx_play_note(SFX_HIT_WALL);
 	ld	a, #0x02
 	push	af
 	inc	sp
@@ -8199,33 +8166,33 @@ _game_tick::
 	call	___sdcc_bcall_ehl
 	inc	sp
 00186$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1619: spawn_explosion_timer(bidx, 3);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1612: spawn_explosion_timer(bidx, 3);
 	ld	a, #0x03
 	ldhl	sp,	#2
 	ld	e, (hl)
 	inc	hl
 	ld	d, (hl)
 	call	_spawn_explosion_timer
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1620: remove_bullet_at(i);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1613: remove_bullet_at(i);
 	ldhl	sp,	#16
 	ld	a, (hl)
 	call	_remove_bullet_at
 	jp	00198$
 00200$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1624: collect_actors();
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1617: collect_actors();
 	call	_collect_actors
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1625: turret_tick();
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1618: turret_tick();
 	call	_turret_tick
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1626: enemy_tick();
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1619: enemy_tick();
 	call	_enemy_tick
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1629: for (i = 0; i < bomb_count; i++) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1622: for (i = 0; i < bomb_count; i++) {
 	ld	c, #0x00
 00253$:
 	ld	a, c
 	ld	hl, #_bomb_count
 	sub	a, (hl)
 	jr	NC, 00334$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1630: eidx = bomb_list[i];
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1623: eidx = bomb_list[i];
 	ld	l, c
 	xor	a, a
 	ld	h, a
@@ -8234,7 +8201,7 @@ _game_tick::
 	add	hl, de
 	ld	a,	(hl+)
 	ld	h, (hl)
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1631: if (map_type[eidx] == CT_BOMB && map_extra[eidx] != 0) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1624: if (map_type[eidx] == CT_BOMB && map_extra[eidx] != 0) {
 	ld	l, a
 	add	a,#<(_map_type)
 	ld	e, a
@@ -8253,13 +8220,13 @@ _game_tick::
 	ld	a, (de)
 	or	a, a
 	jr	Z, 00254$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1632: map_extra[eidx]--;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1625: map_extra[eidx]--;
 	dec	a
 	ld	(de), a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1633: if (map_extra[eidx] == 0) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1626: if (map_extra[eidx] == 0) {
 	or	a, a
 	jr	NZ, 00202$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1634: bomb_explode(eidx);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1627: bomb_explode(eidx);
 	push	bc
 	ld	e, l
 	ld	d, h
@@ -8267,7 +8234,7 @@ _game_tick::
 	pop	bc
 	jr	00254$
 00202$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1636: render_cell(eidx % MAP_W, eidx / MAP_W);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1629: render_cell(eidx % MAP_W, eidx / MAP_W);
 	ld	e, l
 	ld	d, h
 	srl	d
@@ -8285,12 +8252,12 @@ _game_tick::
 	call	_render_cell
 	pop	bc
 00254$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1629: for (i = 0; i < bomb_count; i++) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1622: for (i = 0; i < bomb_count; i++) {
 	inc	c
 	jr	00253$
 00334$:
 	ldhl	sp,	#14
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1643: for (ei = 0; ei < explosion_count; ei++) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1636: for (ei = 0; ei < explosion_count; ei++) {
 	ld	a, c
 	ld	(hl+), a
 	xor	a, a
@@ -8308,7 +8275,7 @@ _game_tick::
 	ld	a, (de)
 	sbc	a, (hl)
 	jp	NC, 00323$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1644: eidx = explosion_list[ei];
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1637: eidx = explosion_list[ei];
 	ldhl	sp,	#15
 	ld	a, (hl+)
 	ld	c, a
@@ -8325,7 +8292,7 @@ _game_tick::
 	inc	de
 	ld	a, (de)
 	ld	(hl), a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1645: if (map_type[eidx] == CT_EXPLOSION) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1638: if (map_type[eidx] == CT_EXPLOSION) {
 	ld	de, #_map_type
 	ldhl	sp,	#7
 	ld	a,	(hl+)
@@ -8346,7 +8313,7 @@ _game_tick::
 	ld	a, (de)
 	sub	a, #0x1c
 	jp	NZ, 00257$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1646: uint8_t timer = map_extra[eidx] & 7;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1639: uint8_t timer = map_extra[eidx] & 7;
 	ld	de, #_map_extra
 	ldhl	sp,	#7
 	ld	a,	(hl+)
@@ -8363,7 +8330,7 @@ _game_tick::
 	ld	(hl-), a
 	ld	a, (hl+)
 	ld	e, a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1647: uint8_t payload = map_extra[eidx] >> 3;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1640: uint8_t payload = map_extra[eidx] >> 3;
 	ld	a, (hl+)
 	ld	d, a
 	ld	a, (de)
@@ -8375,13 +8342,13 @@ _game_tick::
 	rlca
 	and	a, #0x1f
 	ld	(hl), a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1648: if (timer > 0) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1641: if (timer > 0) {
 	ld	a, c
 	or	a, a
 	jr	Z, 00215$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1649: timer--;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1642: timer--;
 	dec	c
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1650: map_extra[eidx] = (uint8_t)((payload << 3) | timer);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1643: map_extra[eidx] = (uint8_t)((payload << 3) | timer);
 	ld	a, (hl)
 	add	a, a
 	add	a, a
@@ -8395,7 +8362,7 @@ _game_tick::
 	ld	d, a
 	ld	a, (hl)
 	ld	(de), a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1651: render_cell(eidx % MAP_W, eidx / MAP_W);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1644: render_cell(eidx % MAP_W, eidx / MAP_W);
 	ldhl	sp,	#7
 	ld	a, (hl)
 	ldhl	sp,	#12
@@ -8440,12 +8407,12 @@ _game_tick::
 	call	_render_cell
 	jr	00257$
 00215$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1652: } else if (payload == 12) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1645: } else if (payload == 12) {
 	ldhl	sp,	#13
 	ld	a, (hl)
 	sub	a, #0x0c
 	jr	NZ, 00212$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1653: teleport_arrive(eidx);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1646: teleport_arrive(eidx);
 	ldhl	sp,	#7
 	ld	a, (hl+)
 	ld	e, a
@@ -8453,12 +8420,12 @@ _game_tick::
 	call	_teleport_arrive
 	jr	00257$
 00212$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1654: } else if (payload != 0) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1647: } else if (payload != 0) {
 	ldhl	sp,	#13
 	ld	a, (hl)
 	or	a, a
 	jr	Z, 00209$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1655: spawn_question_payload(eidx, payload - 1);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1648: spawn_question_payload(eidx, payload - 1);
 	ld	a, (hl)
 	dec	a
 	ldhl	sp,	#7
@@ -8468,19 +8435,19 @@ _game_tick::
 	call	_spawn_question_payload
 	jr	00257$
 00209$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1657: map_type[eidx] = CT_EMPTY;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1650: map_type[eidx] = CT_EMPTY;
 	ldhl	sp,	#9
 	ld	a, (hl+)
 	ld	h, (hl)
 	ld	l, a
 	ld	(hl), #0x00
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1658: map_extra[eidx] = 0;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1651: map_extra[eidx] = 0;
 	ldhl	sp,	#11
 	ld	a, (hl+)
 	ld	h, (hl)
 	ld	l, a
 	ld	(hl), #0x00
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1659: render_cell(eidx % MAP_W, eidx / MAP_W);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1652: render_cell(eidx % MAP_W, eidx / MAP_W);
 	ldhl	sp,	#7
 	ld	a, (hl+)
 	ld	c, a
@@ -8499,14 +8466,14 @@ _game_tick::
 	and	a, #0x0f
 	call	_render_cell
 00257$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1643: for (ei = 0; ei < explosion_count; ei++) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1636: for (ei = 0; ei < explosion_count; ei++) {
 	ldhl	sp,	#15
 	inc	(hl)
 	jp	NZ, 00256$
 	inc	hl
 	inc	(hl)
 	jp	00256$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1664: while (i < sliding_count) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1657: while (i < sliding_count) {
 00323$:
 	ldhl	sp,	#14
 	ld	a, (hl+)
@@ -8518,7 +8485,7 @@ _game_tick::
 	ld	hl, #_sliding_count
 	sub	a, (hl)
 	jp	NC, 00245$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1665: uint16_t idx = sliding_boxes[i];
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1658: uint16_t idx = sliding_boxes[i];
 	ldhl	sp,	#16
 	ld	c, (hl)
 	ld	b, #0x00
@@ -8542,7 +8509,7 @@ _game_tick::
 	ld	(hl+), a
 	inc	de
 	ld	a, (de)
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1669: if (map_type[idx] != CT_PUSHABLE) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1662: if (map_type[idx] != CT_PUSHABLE) {
 	ld	(hl-), a
 	ld	a, (hl+)
 	ld	e, a
@@ -8554,14 +8521,14 @@ _game_tick::
 	ld	a, (bc)
 	sub	a, #0x0b
 	jr	Z, 00221$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1670: remove_sliding(i);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1663: remove_sliding(i);
 	ldhl	sp,	#16
 	ld	a, (hl)
 	call	_remove_sliding
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1671: continue;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1664: continue;
 	jr	00243$
 00221$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1674: x = idx % MAP_W;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1667: x = idx % MAP_W;
 	ldhl	sp,	#6
 	ld	a, (hl+)
 	ld	c, a
@@ -8569,7 +8536,7 @@ _game_tick::
 	ld	b, a
 	ld	a, c
 	and	a, #0x0f
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1675: y = idx / MAP_W;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1668: y = idx / MAP_W;
 	ld	(hl+), a
 	srl	b
 	rr	c
@@ -8580,7 +8547,7 @@ _game_tick::
 	srl	b
 	rr	c
 	ld	(hl), c
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1676: dir = map_extra[idx] & 3;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1669: dir = map_extra[idx] & 3;
 	ld	de, #_map_extra
 	ldhl	sp,	#6
 	ld	a,	(hl+)
@@ -8604,15 +8571,15 @@ _game_tick::
 	and	a, #0x03
 	ldhl	sp,	#12
 	ld	(hl), a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1677: nx = x;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1670: nx = x;
 	ldhl	sp,	#8
 	ld	a, (hl)
 	ldhl	sp,	#13
 	ld	(hl), a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1678: ny = y;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1671: ny = y;
 	ldhl	sp,	#9
 	ld	c, (hl)
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1680: if (dir == 0) nx++;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1673: if (dir == 0) nx++;
 	ldhl	sp,	#12
 	ld	a, (hl)
 	or	a, a
@@ -8624,7 +8591,7 @@ _game_tick::
 	ld	(hl), a
 	jr	00234$
 00233$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1681: else if (dir == 1) ny++;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1674: else if (dir == 1) ny++;
 	ldhl	sp,	#12
 	ld	a, (hl)
 	dec	a
@@ -8634,7 +8601,7 @@ _game_tick::
 	inc	c
 	jr	00234$
 00230$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1682: else if (dir == 2) { if (nx > 0) nx--; }
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1675: else if (dir == 2) { if (nx > 0) nx--; }
 	ldhl	sp,	#12
 	ld	a, (hl)
 	sub	a, #0x02
@@ -8649,7 +8616,7 @@ _game_tick::
 	ld	(hl), a
 	jr	00234$
 00227$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1683: else { if (ny > 0) ny--; }
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1676: else { if (ny > 0) ny--; }
 	ldhl	sp,	#9
 	ld	a, (hl)
 	or	a, a
@@ -8657,7 +8624,7 @@ _game_tick::
 	ld	c, (hl)
 	dec	c
 00234$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1685: if (nx >= MAP_W || ny >= level_height) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1678: if (nx >= MAP_W || ny >= level_height) {
 	ldhl	sp,	#13
 	ld	a, (hl)
 	sub	a, #0x10
@@ -8667,7 +8634,7 @@ _game_tick::
 	sub	a, (hl)
 	jr	C, 00236$
 00235$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1686: map_extra[idx] &= (uint8_t)~4;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1679: map_extra[idx] &= (uint8_t)~4;
 	ldhl	sp,	#15
 	ld	a, (hl)
 	and	a, #0xfb
@@ -8677,20 +8644,20 @@ _game_tick::
 	ld	h, (hl)
 	ld	l, e
 	ld	(hl), a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1687: render_cell(x, y);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1680: render_cell(x, y);
 	ldhl	sp,	#9
 	ld	a, (hl-)
 	ld	e, a
 	ld	a, (hl)
 	call	_render_cell
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1688: remove_sliding(i);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1681: remove_sliding(i);
 	ldhl	sp,	#16
 	ld	a, (hl)
 	call	_remove_sliding
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1689: continue;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1682: continue;
 	jp	00243$
 00236$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1692: nidx = (uint16_t)ny * MAP_W + nx;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1685: nidx = (uint16_t)ny * MAP_W + nx;
 	ld	l, c
 	ld	h, #0x00
 	add	hl, hl
@@ -8708,7 +8675,7 @@ _game_tick::
 	ldhl	sp,	#14
 	ld	(hl), e
 	inc	hl
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1693: target = map_type[nidx];
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1686: target = map_type[nidx];
 	ld	(hl-), a
 	ld	a, (hl+)
 	ld	e, a
@@ -8719,14 +8686,14 @@ _game_tick::
 	ld	d, h
 	ld	a, (de)
 	ld	b, a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1695: if (target == CT_EMPTY) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1688: if (target == CT_EMPTY) {
 	inc	b
 	dec	b
 	jr	NZ, 00241$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1696: map_type[nidx] = CT_PUSHABLE;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1689: map_type[nidx] = CT_PUSHABLE;
 	ld	a, #0x0b
 	ld	(de), a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1697: map_extra[nidx] = dir | 4;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1690: map_extra[nidx] = dir | 4;
 	ld	de, #_map_extra
 	ldhl	sp,	#14
 	ld	a,	(hl+)
@@ -8739,7 +8706,7 @@ _game_tick::
 	ld	a, (hl)
 	set	2, a
 	ld	(de), a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1698: map_type[idx] = CT_EMPTY;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1691: map_type[idx] = CT_EMPTY;
 	ld	de, #_map_type
 	ldhl	sp,	#6
 	ld	a,	(hl+)
@@ -8750,13 +8717,13 @@ _game_tick::
 	ld	d, h
 	xor	a, a
 	ld	(de), a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1699: map_extra[idx] = 0;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1692: map_extra[idx] = 0;
 	ldhl	sp,	#10
 	ld	a, (hl+)
 	ld	h, (hl)
 	ld	l, a
 	ld	(hl), #0x00
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1700: render_cell(x, y);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1693: render_cell(x, y);
 	push	bc
 	ldhl	sp,	#11
 	ld	a, (hl-)
@@ -8764,12 +8731,12 @@ _game_tick::
 	ld	a, (hl)
 	call	_render_cell
 	pop	bc
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1701: render_cell(nx, ny);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1694: render_cell(nx, ny);
 	ld	e, c
 	ldhl	sp,	#13
 	ld	a, (hl)
 	call	_render_cell
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1702: sliding_boxes[i] = nidx;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1695: sliding_boxes[i] = nidx;
 	ldhl	sp,	#4
 	ld	a, (hl+)
 	ld	e, a
@@ -8778,24 +8745,24 @@ _game_tick::
 	ld	a, (hl+)
 	ld	(de), a
 	inc	de
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1703: i++;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1696: i++;
 	ld	a, (hl+)
 	ld	(de), a
 	inc	(hl)
 	jp	00243$
 00241$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1707: if (is_demolishable(target)) {
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1700: if (is_demolishable(target)) {
 	call	_is_demolishable
 	or	a, a
 	jr	Z, 00239$
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1708: demolish_cell(nidx);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1701: demolish_cell(nidx);
 	ldhl	sp,	#14
 	ld	a, (hl+)
 	ld	e, a
 	ld	d, (hl)
 	call	_demolish_cell
 00239$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1710: map_extra[idx] &= (uint8_t)~4;
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1703: map_extra[idx] &= (uint8_t)~4;
 	ldhl	sp,#10
 	ld	a, (hl+)
 	ld	e, a
@@ -8808,24 +8775,24 @@ _game_tick::
 	ld	h, (hl)
 	ld	l, e
 	ld	(hl), a
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1711: render_cell(x, y);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1704: render_cell(x, y);
 	ldhl	sp,	#9
 	ld	a, (hl-)
 	ld	e, a
 	ld	a, (hl)
 	call	_render_cell
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1712: remove_sliding(i);
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1705: remove_sliding(i);
 	ldhl	sp,	#16
 	ld	a, (hl)
 	call	_remove_sliding
 	jp	00243$
 00245$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1716: animate_static_objects();
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1709: animate_static_objects();
 	call	_animate_static_objects
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1717: magnet_tick();
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1710: magnet_tick();
 	call	_magnet_tick
 00258$:
-;C:\dev\AI\robbo-port2\gb\src\core\game.c:1718: }
+;C:\dev\AI\robbo-port2\gb\src\core\game.c:1711: }
 	add	sp, #17
 	ret
 	.area _CODE
