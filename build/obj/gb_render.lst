@@ -160,8 +160,8 @@
     00000089 E1               [12]  160 	pop	hl
     0000008A 28 10            [12]  161 	jr	Z, 00111$
     0000008C                        162 00110$:
-                                    163 ;C:\dev\AI\robbo-port2\gb\src\gb\render.c:37: return (anim_frame & 1) ? MT_SPACESHIP_1 : MT_SPACESHIP_0;
-    0000008C FAr00r00         [16]  164 	ld	a, (_anim_frame)
+                                    163 ;C:\dev\AI\robbo-port2\gb\src\gb\render.c:37: return (anim_slow & 1) ? MT_SPACESHIP_1 : MT_SPACESHIP_0;
+    0000008C FAr00r00         [16]  164 	ld	a, (_anim_slow)
     0000008F 0F               [ 4]  165 	rrca
     00000090 30 05            [12]  166 	jr	NC, 00134$
     00000092 3E 07            [ 8]  167 	ld	a, #0x07
@@ -170,8 +170,8 @@
     00000097 3E 06            [ 8]  170 	ld	a, #0x06
     00000099 C3r4Er01         [16]  171 	jp	00132$
     0000009C                        172 00111$:
-                                    173 ;C:\dev\AI\robbo-port2\gb\src\gb\render.c:39: return MT_SPACESHIP_1;
-    0000009C 3E 07            [ 8]  174 	ld	a, #0x07
+                                    173 ;C:\dev\AI\robbo-port2\gb\src\gb\render.c:39: return MT_SPACESHIP_0;
+    0000009C 3E 06            [ 8]  174 	ld	a, #0x06
     0000009E C3r4Er01         [16]  175 	jp	00132$
                                     176 ;C:\dev\AI\robbo-port2\gb\src\gb\render.c:40: case CT_QUESTION:   return MT_QUESTION;
     000000A1                        177 00113$:
@@ -204,9 +204,9 @@
     000000C5 09               [ 8]  204 	add	hl, bc
     000000C6 7E               [ 8]  205 	ld	a, (hl)
     000000C7 C3r4Er01         [16]  206 	jp	00132$
-                                    207 ;C:\dev\AI\robbo-port2\gb\src\gb\render.c:46: case CT_TELEPORT:   return MT_TELEPORT_0 + (anim_frame & 1);
+                                    207 ;C:\dev\AI\robbo-port2\gb\src\gb\render.c:46: case CT_TELEPORT:   return MT_TELEPORT_0 + (anim_slow & 1);
     000000CA                        208 00119$:
-    000000CA FAr00r00         [16]  209 	ld	a, (_anim_frame)
+    000000CA FAr00r00         [16]  209 	ld	a, (_anim_slow)
     000000CD E6 01            [ 8]  210 	and	a, #0x01
     000000CF C6 11            [ 8]  211 	add	a, #0x11
     000000D1 18 7B            [12]  212 	jr	00132$
@@ -274,12 +274,12 @@
                                     274 ;C:\dev\AI\robbo-port2\gb\src\gb\render.c:55: uint8_t dir = extra & 3;
     00000125 F8 00            [12]  275 	ldhl	sp,	#0
     00000127 7E               [ 8]  276 	ld	a, (hl)
-                                    277 ;C:\dev\AI\robbo-port2\gb\src\gb\render.c:56: return MT_BULLET_0 + (uint8_t)((dir & 1) * 2) + (anim_frame & 1);
+                                    277 ;C:\dev\AI\robbo-port2\gb\src\gb\render.c:56: return MT_BULLET_0 + (uint8_t)((dir & 1) * 2) + (anim_slow & 1);
     00000128 E6 01            [ 8]  278 	and	a, #0x1
     0000012A 87               [ 4]  279 	add	a, a
     0000012B C6 17            [ 8]  280 	add	a, #0x17
     0000012D 4F               [ 4]  281 	ld	c, a
-    0000012E FAr00r00         [16]  282 	ld	a, (_anim_frame)
+    0000012E FAr00r00         [16]  282 	ld	a, (_anim_slow)
     00000131 E6 01            [ 8]  283 	and	a, #0x01
     00000133 81               [ 4]  284 	add	a, c
     00000134 18 18            [12]  285 	jr	00132$

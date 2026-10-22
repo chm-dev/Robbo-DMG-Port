@@ -80,6 +80,8 @@ extern uint8_t game_restart_requested;
 extern uint8_t game_level_advance_requested;
 extern uint8_t cam_override;
 extern uint8_t anim_frame;
+/* Toggles every other logic tick; drives bullets, the capsule and teleports. */
+extern uint8_t anim_slow;
 extern uint8_t robbo_step_anim;
 extern uint8_t cam_target_x;
 extern uint8_t cam_target_y;

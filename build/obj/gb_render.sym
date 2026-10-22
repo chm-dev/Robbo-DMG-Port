@@ -23,6 +23,7 @@ Symbol Table
     _add_VBL                                                        ******** GX
     _ammo                                                           ******** GX
     _anim_frame                                                     ******** GX
+    _anim_slow                                                      ******** GX
     _cam_override                                                   ******** GX
     _cam_pan_timer                                                  ******** GX
     _cam_target_x                                                   ******** GX
@@ -57,12 +58,12 @@ Symbol Table
   0 _render_init                                                    00000204 GR
   0 _render_level                                                   000002B9 GR
   0 _render_metatile_for_cell                                       00000000 GR
-  0 _render_sync_rows                                               0000049D GR
 ASxxxx Assembler V02.00 + NoICE + SDCC mods  (GameBoy)                  Page 2
 Hexadecimal [32-Bits]
 
 Symbol Table
 
+  0 _render_sync_rows                                               0000049D GR
   0 _robbo_mt_base                                                  00000155 R
     _robbo_step_anim                                                ******** GX
     _robbo_x                                                        ******** GX

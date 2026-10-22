@@ -45,6 +45,7 @@ uint8_t cam_target_x;
 uint8_t cam_target_y;
 uint8_t cam_pan_timer;
 uint8_t anim_frame;
+uint8_t anim_slow;
 uint8_t robbo_step_anim;
 
 #define MAX_SLIDING 32
@@ -159,6 +160,7 @@ void game_load_level(uint8_t level)
     transition_active = 0;
     wipe_col = 0;
     anim_frame = 0;
+    anim_slow = 0;
     robbo_step_anim = 0;
     render_flash_set(0);
 
@@ -536,12 +538,11 @@ uint8_t game_try_move(uint8_t dir)
             sfx_play_note(SFX_LEVEL_END);
             return 0;
         }
-        render_cell(robbo_x, robbo_y);
-        return 0;
+        /* Inactive capsule is movable: fall through to the push block. */
     }
 
     if (target == CT_STONE || target == CT_PUSHABLE ||
-        target == CT_BOMB || target == CT_QUESTION) {
+        target == CT_SPACESHIP || target == CT_BOMB || target == CT_QUESTION) {
         uint8_t bx = nx;
         uint8_t by = ny;
         uint8_t moved_extra = map_extra[new_idx];
@@ -1424,6 +1425,8 @@ void game_tick(void)
 
     if (fire_delay != 0) fire_delay--;
     anim_frame = (anim_frame + 1) & 1;
+    /* Bullets, capsule and teleports swap frames every other logic tick. */
+    if (anim_frame == 0) anim_slow ^= 1;
     explosion_sfx_started = 0;
 
     if (robbo_dead) {

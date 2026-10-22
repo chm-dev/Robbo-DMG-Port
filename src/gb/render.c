@@ -34,16 +34,16 @@ uint8_t render_metatile_for_cell(uint8_t type, uint8_t extra)
         case CT_DOOR:       return MT_DOOR;
         case CT_SPACESHIP:
             if (screws_left == 0 || (extra & 1)) {
-                return (anim_frame & 1) ? MT_SPACESHIP_1 : MT_SPACESHIP_0;
+                return (anim_slow & 1) ? MT_SPACESHIP_1 : MT_SPACESHIP_0;
             }
-            return MT_SPACESHIP_1;
+            return MT_SPACESHIP_0;
         case CT_QUESTION:   return MT_QUESTION;
         case CT_BOMB:       return MT_BOMB;
         case CT_KEY:        return MT_KEY;
         case CT_SCREW:      return MT_SCREW;
         case CT_AMMO:       return MT_AMMO;
         case CT_TURRET:     return turret_mt[extra & 3];
-        case CT_TELEPORT:   return MT_TELEPORT_0 + (anim_frame & 1);
+        case CT_TELEPORT:   return MT_TELEPORT_0 + (anim_slow & 1);
         case CT_MUSTACHE:   return MT_MUSTACHE_0 + (anim_frame & 1);
         case CT_BUTTERFLY:  return MT_BUTTERFLY_0 + (anim_frame & 1);
         case CT_BEAR:       return ((extra & 4) ? MT_BEAR_2 : MT_BEAR_0) + (anim_frame & 1);
@@ -53,7 +53,7 @@ uint8_t render_metatile_for_cell(uint8_t type, uint8_t extra)
                                    (robbo_step_anim & 1);
         case CT_BULLET: {
             uint8_t dir = extra & 3;
-            return MT_BULLET_0 + (uint8_t)((dir & 1) * 2) + (anim_frame & 1);
+            return MT_BULLET_0 + (uint8_t)((dir & 1) * 2) + (anim_slow & 1);
         }
         case CT_EXPLOSION: {
             uint8_t t = extra & 7;

@@ -160,8 +160,8 @@ _render_metatile_for_cell::
 	pop	hl
 	jr	Z, 00111$
 00110$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:37: return (anim_frame & 1) ? MT_SPACESHIP_1 : MT_SPACESHIP_0;
-	ld	a, (_anim_frame)
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:37: return (anim_slow & 1) ? MT_SPACESHIP_1 : MT_SPACESHIP_0;
+	ld	a, (_anim_slow)
 	rrca
 	jr	NC, 00134$
 	ld	a, #0x07
@@ -170,8 +170,8 @@ _render_metatile_for_cell::
 	ld	a, #0x06
 	jp	00132$
 00111$:
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:39: return MT_SPACESHIP_1;
-	ld	a, #0x07
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:39: return MT_SPACESHIP_0;
+	ld	a, #0x06
 	jp	00132$
 ;C:\dev\AI\robbo-port2\gb\src\gb\render.c:40: case CT_QUESTION:   return MT_QUESTION;
 00113$:
@@ -204,9 +204,9 @@ _render_metatile_for_cell::
 	add	hl, bc
 	ld	a, (hl)
 	jp	00132$
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:46: case CT_TELEPORT:   return MT_TELEPORT_0 + (anim_frame & 1);
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:46: case CT_TELEPORT:   return MT_TELEPORT_0 + (anim_slow & 1);
 00119$:
-	ld	a, (_anim_frame)
+	ld	a, (_anim_slow)
 	and	a, #0x01
 	add	a, #0x11
 	jr	00132$
@@ -274,12 +274,12 @@ _render_metatile_for_cell::
 ;C:\dev\AI\robbo-port2\gb\src\gb\render.c:55: uint8_t dir = extra & 3;
 	ldhl	sp,	#0
 	ld	a, (hl)
-;C:\dev\AI\robbo-port2\gb\src\gb\render.c:56: return MT_BULLET_0 + (uint8_t)((dir & 1) * 2) + (anim_frame & 1);
+;C:\dev\AI\robbo-port2\gb\src\gb\render.c:56: return MT_BULLET_0 + (uint8_t)((dir & 1) * 2) + (anim_slow & 1);
 	and	a, #0x1
 	add	a, a
 	add	a, #0x17
 	ld	c, a
-	ld	a, (_anim_frame)
+	ld	a, (_anim_slow)
 	and	a, #0x01
 	add	a, c
 	jr	00132$

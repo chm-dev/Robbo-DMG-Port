@@ -176,5 +176,38 @@ function waitArrival({ gb, byte }, maxFrames = 400) {
     `dest=${readMem(ctx.gb, S.teleport_dest + 1 * 2, 2).join(',')}`);
 }
 
+// --- Teleport frames swap every other logic tick, not every tick. ---
+{
+  const ctx = fresh();
+  const bgmap = ctx.core.BGCHRBank1;
+  // Level 1 teleport at (7,2): metatile row 2, top-left tile at (14,4).
+  const addr = (0x9800 + 4 * 32 + 7 * 2) & 0x7ff;
+  let tile = bgmap[addr];
+  let slow = ctx.byte('anim_slow');
+  let tileChanges = 0;
+  let slowChanges = 0;
+  const seen = new Set([tile]);
+
+  for (let i = 0; i < 600; i++) {
+    ctx.gb.doFrame();
+    if (bgmap[addr] !== tile) {
+      tile = bgmap[addr];
+      tileChanges++;
+      seen.add(tile);
+    }
+    const nextSlow = ctx.byte('anim_slow');
+    if (nextSlow !== slow) {
+      slow = nextSlow;
+      slowChanges++;
+    }
+  }
+
+  check('teleport animates between two frames', seen.size === 2,
+    `tiles=${[...seen].join(',')}`);
+  check('teleport swaps at the half-rate clock',
+    slowChanges >= 4 && tileChanges === slowChanges,
+    `tileChanges=${tileChanges} slowChanges=${slowChanges}`);
+}
+
 console.log(failures ? `\n${failures} checkpoint(s) failed` : '\nCheckpoint 6 passed');
 process.exit(failures ? 1 : 0);
