@@ -5,8 +5,10 @@
 #include <stdint.h>
 #include <gb/gb.h>
 
-#define TILESET_COUNT 238
-#define METATILE_COUNT 52
+#define TILESET_COUNT 241
+#define METATILE_COUNT 53
+#define WALL_TILE_BASE 237
+#define WALL_ROTATION_COUNT 14
 #define SHEET_COLS 11
 #define SHEET_ROWS 8
 #define SHEET_CELL_COUNT 88
@@ -64,12 +66,14 @@
 #define MT_ROBBO_5 49
 #define MT_ROBBO_6 50
 #define MT_ROBBO_7 51
+#define MT_WALL_CAVE 52
 
 extern const uint8_t tileset_data[];
 extern const uint8_t tileset_count;
 extern const uint8_t hud_bg_tile;
 extern const uint8_t metatile_tiles[];
 extern const uint8_t metatile_count;
+extern const uint8_t wall_rotation_cells[WALL_ROTATION_COUNT];
 extern const uint8_t sheet_metatile_tiles[];
 extern const uint8_t sheet_tile_count;
 extern const uint8_t sheet_tiles_data[];

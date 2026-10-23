@@ -35,14 +35,13 @@ static uint8_t pause_draw = 0;
 static uint8_t game_complete = 0;
 static uint8_t pan_active = 0;
 static uint8_t pan_delay = 0;
-static uint8_t pan_saved_x = 0;
-static uint8_t pan_saved_y = 0;
+static uint16_t pan_saved_x = 0;
+static uint16_t pan_saved_y = 0;
 
 static void pan_cancel(uint8_t restore)
 {
     if (pan_active && restore) {
-        cam_x = pan_saved_x;
-        cam_y = pan_saved_y;
+        render_camera_set_q(pan_saved_x, pan_saved_y);
     }
     pan_active = 0;
     pan_delay = 0;
@@ -50,18 +49,7 @@ static void pan_cancel(uint8_t restore)
 
 static void pan_step(uint8_t dir)
 {
-    uint8_t max_x = MAP_W - VIEW_COLS;
-    uint8_t max_y = (level_height > VIEW_ROWS) ? (level_height - VIEW_ROWS) : 0;
-
-    if (dir == 0) {
-        if (cam_x < max_x) cam_x++;
-    } else if (dir == 1) {
-        if (cam_y < max_y) cam_y++;
-    } else if (dir == 2) {
-        if (cam_x > 0) cam_x--;
-    } else if (dir == 3) {
-        if (cam_y > 0) cam_y--;
-    }
+    render_camera_pan_step(dir);
 }
 
 static void wait_vbl(void)
@@ -115,9 +103,11 @@ void main(void)
             continue;
         }
 
-        /* All VRAM writes happen here, at the start of VBlank. */
+        /* All VRAM writes happen here, at the start of VBlank.  The camera
+         * itself is applied by the VBlank handler; this only publishes the
+         * next goal (or steps a teleport/pan). */
         if (!pan_active) render_camera();
-        render_apply_camera();
+        if (paused && !cam_override) cam_smooth = 0;
         game_teleport_camera_ready();
         render_sync_rows();
         if (pause_draw) {
@@ -128,6 +118,10 @@ void main(void)
             render_hud();
         }
         render_flush_cells();
+
+        /* Advance frame-rate visual timers after the cells are flushed, so a
+         * freshly queued step pose is drawn before the timer starts counting. */
+        game_frame();
 
         pad = joypad();
         debug_pad = pad;
@@ -183,16 +177,18 @@ void main(void)
              * that was active when B was pressed. */
             if ((pad & J_B) && !(prev & J_B) && !pan_active && !robbo_busy) {
                 pan_active = 1;
-                pan_saved_x = cam_x;
-                pan_saved_y = cam_y;
+                cam_smooth = 0;
+                __critical {
+                    pan_saved_x = cam_qx;
+                    pan_saved_y = cam_qy;
+                }
                 pan_delay = 0;
                 move_delay = 0;
             }
 
             if (pan_active) {
                 if (!(pad & J_B)) {
-                    cam_x = pan_saved_x;
-                    cam_y = pan_saved_y;
+                    render_camera_set_q(pan_saved_x, pan_saved_y);
                     pan_active = 0;
                     pan_delay = 0;
                 } else if (dir != 0xFF) {
@@ -253,8 +249,7 @@ void main(void)
             pan_cancel(0);
             if (level_planet >= LEVEL_COUNT) {
                 game_complete = 1;
-                cam_x = 0;
-                cam_y = 0;
+                render_camera_reset();
                 DISPLAY_OFF;
                 render_victory();
                 DISPLAY_ON;

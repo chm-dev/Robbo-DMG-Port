@@ -620,7 +620,18 @@ WALL_SLOT = {
     "p": 0, "S": 1, "s": 2, "Y": 3, "z": 4, "Z": 5, "J": 6, "j": 7, "i": 0,
 }
 
-# Source coordinates for the 8 wall textures (x, y grid coords).
+# Wall rotation order requested for the 56 Atari levels: one source texture
+# per four-level block (14 blocks).  Coordinates are 0-based (col, row) on the
+# 11x8 sheet; the request used 1-based positions (4x1, 3x1, ...).
+WALL_ROTATION = [
+    (3, 0), (2, 0), (5, 2), (7, 7), (9, 5), (7, 7), (9, 6),
+    (10, 0), (9, 7), (10, 7), (8, 6), (8, 5), (8, 7), (9, 1),
+]
+
+# Fixed black cave-fill texture (Atari glyph 0x13 / GNU '-').
+WALL_CAVE = (7, 1)
+
+# Legacy 8-slot wall source list, kept for gen_levels.py --gnu / old tools.
 WALL_SOURCE = [(3, 0), (2, 0), (7, 6), (5, 2), (9, 5), (7, 1), (9, 1), (8, 5)]
 
 

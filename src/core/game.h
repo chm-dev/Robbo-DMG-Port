@@ -13,6 +13,7 @@
 #define VIEW_COLS 10
 #define VIEW_ROWS 8
 #define MAX_TELEPORTS 64
+#define BONUS_WORDS ((MAP_CELLS + 7) / 8)
 
 /* Cell type ids.  Generated level packs and the renderer depend on these
  * values; walls occupy 1..8 and encode their texture slot. */
@@ -46,6 +47,7 @@ enum {
     CT_ROBBO = 26,
     CT_BULLET = 27,
     CT_EXPLOSION = 28,
+    CT_EXTRA_LIFE = 29,
 };
 
 #define IS_WALL(t) ((t) >= CT_WALL_0 && (t) <= CT_WALL_7)
@@ -62,6 +64,10 @@ extern uint8_t level_height;
 extern uint8_t level_screw;
 extern uint8_t level_planet;
 extern uint8_t level_teleport_count;
+/* Source-sheet cell index for the current four-level wall style. */
+extern uint8_t level_wall_cell;
+/* Hidden extra-life easter-egg cells; their map_type is converted to empty. */
+extern uint8_t bonus_bits[BONUS_WORDS];
 
 extern uint8_t robbo_x;
 extern uint8_t robbo_y;
@@ -69,8 +75,20 @@ extern uint8_t robbo_dir;
 extern uint8_t screws_left;
 extern uint8_t ammo;
 extern uint8_t keys;
-extern uint8_t cam_x;
-extern uint8_t cam_y;
+/* Smooth camera.  cam_qx/cam_qy are Q4 (1/16 px) absolute positions, kept by
+ * the VBlank handler while cam_smooth is set.  cam_x/cam_y are the derived
+ * cell origin used by the row ring, the teleport check and the tests.
+ * cam_goal_x/y are the dead-zone target in cells; cam_scx/scy are the pixel
+ * scroll values applied to SCX/SCY. */
+extern volatile uint16_t cam_qx;
+extern volatile uint16_t cam_qy;
+extern volatile uint8_t cam_x;
+extern volatile uint8_t cam_y;
+extern volatile uint8_t cam_goal_x;
+extern volatile uint8_t cam_goal_y;
+extern volatile uint8_t cam_smooth;
+extern volatile uint8_t cam_scx;
+extern volatile uint8_t cam_scy;
 extern uint8_t debug_pad;
 extern uint16_t debug_ticks;
 extern uint8_t hud_dirty;
@@ -82,7 +100,11 @@ extern uint8_t cam_override;
 extern uint8_t anim_frame;
 /* Toggles every other logic tick; drives bullets, the capsule and teleports. */
 extern uint8_t anim_slow;
-extern uint8_t robbo_step_anim;
+/* Frames left in the current step.  The walk pose is shown while this is
+ * non-zero; when it expires Robbo redraws in the neutral frame.  Mirrors the
+ * GBC renderer's `robbo.moved > 0 ? walk : neutral` rule. */
+#define ROBBO_STEP_ANIM_FRAMES 3
+extern uint8_t robbo_step_timer;
 extern uint8_t cam_target_x;
 extern uint8_t cam_target_y;
 extern uint8_t cam_pan_timer;
@@ -90,6 +112,8 @@ extern uint8_t cam_pan_timer;
 void game_init(void);
 void game_load_level(uint8_t level);
 void game_tick(void);
+/* One per rendered frame: advances frame-rate animation timers. */
+void game_frame(void);
 uint8_t game_try_move(uint8_t dir);
 uint8_t game_fire(void);
 void game_face(uint8_t dir);

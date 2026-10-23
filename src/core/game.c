@@ -3,17 +3,16 @@
 
 #include "game.h"
 #include "../gen/levels.h"
+#include "../gen/tiles.h"
 #include "../gb/render.h"
 #include "../gb/sound.h"
 
-/* Q8 pitch multiplier used by the retained POKEY effect windows. */
-#define PITCH_DOWN_2OCT 64
+uint16_t bear_step(uint16_t idx, uint8_t state) BANKED;
 
 /* Retained effects from the previous sound set.  The new sound-port2 set
- * removed EXPLOSION, DESTRUCT and DOOR OPEN, so these keep the old
- * SfxDef rendering.  Everything else uses the SFX_* patterns from sound.h. */
+ * removed EXPLOSION and DESTRUCT, so these keep the old SfxDef rendering.
+ * DOOR OPEN now uses the GBC CH3 wave conversion via sfx_play_note(). */
 static const SfxDef sfx_destroy   = { 17, 0, 16, 512, 2, 0, 0, 0, 0, 0, 0, 0, 1, 1, 7, 1, 3 };
-static const SfxDef sfx_door_open = { 11, 0,  7, PITCH_DOWN_2OCT, 5, 0, 0, 7, 2, 256, 0, 0, 0, 0 };
 static const SfxDef sfx_explosion = { 16, 0, 16, 16, 4, 0, 0, 0, 0, 0, 0, 0, 1, 4 };
 
 uint8_t map_type[MAP_CELLS];
@@ -32,8 +31,15 @@ uint8_t robbo_dir;
 uint8_t screws_left;
 uint8_t ammo;
 uint8_t keys;
-uint8_t cam_x;
-uint8_t cam_y;
+volatile uint16_t cam_qx;
+volatile uint16_t cam_qy;
+volatile uint8_t cam_x;
+volatile uint8_t cam_y;
+volatile uint8_t cam_goal_x;
+volatile uint8_t cam_goal_y;
+volatile uint8_t cam_smooth;
+volatile uint8_t cam_scx;
+volatile uint8_t cam_scy;
 uint8_t debug_pad;
 uint16_t debug_ticks;
 uint8_t hud_dirty;
@@ -46,7 +52,9 @@ uint8_t cam_target_y;
 uint8_t cam_pan_timer;
 uint8_t anim_frame;
 uint8_t anim_slow;
-uint8_t robbo_step_anim;
+uint8_t robbo_step_timer;
+uint8_t level_wall_cell;
+uint8_t bonus_bits[BONUS_WORDS];
 
 #define MAX_SLIDING 32
 static uint16_t sliding_boxes[MAX_SLIDING];
@@ -54,7 +62,7 @@ static uint8_t sliding_count;
 
 #define MAX_BULLETS 96
 static uint16_t bullet_cells[MAX_BULLETS];
-#define MAX_TURRET_LIST 16
+#define MAX_TURRET_LIST 32
 #define MAX_ENEMY_LIST 40
 #define MAX_BOMB_LIST 160
 #define MAX_EXPLOSION_LIST 496
@@ -113,10 +121,29 @@ void game_load_level(uint8_t level)
     if (level == 0) level = 1;
     if (level > LEVEL_COUNT) level = LEVEL_COUNT;
 
+    /* Freeze the VBlank ease while the level is rebuilt; it is re-enabled
+     * after the camera has been snapped to the new start. */
+    cam_smooth = 0;
+
     load_level_data(level);
 
+    /* One wall texture per four-level block, loaded from the full sheet. */
+    level_wall_cell = wall_rotation_cells[(uint8_t)((level - 1) >> 2)];
+    render_set_wall_style(level_wall_cell);
+
+    for (i = 0; i < BONUS_WORDS; i++) {
+        bonus_bits[i] = 0;
+    }
     for (i = 0; i < MAP_CELLS; i++) {
         map_obj[i] = 0;
+        if (map_type[i] == CT_EXTRA_LIFE) {
+            /* Invisible easter egg: empty for every actor, but Robbo's entry
+             * triggers the bonus.  Scan the full array, including rows past
+             * the current height (some Atari bonuses sit on the bottom row). */
+            bonus_bits[i >> 3] |= (uint8_t)(1u << (i & 7));
+            map_type[i] = CT_EMPTY;
+            map_extra[i] = 0;
+        }
     }
 
     robbo_x = 2;
@@ -138,8 +165,6 @@ void game_load_level(uint8_t level)
     screws_left = level_screw;
     ammo = 0;
     keys = 0;
-    cam_x = 0;
-    cam_y = 0;
     sliding_count = 0;
     bullet_count = 0;
     fire_delay = 0;
@@ -161,13 +186,14 @@ void game_load_level(uint8_t level)
     wipe_col = 0;
     anim_frame = 0;
     anim_slow = 0;
-    robbo_step_anim = 0;
+    robbo_step_timer = 0;
     render_flash_set(0);
 
+    render_camera_snap();
     render_level();
     hud_dirty = 0;
-    render_camera();
     render_apply_camera();
+    cam_smooth = 1;
 
     /* Fill the legacy SFX conversion cache while the display is off: the
      * first explosion must not pay those divisions mid-gameplay.  Re-loading
@@ -214,6 +240,7 @@ static uint8_t is_explodable(uint8_t type)
         case CT_BUTTERFLY:
         case CT_BEAR:
         case CT_LAVA:
+        case CT_EXTRA_LIFE:
             return 1;
         default:
             return 0;
@@ -278,6 +305,11 @@ static void move_robbo_to(uint8_t nx, uint8_t ny, uint8_t dir)
     map_type[new_idx] = CT_ROBBO;
     map_extra[new_idx] = dir;
 
+    /* GBC rule: the walk frame is `moving ? 1 : 0`, not a persistent flip.
+     * Show it for the first half of the move-repeat period, then return to
+     * the neutral frame when the timer expires in game_frame(). */
+    robbo_step_timer = ROBBO_STEP_ANIM_FRAMES;
+
     render_cell(robbo_x, robbo_y);
     robbo_x = nx;
     robbo_y = ny;
@@ -285,10 +317,14 @@ static void move_robbo_to(uint8_t nx, uint8_t ny, uint8_t dir)
     render_cell(robbo_x, robbo_y);
 }
 
-static void robbo_step_to(uint8_t nx, uint8_t ny, uint8_t dir)
+static void collect_bonus(uint16_t idx)
 {
-    robbo_step_anim ^= 1;
-    move_robbo_to(nx, ny, dir);
+    bonus_bits[idx >> 3] &= (uint8_t)~(1u << (idx & 7));
+    /* Easter egg: the hidden extra-life cell uses the last-bolt flash and the
+     * extra-life jingle, but awards nothing. */
+    screen_flash_ticks = 1;
+    render_flash_set(1);
+    sfx_play_note(SFX_EXTRA_LIFE);
 }
 
 static const int8_t tp_dx[4] = { 1, 0, -1, 0 };
@@ -470,7 +506,10 @@ uint8_t game_try_move(uint8_t dir)
     }
 
     if (target == CT_EMPTY) {
-        robbo_step_to(nx, ny, dir);
+        if (bonus_bits[new_idx >> 3] & (uint8_t)(1u << (new_idx & 7))) {
+            collect_bonus(new_idx);
+        }
+        move_robbo_to(nx, ny, dir);
         return 1;
     }
 
@@ -484,9 +523,9 @@ uint8_t game_try_move(uint8_t dir)
             render_flash_set(1);
             refresh_spaceships();
         }
-        robbo_step_to(nx, ny, dir);
-        /* The last bolt uses the special end-of-screws jingle. */
-        sfx_play_note(screws_left == 0 ? SFX_GAME_OVER : SFX_BOLT);
+        move_robbo_to(nx, ny, dir);
+        /* The last bolt uses the GBC capsule-open jingle. */
+        sfx_play_note(screws_left == 0 ? SFX_LAST_BOLT : SFX_BOLT);
         return 1;
     }
 
@@ -496,8 +535,18 @@ uint8_t game_try_move(uint8_t dir)
         map_type[new_idx] = CT_EMPTY;
         map_extra[new_idx] = 0;
         hud_dirty = 1;
-        robbo_step_to(nx, ny, dir);
+        move_robbo_to(nx, ny, dir);
         sfx_play_note(SFX_AMMO);
+        return 1;
+    }
+
+    if (target == CT_EXTRA_LIFE) {
+        /* Fallback for directly injected bonus cells; level loading normally
+         * converts them to empty + bonus_bits. */
+        map_type[new_idx] = CT_EMPTY;
+        map_extra[new_idx] = 0;
+        collect_bonus(new_idx);
+        move_robbo_to(nx, ny, dir);
         return 1;
     }
 
@@ -507,7 +556,7 @@ uint8_t game_try_move(uint8_t dir)
         map_type[new_idx] = CT_EMPTY;
         map_extra[new_idx] = 0;
         hud_dirty = 1;
-        robbo_step_to(nx, ny, dir);
+        move_robbo_to(nx, ny, dir);
         sfx_play_note(SFX_KEY);
         return 1;
     }
@@ -519,7 +568,7 @@ uint8_t game_try_move(uint8_t dir)
             map_extra[new_idx] = 0;
             hud_dirty = 1;
             render_cell(nx, ny);
-            sfx_play_def(&sfx_door_open);
+            sfx_play_note(SFX_DOOR);
         }
         /* Door.eat() returns false: Robbo stays put for this tick. */
         render_cell(robbo_x, robbo_y);
@@ -576,7 +625,7 @@ uint8_t game_try_move(uint8_t dir)
         render_cell(bx, by);
         render_cell(nx, ny);
         if (target == CT_PUSHABLE) add_sliding(beyond_idx);
-        robbo_step_to(nx, ny, dir);
+        move_robbo_to(nx, ny, dir);
         sfx_play_note(SFX_PUSH);
         return 1;
     }
@@ -942,8 +991,6 @@ static void turret_tick(void)
 }
 
 #define ENEMY_PROC 0x80
-#define BEAR_LAST_SKIP 1
-#define BEAR_SKIP 2
 #define BFLY_VALID 1
 #define MUST_INNER_SKIP 1
 #define MUST_JUST_SHOT 2
@@ -980,61 +1027,6 @@ static uint8_t dirs_contains(const uint8_t *dirs, uint8_t count, uint8_t dir)
         if (dirs[i] == dir) return 1;
     }
     return 0;
-}
-
-static uint16_t bear_step(uint16_t idx, uint8_t state)
-{
-    uint8_t extra = map_extra[idx];
-    uint8_t dir = extra & 3;
-    uint8_t cw = (extra >> 2) & 1;
-    int8_t add = cw ? 1 : -1;
-    uint8_t original = dir;
-    uint8_t i;
-
-    if (state & BEAR_SKIP) {
-        state &= (uint8_t)~BEAR_SKIP;
-        map_obj[idx] = state;
-        return idx;
-    }
-
-    for (i = 2; i; ) {
-        uint8_t test;
-        int16_t nx, ny;
-
-        --i;
-        test = dir;
-        dir = (uint8_t)((dir + 4 - add) & 3);
-
-        nx = (int16_t)(idx % MAP_W) + tp_dx[test];
-        ny = (int16_t)(idx / MAP_W) + tp_dy[test];
-        if (nx >= 0 && ny >= 0 && nx < MAP_W && ny < level_height) {
-            uint16_t nidx = (uint16_t)ny * MAP_W + (uint8_t)nx;
-            if (map_type[nidx] == CT_EMPTY) {
-                map_type[nidx] = CT_BEAR;
-                map_extra[nidx] = (uint8_t)((extra & ~3) | dir);
-                map_obj[nidx] = (uint8_t)(state & ~(BEAR_LAST_SKIP | BEAR_SKIP));
-                map_type[idx] = CT_EMPTY;
-                map_extra[idx] = 0;
-                map_obj[idx] = 0;
-                render_cell(idx % MAP_W, idx / MAP_W);
-                render_cell((uint8_t)nx, (uint8_t)ny);
-                return nidx;
-            }
-            if (map_type[nidx] == CT_BEAR && i == 0 && !(state & BEAR_LAST_SKIP)) {
-                state |= BEAR_LAST_SKIP | BEAR_SKIP;
-                extra = (uint8_t)((extra & ~3) | original);
-                map_extra[idx] = extra;
-                map_obj[idx] = state;
-                return idx;
-            }
-        }
-        dir = (uint8_t)((dir + 4 + add * 2) & 3);
-    }
-
-    map_extra[idx] = (uint8_t)((extra & ~3) | dir);
-    state &= (uint8_t)~BEAR_LAST_SKIP;
-    map_obj[idx] = state;
-    return idx;
 }
 
 static uint16_t butterfly_step(uint16_t idx, uint8_t state)
@@ -1157,7 +1149,7 @@ static uint16_t mustache_step(uint16_t idx, uint8_t state)
 #define CAT_MAGNET 5
 #define CAT_SPACESHIP 6
 #define CAT_TELEPORT 7
-static const uint8_t type_cat[29] = {
+static const uint8_t type_cat[30] = {
     CAT_NONE,       /* CT_EMPTY */
     CAT_NONE, CAT_NONE, CAT_NONE, CAT_NONE, CAT_NONE, CAT_NONE, CAT_NONE, CAT_NONE,
     CAT_NONE,       /* CT_GROUND */
@@ -1180,6 +1172,7 @@ static const uint8_t type_cat[29] = {
     CAT_NONE,       /* CT_ROBBO */
     CAT_NONE,       /* CT_BULLET */
     CAT_EXPLOSION,  /* CT_EXPLOSION */
+    CAT_NONE,       /* CT_EXTRA_LIFE */
 };
 
 static void collect_actors(void)
@@ -1408,6 +1401,18 @@ uint8_t game_fire(void)
      * point-blank shot must leave them intact, just like a bullet fired from
      * farther away.  The original fire() returns false for these cells. */
     return 0;
+}
+
+void game_frame(void)
+{
+    if (robbo_step_timer) {
+        robbo_step_timer--;
+        if (robbo_step_timer == 0) {
+            /* Redraw once so the neutral (standing) frame replaces the walk
+             * pose; the dirty bitmap flushes it at the next VBlank. */
+            render_cell(robbo_x, robbo_y);
+        }
+    }
 }
 
 void game_tick(void)
@@ -1654,6 +1659,9 @@ void game_tick(void)
         }
     }
 
+    /* `i` still holds the explosion-loop count here; restart it for the
+     * sliding list or an active explosion silently skips every box. */
+    i = 0;
     while (i < sliding_count) {
         uint16_t idx = sliding_boxes[i];
         uint8_t x, y, nx, ny, dir, target;

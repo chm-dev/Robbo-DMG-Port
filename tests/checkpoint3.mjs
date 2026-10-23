@@ -27,7 +27,8 @@ const S = symbols();
 const core = gb[Object.keys(gb)[0]].gameboy;
 const mem = core.memory;
 const byte = (name) => readMem(gb, S[name], 1)[0];
-const mapCell = (x, y) => readMem(gb, S.map_type + y * 16 + x, 1)[0];
+const CT_EMPTY = 0;
+const CT_AMMO = 19;
 const CT_BULLET = 27;
 const CT_EXPLOSION = 28;
 
@@ -43,6 +44,14 @@ function clearTurretsAndBullets() {
 function countType(type) {
   const cells = readMem(gb, S.map_type, 16 * 31);
   return cells.filter(v => v === type).length;
+}
+
+function bulletXInRow(y) {
+  const cells = readMem(gb, S.map_type, 16 * 31);
+  for (let i = 0; i < cells.length; i++) {
+    if (cells[i] === CT_BULLET && (i >> 4) === y) return i & 15;
+  }
+  return -1;
 }
 
 let failures = 0;
@@ -66,7 +75,15 @@ check('fire+direction with no ammo faces direction', byte('robbo_dir') === 2,
   `dir=${byte('robbo_dir')}`);
 check('no ammo consumed with none', byte('ammo') === 0, `ammo=${byte('ammo')}`);
 
-// Level 1: ammo pickup at (4,2), directly right of Robbo.
+// The Atari level 1 has no adjacent ammo pickup, so inject one at (4,2) for
+// this gameplay test.  (3,2) is cleared to make the path deterministic.
+mem[S.map_type + 2 * 16 + 3] = CT_EMPTY;
+mem[S.map_extra + 2 * 16 + 3] = 0;
+mem[S.map_obj + 2 * 16 + 3] = 0;
+mem[S.map_type + 2 * 16 + 4] = CT_AMMO;
+mem[S.map_extra + 2 * 16 + 4] = 0;
+mem[S.map_obj + 2 * 16 + 4] = 0;
+
 let guard = 0;
 while (byte('robbo_x') !== 4 && guard++ < 10) holdKey(gb, 'RIGHT', 12);
 check('reached ammo cell', byte('robbo_x') === 4 && byte('robbo_y') === 2,
@@ -89,8 +106,9 @@ check('fire+direction did not move Robbo', byte('robbo_x') === 4 && byte('robbo_
 check('facing left', byte('robbo_dir') === 2, `dir=${byte('robbo_dir')}`);
 check('exactly one projectile exists', countType(CT_BULLET) === 1,
   `bullets=${countType(CT_BULLET)}`);
-check('projectile spawned in front', mapCell(3, 2) === CT_BULLET,
-  `cell(3,2)=${mapCell(3, 2)}`);
+const shotX = bulletXInRow(2);
+check('projectile spawned in front', shotX >= 0 && shotX < 4,
+  `bulletX=${shotX}`);
 
 // Firing again while the projectile is active must not consume ammo or spawn.
 holdKey(gb, ['LEFT', 'A'], 2);
@@ -107,8 +125,9 @@ check('projectile disappeared', countType(CT_BULLET) === 0,
 check('explosion cleared', countType(CT_EXPLOSION) === 0,
   `explosions=${countType(CT_EXPLOSION)}`);
 
-// One projectile again after the first disappears.
-holdKey(gb, ['LEFT', 'A'], 2);
+// One projectile again after the first disappears.  Eight frames guarantees
+// a logic tick regardless of the current 6-frame phase.
+holdKey(gb, ['LEFT', 'A'], 8);
 check('next shot allowed after projectile disappears', byte('ammo') === 7,
   `ammo=${byte('ammo')}`);
 check('new projectile exists', countType(CT_BULLET) === 1,

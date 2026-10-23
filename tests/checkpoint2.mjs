@@ -51,6 +51,7 @@ run(gb, 150);
 
 // --- Level 5: walk to the bolt at (10,2) and collect it. ---
 for (let i = 0; i < 10 && byte('level_planet') !== 5; i++) tapKey(gb, 'SELECT', 80);
+for (let i = 0; i < 40 && byte('screws_left') !== byte('level_screw'); i++) gb.doFrame();
 clearTurretsAndBullets();
 check('warp to level 5', byte('level_planet') === 5, `level=${byte('level_planet')}`);
 
@@ -69,7 +70,10 @@ check('Robbo entered bolt cell', byte('robbo_y') === 2 && byte('robbo_x') === 10
 savePng(gb.getScreen(), path.join(out, 'cp2-bolt.png'));
 
 // --- Level 30: push a stone one cell, then push a sliding box. ---
-tapKey(gb, ['SELECT', 'A'], 90);
+for (let i = 0; i < 20 && byte('level_planet') !== 30; i++) {
+  tapKey(gb, ['SELECT', 'A'], 50);
+}
+for (let i = 0; i < 40 && byte('screws_left') !== byte('level_screw'); i++) gb.doFrame();
 clearTurretsAndBullets();
 check('warp to level 30', byte('level_planet') === 30, `level=${byte('level_planet')}`);
 

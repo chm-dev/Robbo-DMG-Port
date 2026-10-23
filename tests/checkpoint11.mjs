@@ -45,6 +45,7 @@ const CT_MUSTACHE = 21;
 const CT_BUTTERFLY = 22;
 const CT_BEAR = 23;
 const CT_TURRET = 18;
+const CT_ROBBO = 26;
 const CT_BULLET = 27;
 
 /* serverboy's resampler rate; audioBuffer holds float32 L/R pairs where
@@ -200,17 +201,27 @@ function quietLevel() {
   check('key pickup sound', pickup.peak > 0.005, `peak=${pickup.peak}`);
 }
 
-/* --- Door open keeps the retained door sound. --------------------------- */
+/* --- Door open uses the GBC CH3 wave effect. ---------------------------- */
 {
   const ctx = quietLevel();
   ctx.mem[S.keys] = 1;
   setCell(ctx, 3, 2, CT_DOOR);
   capture(ctx, 5);
-  const door = capture(ctx, 40, ['RIGHT']);
+  const raw = captureRaw(ctx, 90, ['RIGHT']);
+  const door = analyze(raw);
+  const doorMs = lastAudibleMs(raw);
+  const doorCell = ctx.mem[S.map_type + 2 * 16 + 3];
   check('door opened', ctx.byte('keys') === 0 &&
-    ctx.mem[S.map_type + 2 * 16 + 3] === CT_EMPTY,
-    `keys=${ctx.byte('keys')} cell=${ctx.mem[S.map_type + 2 * 16 + 3]}`);
+    (doorCell === CT_EMPTY || doorCell === CT_ROBBO),
+    `keys=${ctx.byte('keys')} cell=${doorCell}`);
   check('door open sound', door.peak > 0.005, `peak=${door.peak}`);
+  check('door open has GBC-length wave tail', doorMs > 600,
+    `duration=${doorMs}ms`);
+  check('door routes CH3', (ctx.mem[0xFF25] & 0x44) === 0x44,
+    `NR51=${ctx.mem[0xFF25].toString(16)}`);
+  let waveSum = 0;
+  for (let i = 0; i < 16; i++) waveSum += ctx.mem[0xFF30 + i];
+  check('door loaded CH3 wave RAM', waveSum > 0, `sum=${waveSum}`);
 }
 
 /* --- Ammo pickup plays AMMO. -------------------------------------------- */
@@ -272,26 +283,42 @@ function quietLevel() {
     `duration=${ms}ms`);
 }
 
-/* --- Last bolt plays the long GAME OVER pattern instead of BOLT. -------- */
+/* --- Last bolt plays the GBC capsule-open noise fade instead of BOLT. --- */
 {
   const ctx = quietLevel();
+  /* The last-bolt effect is deliberately skipped when the noise voice is
+   * still busy; make sure the previous level-start tail has fully retired. */
+  for (let i = 0; i < 300 && ctx.byte('sfx_voice_mask') !== 0; i++) {
+    ctx.gb.doFrame();
+  }
   ctx.mem[S.screws_left] = 1;
   setCell(ctx, 3, 2, CT_SCREW);
   capture(ctx, 5);
 
   const samples = [];
   let picked = false;
+  let lastBoltNR43 = -1;
   for (let f = 0; f < 260; f++) {
     ctx.core.JoyPad = 0xff;
     if (!picked) ctx.gb.pressKeys(['RIGHT']);
     ctx.gb.doFrame();
     samples.push(...leftSamples(ctx.gb));
-    if (ctx.byte('screws_left') === 0) picked = true;
+    if (!picked && ctx.byte('screws_left') === 0) {
+      picked = true;
+    }
+    if (picked && lastBoltNR43 < 0 &&
+        (ctx.byte('sfx_voice_mask') & 0x04) !== 0) {
+      lastBoltNR43 = ctx.mem[0xFF22];
+    }
   }
   check('last bolt collected', ctx.byte('screws_left') === 0,
     `screws=${ctx.byte('screws_left')}`);
   const ms = lastAudibleMs(samples);
-  check('last bolt uses the game-over jingle', ms > 700, `duration=${ms}ms`);
+  check('last bolt uses the GBC capsule-open jingle', ms > 700,
+    `duration=${ms}ms`);
+  check('last bolt uses GBC noise rate',
+    lastBoltNR43 === 0x45 || lastBoltNR43 === 0x57,
+    `NR43=0x${lastBoltNR43.toString(16).padStart(2, '0')}`);
 }
 
 /* --- Polyphony: retained explosion (noise) + key pickup (tone). --------- */

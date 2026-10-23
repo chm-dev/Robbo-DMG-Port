@@ -11,9 +11,12 @@
  *     patterns played on the original 80 ms grid.  This is the game's main
  *     sound set.
  *  2. Legacy SfxDef effects, kept only for events the new set removed
- *     (explosion, destruct, door open).  They use the earlier mapping.
+ *     (explosion, destruct).  They use the earlier mapping.
+ *  3. GBC-derived step tables for the door, level-start, and last-bolt
+ *     effects: original POKEY volumes, exact NR43 noise rates, and CH3 poly4
+ *     waves for the door.
  *
- * The player mixes three voices (pulse 1, pulse 2, noise) so unrelated
+ * The player mixes four voices (pulse 1, pulse 2, noise, CH3 wave) so unrelated
  * effects play together.  Sounds that need the same hardware channel still
  * replace each other.
  */
@@ -29,12 +32,14 @@
 #define SFX_TELEPORT     0x03  /* teleport / level-entry warp (tone run)   */
 #define SFX_BOLT         0x04  /* bolt collected                           */
 #define SFX_EXTRA_LIFE   0x05  /* extra life awarded                       */
+#define SFX_DOOR         0x06  /* key door: CH3 poly4 + noise accents       */
 #define SFX_AMMO         0x07  /* ammo collected (plus 9 shots)            */
 #define SFX_PUSH         0x08  /* pushing a block                          */
 #define SFX_KEY          0x09  /* key collected                            */
 #define SFX_LEVEL_START  0x0B  /* new level fanfare (noise + tone run)     */
 #define SFX_LEVEL_END    0x0C  /* exit capsule reached / level complete    */
-#define SFX_GAME_OVER    0x0D  /* last bolt collected (overrides SFX_BOLT) */
+#define SFX_LAST_BOLT    0x0D  /* last bolt: GBC capsule-open noise fade   */
+#define SFX_GAME_OVER    SFX_LAST_BOLT /* historical sound-port2 name      */
 #define SFX_MAGNET       0x0E  /* magnet hazard death                      */
 
 /* ------------------------------------------------------------------ */
@@ -66,14 +71,17 @@ typedef struct {
     uint8_t master;      /* 1..7 = attenuate this sound (3 = half), 0 = full */
 } SfxDef;
 
-/* Bit per active voice (0 = pulse 1, 1 = pulse 2, 2 = noise).  Exposed so the
- * emulator tests can assert that effects really overlap. */
+/* Bit per active voice (0 = pulse 1, 1 = pulse 2, 2 = noise, 3 = CH3 wave).
+ * Exposed so the emulator tests can assert that effects really overlap. */
 extern uint8_t sfx_voice_mask;
 
 /* Reset the APU and select a sane master volume. */
 void sound_init(void) BANKED;
 
-/* Play a sound-port2 pattern (SFX_*).  Muted patterns do nothing. */
+/* Play a sound-port2 pattern (SFX_*).  SFX_DOOR selects the CH3 wave table,
+ * SFX_LEVEL_START uses the GBC-derived note 11 table, and SFX_LAST_BOLT uses
+ * the GBC note 13 table; other SFX_* values use the POKEY note table.  Muted
+ * patterns do nothing. */
 void sfx_play_note(uint8_t note) BANKED;
 
 /* Start a legacy SfxDef sound (retained effects only). */

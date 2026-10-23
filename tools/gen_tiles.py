@@ -20,6 +20,8 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
+import tileset
+
 ROOT = Path(__file__).resolve().parents[2]
 SHEET = ROOT / "tiles_dmg.png"
 LEVELS = ROOT / "gb" / "tests" / "fixtures" / "levels.json"
@@ -31,6 +33,8 @@ GEN = ROOT / "gb" / "src" / "gen"
 GRID = 17
 CELL = 16
 OFFSET = 1
+SHEET_COLS = 11
+SHEET_ROWS = 8
 
 # tiles_dmg.png is already quantised to these four DMG shades.
 RGB = [(255, 255, 255), (170, 170, 170), (85, 85, 85), (0, 0, 0)]
@@ -38,7 +42,9 @@ RGB = [(255, 255, 255), (170, 170, 170), (85, 85, 85), (0, 0, 0)]
 # Source coords from robboJS/js/sprites.js.  Order here is the metatile order.
 SPRITES: dict[str, tuple[int, int]] = {
     "EMPTY": (10, 2),
-    "WALL": (2, 0),
+    # Preview/contact-sheet graphic only; the ROM uses the dynamic wall slot
+    # and loads WALL_ROTATION[block] from the full sheet on level load.
+    "WALL": tileset.WALL_ROTATION[0],
     "GROUND": (4, 2),
     "STONE": (6, 0),
     "PUSHABLE": (8, 1),
@@ -86,6 +92,11 @@ for i, coord in enumerate([
 for i in range(8):
     SPRITES[f"ROBBO_{i}"] = (i, 5)
 
+# A single dynamic visible-wall metatile is loaded from the full sheet on
+# every level load (the 14 rotation textures cannot all fit in active VRAM).
+# WALL_CAVE is the fixed black cave-fill texture.
+SPRITES["WALL_CAVE"] = tileset.WALL_CAVE
+
 # Hand-tuned 1px HUD tweaks.  The bolt (screw) icon sits one pixel high in its
 # cell; the planet icon needs a blank right column so the level digits have a
 # 1px margin from it.  Fill is shade 3, matching the HUD background.
@@ -96,12 +107,6 @@ SPRITE_SHIFT = {
 }
 SPRITE_TRIM_RIGHT = {
     "HUD_PLANET": 1,
-}
-
-WALL_GLYPHS = "OIo-QqPpSsyYzZJji"
-WALL_SLOT = {
-    "Q": 0, "O": 1, "I": 2, "o": 3, "y": 4, "-": 5, "q": 6, "P": 7,
-    "p": 0, "S": 1, "s": 2, "Y": 3, "z": 4, "Z": 5, "J": 6, "j": 7, "i": 0,
 }
 
 # Exact 16x16 bevel block from the GB Studio prototype.
@@ -322,6 +327,16 @@ class TilePool:
         self.names.append(name)
         return idx
 
+    def add_reserved(self, shades: list[list[int]], name: str) -> int:
+        """Append one tile without deduplication (reserved dynamic-wall slot)."""
+        data = to_tile_bytes(shades)
+        if len(self.data) >= 256:
+            raise RuntimeError(f"Tile budget exceeded at {name}")
+        idx = len(self.data)
+        self.data.append(data)
+        self.names.append(name)
+        return idx
+
 
 def quadrants(tile16: list[list[int]]) -> list[list[list[int]]]:
     return [
@@ -372,8 +387,8 @@ GLYPH_MT = {
     "^": "MUSTACHE_0", "V": "BUTTERFLY_0", "@": "BEAR_0", "*": "BEAR_2",
     "M": "MAGNET_0", "=": "LAVA_0", "R": "ROBBO_2",
 }
-for glyph, slot in WALL_SLOT.items():
-    GLYPH_MT[glyph] = "WALL"
+for glyph in tileset.WALL_GLYPHS:
+    GLYPH_MT[glyph] = "WALL_CAVE" if glyph == "-" else "WALL"
 
 
 def build_mock(metatiles: dict[str, list[list[int]]]) -> None:
@@ -406,7 +421,7 @@ def build_mock(metatiles: dict[str, list[list[int]]]) -> None:
 def emit(metatiles: dict[str, list[list[int]]], pool: TilePool,
          digit_tiles: dict[str, tuple[int, int]], font_tiles: dict[str, int],
          hud_bg_tile: int, sheet_cells: list[list[list[int]]],
-         sheet_pool: TilePool) -> None:
+         sheet_pool: TilePool, wall_tile_base: int) -> None:
     GEN.mkdir(parents=True, exist_ok=True)
     mt_names = list(metatiles.keys())
     mt_index = {name: i for i, name in enumerate(mt_names)}
@@ -422,15 +437,26 @@ def emit(metatiles: dict[str, list[list[int]]], pool: TilePool,
         f"const uint8_t metatile_tiles[{len(mt_names) * 4}] = {{",
     ]
     for name in mt_names:
-        quads = quadrants(metatiles[name])
-        vals = []
-        for q in quads:
-            data = to_tile_bytes(q)
-            vals.append(pool.index[data])
+        if name == "WALL":
+            # Four consecutive reserved tiles; render_set_wall_style()
+            # overwrites them from the full sheet on every level load.
+            vals = [wall_tile_base + i for i in range(4)]
+        else:
+            quads = quadrants(metatiles[name])
+            vals = []
+            for q in quads:
+                data = to_tile_bytes(q)
+                vals.append(pool.index[data])
         lines.append(f"    {vals[0]}, {vals[1]}, {vals[2]}, {vals[3]},  /* {mt_index[name]} {name} */")
     lines.append("};")
     lines.append("")
     lines.append(f"const uint8_t metatile_count = {len(mt_names)};")
+    lines.append("")
+    rotation_cells = [row * SHEET_COLS + col for (col, row) in tileset.WALL_ROTATION]
+    lines.append(f"const uint8_t wall_rotation_cells[{len(rotation_cells)}] = {{")
+    for i in range(0, len(rotation_cells), 16):
+        lines.append("    " + ", ".join(str(v) for v in rotation_cells[i:i + 16]) + ",")
+    lines.append("};")
     lines.append("")
     lines.append(f"const uint8_t sheet_tile_count = {len(sheet_pool.data)};")
     lines.append("")
@@ -516,8 +542,10 @@ def emit(metatiles: dict[str, list[list[int]]], pool: TilePool,
         "",
         f"#define TILESET_COUNT {len(pool.data)}",
         f"#define METATILE_COUNT {len(mt_names)}",
-        "#define SHEET_COLS 11",
-        "#define SHEET_ROWS 8",
+        f"#define WALL_TILE_BASE {wall_tile_base}",
+        f"#define WALL_ROTATION_COUNT {len(tileset.WALL_ROTATION)}",
+        f"#define SHEET_COLS {SHEET_COLS}",
+        f"#define SHEET_ROWS {SHEET_ROWS}",
         f"#define SHEET_CELL_COUNT {len(sheet_cells)}",
         "#define SHEET_CELL(row, col) ((uint8_t)((row) * SHEET_COLS + (col)))",
         "",
@@ -531,6 +559,7 @@ def emit(metatiles: dict[str, list[list[int]]], pool: TilePool,
         "extern const uint8_t hud_bg_tile;",
         "extern const uint8_t metatile_tiles[];",
         "extern const uint8_t metatile_count;",
+        "extern const uint8_t wall_rotation_cells[WALL_ROTATION_COUNT];",
         "extern const uint8_t sheet_metatile_tiles[];",
         "extern const uint8_t sheet_tile_count;",
         "extern const uint8_t sheet_tiles_data[];",
@@ -575,8 +604,8 @@ def main() -> None:
     # Keep the complete sheet in ROM for future animation/wall work.  The
     # current build only loads the active metatiles above into VRAM.
     sheet_cells: list[list[list[int]]] = []
-    for row in range(8):
-        for col in range(11):
+    for row in range(SHEET_ROWS):
+        for col in range(SHEET_COLS):
             sheet_cells.append(crop_source(image, (col, row)))
     sheet_pool = TilePool()
     for cell_index, cell in enumerate(sheet_cells):
@@ -588,7 +617,11 @@ def main() -> None:
     # range; it is used for the window rows behind the HUD items.
     hud_bg_tile = pool.add([[3] * 8 for _ in range(8)], "hud.bg")
     # Add metatile quadrants next so the remaining tile indices follow sprites.
+    # WALL uses four reserved consecutive tiles instead of its source graphic;
+    # the level loader overwrites them from the full sheet.
     for name in metatiles:
+        if name == "WALL":
+            continue
         for q in quadrants(metatiles[name]):
             pool.add(q, f"{name}.q")
 
@@ -601,9 +634,16 @@ def main() -> None:
     for char, rows in FONT.items():
         font_tiles[char] = pool.add(glyph8(rows), f"font.{ord(char):02X}")
 
+    # Reserve four consecutive VRAM slots for the dynamic visible-wall
+    # metatile.  They are overwritten by sheet_load_metatile() on level load.
+    wall_tile_base = len(pool.data)
+    for i in range(4):
+        pool.add_reserved([[3] * 8 for _ in range(8)], f"wall.dynamic{i}")
+
     build_contact_sheet(metatiles)
     build_mock(metatiles)
-    emit(metatiles, pool, digit_tiles, font_tiles, hud_bg_tile, sheet_cells, sheet_pool)
+    emit(metatiles, pool, digit_tiles, font_tiles, hud_bg_tile, sheet_cells,
+         sheet_pool, wall_tile_base)
 
     print(f"Metatiles: {len(metatiles)}")
     print(f"Active 8x8 tiles: {len(pool.data)} / 256")

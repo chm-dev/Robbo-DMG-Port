@@ -6,6 +6,10 @@
 #include "../gen/tiles.h"
 
 #define MAP_METAROWS 16
+/* Rows kept current on each side of the 8-row view.  A sub-cell scroll shows
+ * at most 9 rows; the margin gives ~32px of lead so a row is already resident
+ * before it can scroll into view (the risky direction is upwards). */
+#define CAM_MARGIN 2
 
 static uint8_t map_row_level[MAP_METAROWS];
 
@@ -24,7 +28,11 @@ static const uint8_t robbo_mt_base[4] = { 0, 2, 4, 6 };
 
 uint8_t render_metatile_for_cell(uint8_t type, uint8_t extra)
 {
-    if (IS_WALL(type)) return MT_WALL;
+    if (IS_WALL(type)) {
+        /* Slot 5 is the fixed black cave fill; every visible wall uses the
+         * single dynamic metatile loaded for the current four-level block. */
+        return (WALL_SLOT(type) == 5) ? MT_WALL_CAVE : MT_WALL;
+    }
 
     switch (type) {
         case CT_EMPTY:      return MT_EMPTY;
@@ -48,9 +56,10 @@ uint8_t render_metatile_for_cell(uint8_t type, uint8_t extra)
         case CT_BUTTERFLY:  return MT_BUTTERFLY_0 + (anim_frame & 1);
         case CT_BEAR:       return ((extra & 4) ? MT_BEAR_2 : MT_BEAR_0) + (anim_frame & 1);
         case CT_LAVA:       return MT_LAVA_0;
+        case CT_EXTRA_LIFE: return MT_EMPTY;  /* hidden easter egg */
         case CT_MAGNET:     return (extra & 2) ? MT_MAGNET_1 : MT_MAGNET_0;
         case CT_ROBBO:      return MT_ROBBO_0 + robbo_mt_base[extra & 3] +
-                                   (robbo_step_anim & 1);
+                                   (robbo_step_timer ? 1 : 0);
         case CT_BULLET: {
             uint8_t dir = extra & 3;
             return MT_BULLET_0 + (uint8_t)((dir & 1) * 2) + (anim_slow & 1);
@@ -99,14 +108,36 @@ static void draw_level_row(uint8_t level_y, uint8_t map_row)
 
 void render_apply_camera(void)
 {
-    SCX_REG = (uint8_t)(cam_x * 16);
-    /* The HUD window covers the bottom 16px, so the top of the screen is the
-     * first visible map row. */
-    SCY_REG = (uint8_t)((cam_y & (MAP_METAROWS - 1)) * 16);
+    SCX_REG = cam_scx;
+    /* SCY wraps modulo 256 (the ring is 16 metatile rows). */
+    SCY_REG = cam_scy;
 }
 
+/* Port of robbo-gbc's camera_ease(): move 1/8 of the remaining distance,
+ * with a 3 px/frame cap.  Q4 units give the same sub-pixel settle as GBC. */
+static uint16_t cam_ease_step(uint16_t cur, uint16_t tgt)
+{
+    uint16_t dist, step;
+
+    if (cur == tgt) return cur;
+    dist = (cur < tgt) ? (uint16_t)(tgt - cur) : (uint16_t)(cur - tgt);
+    step = (uint16_t)((dist + 7) >> 3);
+    if (step > 48) step = 48;
+    return (cur < tgt) ? (uint16_t)(cur + step) : (uint16_t)(cur - step);
+}
+
+/* Only the VBlank handler advances and applies the camera.  Main publishes
+ * cell-aligned goals atomically, so SCX/SCY never change mid-frame. */
 static void vbl_isr(void)
 {
+    if (cam_smooth) {
+        cam_qx = cam_ease_step(cam_qx, (uint16_t)((uint16_t)cam_goal_x << 8));
+        cam_qy = cam_ease_step(cam_qy, (uint16_t)((uint16_t)cam_goal_y << 8));
+        cam_scx = (uint8_t)(cam_qx >> 4);
+        cam_scy = (uint8_t)(cam_qy >> 4);
+        cam_x = (uint8_t)(cam_qx >> 8);
+        cam_y = (uint8_t)(cam_qy >> 8);
+    }
     render_apply_camera();
 }
 
@@ -149,15 +180,26 @@ void render_init(void)
     set_interrupts(VBL_IFLAG);
 }
 
+void render_set_wall_style(uint8_t cell)
+{
+    /* Load one 16x16 wall cell from bank 8 into the reserved four-tile slot.
+     * game_load_level() calls this while the display is off. */
+    sheet_load_metatile(cell, WALL_TILE_BASE);
+}
+
 void render_level(void)
 {
     uint8_t row;
+    uint8_t first = (cam_y > CAM_MARGIN) ? (uint8_t)(cam_y - CAM_MARGIN) : 0;
 
     for (row = 0; row < DIRTY_WORDS; row++) dirty_bits[row] = 0;
     dirty_any = 0;
 
+    /* Draw 16 consecutive rows starting at the camera's band so every ring
+     * slot has a valid identity for the initial view and its margins. */
     for (row = 0; row < MAP_METAROWS; row++) {
-        draw_level_row(row, row);
+        uint8_t level_y = (uint8_t)(first + row);
+        draw_level_row(level_y, level_y & (MAP_METAROWS - 1));
     }
 
     render_hud();
@@ -212,8 +254,10 @@ void render_flash_set(uint8_t on)
 void render_sync_rows(void)
 {
     uint8_t i;
-    for (i = 0; i < VIEW_ROWS; i++) {
-        uint8_t level_y = cam_y + i;
+    uint8_t first = (cam_y > CAM_MARGIN) ? (uint8_t)(cam_y - CAM_MARGIN) : 0;
+
+    for (i = 0; i < (VIEW_ROWS + 2 * CAM_MARGIN); i++) {
+        uint8_t level_y = (uint8_t)(first + i);
         uint8_t map_row = level_y & (MAP_METAROWS - 1);
         if (map_row_level[map_row] != level_y) {
             draw_level_row(level_y, map_row);
@@ -259,37 +303,4 @@ void render_flush_cells(void)
     }
 }
 
-void render_camera(void)
-{
-    uint8_t max_x = MAP_W - VIEW_COLS;
-    uint8_t max_y = (level_height > VIEW_ROWS) ? (level_height - VIEW_ROWS) : 0;
 
-    if (cam_override) {
-        /* Teleport: pan one cell every other frame toward the arrival area. */
-        if (cam_pan_timer < 2) {
-            cam_pan_timer++;
-            return;
-        }
-        cam_pan_timer = 0;
-
-        if (cam_x < cam_target_x) cam_x++;
-        else if (cam_x > cam_target_x) cam_x--;
-        if (cam_y < cam_target_y) cam_y++;
-        else if (cam_y > cam_target_y) cam_y--;
-        return;
-    }
-
-    if (robbo_x < cam_x + 2) {
-        cam_x = (robbo_x >= 2) ? (robbo_x - 2) : 0;
-    } else if (robbo_x > cam_x + 7) {
-        cam_x = robbo_x - 7;
-    }
-    if (cam_x > max_x) cam_x = max_x;
-
-    if (robbo_y < cam_y + 2) {
-        cam_y = (robbo_y >= 2) ? (robbo_y - 2) : 0;
-    } else if (robbo_y > cam_y + 5) {
-        cam_y = robbo_y - 5;
-    }
-    if (cam_y > max_y) cam_y = max_y;
-}

@@ -2,88 +2,93 @@
 #include <stdint.h>
 #include "tiles.h"
 
-const uint8_t tileset_count = 238;
+const uint8_t tileset_count = 241;
 const uint8_t hud_bg_tile = 0;
 
-const uint8_t metatile_tiles[208] = {
+const uint8_t metatile_tiles[212] = {
     1, 1, 1, 1,  /* 0 EMPTY */
-    2, 2, 2, 2,  /* 1 WALL */
-    3, 4, 5, 6,  /* 2 GROUND */
-    7, 7, 8, 8,  /* 3 STONE */
-    9, 9, 10, 10,  /* 4 PUSHABLE */
-    11, 12, 13, 14,  /* 5 DOOR */
-    15, 16, 17, 18,  /* 6 SPACESHIP_0 */
-    19, 20, 21, 22,  /* 7 SPACESHIP_1 */
-    23, 24, 25, 26,  /* 8 QUESTION */
-    27, 28, 29, 30,  /* 9 BOMB */
-    31, 32, 33, 34,  /* 10 KEY */
-    35, 36, 37, 38,  /* 11 SCREW */
-    39, 40, 41, 42,  /* 12 AMMO */
-    43, 44, 45, 46,  /* 13 TURRET_R */
-    43, 47, 48, 49,  /* 14 TURRET_D */
-    50, 47, 51, 52,  /* 15 TURRET_L */
-    53, 54, 45, 52,  /* 16 TURRET_U */
-    55, 56, 57, 58,  /* 17 TELEPORT_0 */
-    59, 60, 61, 62,  /* 18 TELEPORT_1 */
-    63, 64, 65, 66,  /* 19 EXPLOSION_0 */
-    67, 68, 69, 70,  /* 20 EXPLOSION_1 */
-    71, 72, 73, 74,  /* 21 EXPLOSION_2 */
-    75, 76, 77, 78,  /* 22 EXPLOSION_3 */
-    79, 79, 80, 80,  /* 23 BULLET_0 */
-    81, 81, 82, 82,  /* 24 BULLET_1 */
-    83, 84, 83, 84,  /* 25 BULLET_2 */
-    85, 86, 85, 86,  /* 26 BULLET_3 */
-    87, 88, 89, 90,  /* 27 MUSTACHE_0 */
-    91, 92, 93, 94,  /* 28 MUSTACHE_1 */
-    95, 96, 97, 98,  /* 29 BUTTERFLY_0 */
-    99, 100, 101, 102,  /* 30 BUTTERFLY_1 */
-    103, 103, 104, 104,  /* 31 LAVA_0 */
-    105, 105, 106, 106,  /* 32 LAVA_1 */
-    107, 108, 109, 110,  /* 33 MAGNET_0 */
-    111, 112, 113, 114,  /* 34 MAGNET_1 */
-    115, 116, 117, 118,  /* 35 HUD_SCREW */
-    119, 120, 121, 122,  /* 36 HUD_AMMO */
-    123, 124, 125, 126,  /* 37 HUD_KEY */
-    127, 128, 129, 130,  /* 38 HUD_LIVES */
-    131, 132, 133, 134,  /* 39 HUD_PLANET */
-    135, 136, 137, 138,  /* 40 BEAR_0 */
-    139, 140, 141, 142,  /* 41 BEAR_1 */
-    143, 144, 145, 146,  /* 42 BEAR_2 */
-    147, 148, 149, 150,  /* 43 BEAR_3 */
-    151, 152, 153, 154,  /* 44 ROBBO_0 */
-    155, 156, 157, 158,  /* 45 ROBBO_1 */
-    159, 160, 161, 162,  /* 46 ROBBO_2 */
-    163, 152, 164, 165,  /* 47 ROBBO_3 */
-    166, 167, 168, 169,  /* 48 ROBBO_4 */
-    170, 171, 172, 173,  /* 49 ROBBO_5 */
-    174, 175, 161, 176,  /* 50 ROBBO_6 */
-    177, 178, 179, 180,  /* 51 ROBBO_7 */
+    237, 238, 239, 240,  /* 1 WALL */
+    2, 3, 4, 5,  /* 2 GROUND */
+    6, 6, 7, 7,  /* 3 STONE */
+    8, 8, 9, 9,  /* 4 PUSHABLE */
+    10, 11, 12, 13,  /* 5 DOOR */
+    14, 15, 16, 17,  /* 6 SPACESHIP_0 */
+    18, 19, 20, 21,  /* 7 SPACESHIP_1 */
+    22, 23, 24, 25,  /* 8 QUESTION */
+    26, 27, 28, 29,  /* 9 BOMB */
+    30, 31, 32, 33,  /* 10 KEY */
+    34, 35, 36, 37,  /* 11 SCREW */
+    38, 39, 40, 41,  /* 12 AMMO */
+    42, 43, 44, 45,  /* 13 TURRET_R */
+    42, 46, 47, 48,  /* 14 TURRET_D */
+    49, 46, 50, 51,  /* 15 TURRET_L */
+    52, 53, 44, 51,  /* 16 TURRET_U */
+    54, 55, 56, 57,  /* 17 TELEPORT_0 */
+    58, 59, 60, 61,  /* 18 TELEPORT_1 */
+    62, 63, 64, 65,  /* 19 EXPLOSION_0 */
+    66, 67, 68, 69,  /* 20 EXPLOSION_1 */
+    70, 71, 72, 73,  /* 21 EXPLOSION_2 */
+    74, 75, 76, 77,  /* 22 EXPLOSION_3 */
+    78, 78, 79, 79,  /* 23 BULLET_0 */
+    80, 80, 81, 81,  /* 24 BULLET_1 */
+    82, 83, 82, 83,  /* 25 BULLET_2 */
+    84, 85, 84, 85,  /* 26 BULLET_3 */
+    86, 87, 88, 89,  /* 27 MUSTACHE_0 */
+    90, 91, 92, 93,  /* 28 MUSTACHE_1 */
+    94, 95, 96, 97,  /* 29 BUTTERFLY_0 */
+    98, 99, 100, 101,  /* 30 BUTTERFLY_1 */
+    102, 102, 103, 103,  /* 31 LAVA_0 */
+    104, 104, 105, 105,  /* 32 LAVA_1 */
+    106, 107, 108, 109,  /* 33 MAGNET_0 */
+    110, 111, 112, 113,  /* 34 MAGNET_1 */
+    114, 115, 116, 117,  /* 35 HUD_SCREW */
+    118, 119, 120, 121,  /* 36 HUD_AMMO */
+    122, 123, 124, 125,  /* 37 HUD_KEY */
+    126, 127, 128, 129,  /* 38 HUD_LIVES */
+    130, 131, 132, 133,  /* 39 HUD_PLANET */
+    134, 135, 136, 137,  /* 40 BEAR_0 */
+    138, 139, 140, 141,  /* 41 BEAR_1 */
+    142, 143, 144, 145,  /* 42 BEAR_2 */
+    146, 147, 148, 149,  /* 43 BEAR_3 */
+    150, 151, 152, 153,  /* 44 ROBBO_0 */
+    154, 155, 156, 157,  /* 45 ROBBO_1 */
+    158, 159, 160, 161,  /* 46 ROBBO_2 */
+    162, 151, 163, 164,  /* 47 ROBBO_3 */
+    165, 166, 167, 168,  /* 48 ROBBO_4 */
+    169, 170, 171, 172,  /* 49 ROBBO_5 */
+    173, 174, 160, 175,  /* 50 ROBBO_6 */
+    176, 177, 178, 179,  /* 51 ROBBO_7 */
+    0, 0, 0, 0,  /* 52 WALL_CAVE */
 };
 
-const uint8_t metatile_count = 52;
+const uint8_t metatile_count = 53;
 
-const uint8_t sheet_tile_count = 251;
+const uint8_t wall_rotation_cells[14] = {
+    3, 2, 27, 84, 64, 84, 75, 10, 86, 87, 74, 63, 85, 20,
+};
+
+const uint8_t sheet_tile_count = 253;
 
 const uint8_t digit_tiles[10][2] = {
-    { 181, 182 },  /* 0 */
-    { 183, 183 },  /* 1 */
-    { 184, 185 },  /* 2 */
-    { 184, 186 },  /* 3 */
-    { 187, 188 },  /* 4 */
-    { 189, 190 },  /* 5 */
-    { 191, 192 },  /* 6 */
-    { 193, 183 },  /* 7 */
-    { 194, 192 },  /* 8 */
-    { 181, 195 },  /* 9 */
+    { 180, 181 },  /* 0 */
+    { 182, 182 },  /* 1 */
+    { 183, 184 },  /* 2 */
+    { 183, 185 },  /* 3 */
+    { 186, 187 },  /* 4 */
+    { 188, 189 },  /* 5 */
+    { 190, 191 },  /* 6 */
+    { 192, 182 },  /* 7 */
+    { 193, 191 },  /* 8 */
+    { 180, 194 },  /* 9 */
 };
 
 const uint8_t font_tiles[128] = {
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-    0xE8, 0xE9, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xEB, 0xEC, 0xFF,
-    0xDE, 0xDF, 0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xED, 0xFF, 0xFF, 0xFF, 0xFF, 0xEA,
-    0xFF, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF, 0xD0, 0xD1, 0xD2,
-    0xD3, 0xD4, 0xD5, 0xD6, 0xD7, 0xD8, 0xD9, 0xDA, 0xDB, 0xDC, 0xDD, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+    0xE7, 0xE8, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xEA, 0xEB, 0xFF,
+    0xDD, 0xDE, 0xDF, 0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xEC, 0xFF, 0xFF, 0xFF, 0xFF, 0xE9,
+    0xFF, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF, 0xD0, 0xD1,
+    0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD7, 0xD8, 0xD9, 0xDA, 0xDB, 0xDC, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 };

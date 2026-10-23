@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Generate banked C level packs from gb/tests/fixtures/levels.json.
+"""Generate banked C level packs from the Atari/GBC set by default.
+
+The default source is gb/tools/data/atari_levels.dat.  Pass --gnu to use the
+legacy gb/tests/fixtures/levels.json (robboJS/GNU original) instead.
 
 Each level pack contains:
     - one byte per cell: cell type (walls encode their texture slot)
@@ -15,12 +18,14 @@ Run: python gb/tools/gen_levels.py
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 import tileset
 
 ROOT = Path(__file__).resolve().parents[2]
 LEVELS = ROOT / "gb" / "tests" / "fixtures" / "levels.json"
+ATARI_LEVELS = ROOT / "gb" / "tools" / "data" / "atari_levels.dat"
 GEN = ROOT / "gb" / "src" / "gen"
 
 MAP_W = 16
@@ -49,6 +54,7 @@ BEAR = 23
 LAVA = 24
 MAGNET = 25
 ROBBO = 26
+EXTRA_LIFE = 29
 
 TYPE_ID = {
     "Empty": EMPTY,
@@ -70,9 +76,15 @@ TYPE_ID = {
     "Lava": LAVA,
     "Magnet": MAGNET,
     "Robbo": ROBBO,
+    "ExtraLife": EXTRA_LIFE,
 }
 
 BULLET_TYPE = {"gun": 0, "laser": 1, "antimatter": 2}
+BULLET_NAME = {v: k for k, v in BULLET_TYPE.items()}
+
+# Wall style is selected at level load from the 14-cell rotation table in
+# tiles.h.  Level data only needs to distinguish visible walls (slot 1) from
+# the fixed black cave fill (slot 5).
 
 
 def pack_extra(cell: list, teleports: list[int]) -> int:
@@ -107,6 +119,146 @@ def pack_extra(cell: list, teleports: list[int]) -> int:
     return 0
 
 
+GLYPH_TYPE = {
+    "H": "Ground", "#": "Stone", "~": "PushableStone", "D": "Door",
+    "!": "Spaceship", "?": "Question", "b": "Bomb", "%": "Key",
+    "T": "Screw", "'": "Ammo", "V": "Butterfly", ".": "Empty",
+}
+
+
+def _pad(values: list[int], count: int) -> list[int]:
+    return (list(values) + [0] * count)[:count]
+
+
+def load_atari_levels(path: Path = ATARI_LEVELS) -> list[dict]:
+    """Read the GBC-compatible Atari .dat and return canonical level records.
+
+    The source was produced by robbo-gbc/tools/convert_atari_levels.py from
+    lkavalon-atari robbo/d2/C1-C3.txt.  Level data only distinguishes visible
+    walls from cave fill; the four-level wall texture is applied at level load
+    from wall_rotation_cells[] in the generated tiles.h.
+    """
+    text = path.read_text(encoding="latin-1").splitlines()
+    raw: dict[int, dict] = {}
+    cur = None
+    mode = None
+    i = 0
+    while i < len(text):
+        line = text[i]
+        if line == "[level]":
+            cur = {"rows": [], "add": []}
+            raw[int(text[i + 1])] = cur
+            i += 2
+            mode = None
+            continue
+        if line == "[data]":
+            mode = "data"
+            i += 1
+            continue
+        if line == "[additional]":
+            i += 1
+            count = int(text[i])
+            i += 1
+            for _ in range(count):
+                p = text[i].split(".")
+                cur["add"].append(
+                    (int(p[0]), int(p[1]), p[2], [int(v) for v in p[3:]])
+                )
+                i += 1
+            mode = None
+            continue
+        if line.startswith("["):
+            mode = None
+            i += 1
+            continue
+        if mode == "data" and line:
+            cur["rows"].append(line)
+        i += 1
+
+    levels = []
+    for number in sorted(raw):
+        lv = raw[number]
+        rows = lv["rows"]
+        if len(rows) != MAP_H or any(len(r) != MAP_W for r in rows):
+            raise SystemExit(f"Level {number}: expected {MAP_W}x{MAP_H}")
+        addmap = {(x, y): vals for (x, y, _ch, vals) in lv["add"]}
+
+        groups: dict[int, list[tuple[int, int]]] = {}
+        for y in range(MAP_H):
+            for x in range(MAP_W):
+                if rows[y][x] == "&":
+                    vals = addmap.get((x, y))
+                    if not vals:
+                        raise SystemExit(f"Level {number}: unlinked teleport at {x},{y}")
+                    groups.setdefault(vals[0], []).append((x, y))
+        dest: dict[tuple[int, int], tuple[int, int]] = {}
+        for cells in groups.values():
+            for k, (x, y) in enumerate(cells):
+                dest[(x, y)] = cells[(k + 1) % len(cells)]
+
+        cells = []
+        for y in range(MAP_H):
+            row = []
+            for x in range(MAP_W):
+                ch = rows[y][x]
+                vals = addmap.get((x, y), [])
+                if ch in tileset.WALL_GLYPHS:
+                    row.append(["Walls", 0, "-" if ch == "-" else "O"])
+                elif ch == "R":
+                    row.append(["Robbo", 1, 0, 0])
+                elif ch == "&":
+                    dx, dy = dest[(x, y)]
+                    row.append(["Teleport", dx, dy])
+                elif ch == "+":
+                    row.append(["ExtraLife"])
+                elif ch == "}":
+                    v = _pad(vals, 5)
+                    row.append([
+                        "Turrel", v[0] & 3, v[1] & 3,
+                        BULLET_NAME.get(v[2] & 3, "gun"), v[3] & 1, v[4] & 1,
+                    ])
+                elif ch == "^":
+                    v = _pad(vals, 3)
+                    row.append(["Mustache", v[0] & 3, v[2] & 1])
+                elif ch in "@*":
+                    v = _pad(vals, 1)
+                    row.append(["Bear", v[0] & 3, 1 if ch == "*" else 0])
+                elif ch == "M":
+                    v = _pad(vals, 1)
+                    row.append(["Magnet", v[0] & 3])
+                elif ch == "=":
+                    v = _pad(vals, 1)
+                    row.append(["Lava", v[0] & 3])
+                elif ch == "!":
+                    row.append(["Spaceship", 0])
+                elif ch == "?":
+                    row.append(["Question", 0])
+                elif ch in GLYPH_TYPE:
+                    row.append([GLYPH_TYPE[ch]])
+                else:
+                    raise SystemExit(
+                        f"Level {number}: unknown glyph {ch!r} at {x},{y}"
+                    )
+            cells.append(row)
+
+        flat = "".join(rows)
+        if flat.count("R") != 1 or flat.count("!") != 1:
+            raise SystemExit(f"Level {number}: expected one Robbo and one capsule")
+        levels.append({
+            "number": number,
+            "canonical": {
+                "width": MAP_W,
+                "height": MAP_H,
+                "screw": sum(r.count("T") for r in rows),
+                "cells": cells,
+            },
+        })
+
+    if len(levels) != 56:
+        raise SystemExit(f"Expected 56 Atari levels, found {len(levels)}")
+    return levels
+
+
 def format_bytes(values: list[int], indent: str = "    ") -> str:
     lines = []
     for i in range(0, len(values), 16):
@@ -115,9 +267,17 @@ def format_bytes(values: list[int], indent: str = "    ") -> str:
 
 
 def main() -> None:
-    data = json.loads(LEVELS.read_text(encoding="utf-8"))
-    levels = data["levels"]
+    # The ROM ships the authentic Atari/GBC set by default.  Pass --gnu to
+    # regenerate the previous robboJS/GNU fixture instead.
+    if "--gnu" in sys.argv[1:]:
+        data = json.loads(LEVELS.read_text(encoding="utf-8"))
+        levels = data["levels"]
+        source = "robboJS/GNU levels.json"
+    else:
+        levels = load_atari_levels()
+        source = "Atari/GBC levels (gb/tools/data/atari_levels.dat)"
     assert len(levels) == 56
+    print(f"Source: {source}")
 
     GEN.mkdir(parents=True, exist_ok=True)
 
