@@ -196,9 +196,11 @@ void game_load_level(uint8_t level)
     cam_smooth = 1;
 
     /* Fill the legacy SFX conversion cache while the display is off: the
-     * first explosion must not pay those divisions mid-gameplay.  Re-loading
-     * a level is nearly free because the memo entries are already present. */
+     * first explosion or destroyed tile must not pay those divisions
+     * mid-gameplay.  Re-loading a level is nearly free because the memo
+     * entries are already present. */
     sfx_prewarm_def(&sfx_explosion);
+    sfx_prewarm_def(&sfx_destroy);
 
     sfx_play_note(SFX_LEVEL_START);
 }
@@ -722,21 +724,17 @@ static void demolish_cell(uint16_t idx)
         return;
     }
 
-    /* Enemies and turrets keep the retained "destroy" sound; everything else
-     * that can be shot uses the new HIT WALL tick.  Bombs stay silent here:
-     * their fuse ends with the retained explosion in bomb_explode(). */
+    /* Every non-bomb demolition shows the perish animation, so it also uses
+     * the retained DESTROY voice.  Bombs stay silent here: their fuse ends
+     * with the retained explosion in bomb_explode().  Callers only invoke
+     * this for demolishable cells. */
     if (type == CT_QUESTION) {
         spawn_payload_explosion(idx, question_payload(idx));
     } else if (is_demolishable(type)) {
         spawn_explosion(idx);
     }
 
-    if (type == CT_BEAR || type == CT_BUTTERFLY || type == CT_MUSTACHE ||
-        type == CT_TURRET) {
-        sfx_play_def(&sfx_destroy);
-    } else {
-        sfx_play_note(SFX_HIT_WALL);
-    }
+    sfx_play_def(&sfx_destroy);
 }
 
 static void blast_cell(uint16_t idx, uint8_t timer)
@@ -1606,15 +1604,31 @@ void game_tick(void)
             spawn_explosion_timer(bidx, 3);
             remove_bullet_at(i);
         } else {
+            uint8_t destroyed = 0;
+
             if (btype == 2 && is_explodable(target)) {
                 sfx_play_note(SFX_HIT_WALL);
                 blast_cell(nidx, 3);
+                if (target != CT_BOMB) {
+                    sfx_play_def(&sfx_destroy);
+                    destroyed = 1;
+                }
             } else if (is_demolishable(target)) {
                 demolish_cell(nidx);
+                destroyed = 1;
             } else {
                 sfx_play_note(SFX_HIT_WALL);
             }
-            spawn_explosion_timer(bidx, 3);
+
+            /* The destroyed cell owns the perish animation; the projectile
+             * just vanishes instead of exploding in the neighbouring cell. */
+            if (destroyed) {
+                map_type[bidx] = CT_EMPTY;
+                map_extra[bidx] = 0;
+                render_cell(bx, by);
+            } else {
+                spawn_explosion_timer(bidx, 3);
+            }
             remove_bullet_at(i);
         }
     }

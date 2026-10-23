@@ -492,17 +492,33 @@ static void apply_legacy_pulse(uint8_t vi, uint8_t vol, uint8_t dist,
 
 static uint8_t memo_find(const SfxDef *def, uint8_t index)
 {
+    const SfxStep *want = &sfx_notes[def->note][def->first + index];
+    uint8_t want_noise = (def->noise_steps != 0 && index < def->noise_steps);
     uint8_t i;
 
     for (i = 0; i < SFX_STEP_MEMO; i++) {
-        if (step_memo[i].def == def && step_memo[i].index == index) return i;
+        const SfxStep *have;
+
+        if (step_memo[i].def != def) continue;
+        if (step_memo[i].index == index) return i;
+        /* Identical AUDC/AUDF steps convert to identical hardware values.
+         * The only index-dependent input is the noise_steps override, so a
+         * value match is safe on the same side of that boundary.  DESTROY is
+         * 16 identical steps; sharing one memo entry keeps level-load
+         * prewarming from converting the same pair 16 times. */
+        if (def->noise_steps != 0 &&
+            ((step_memo[i].index < def->noise_steps) != want_noise)) {
+            continue;
+        }
+        have = &sfx_notes[def->note][def->first + step_memo[i].index];
+        if (have->audc == want->audc && have->audf == want->audf) return i;
     }
     return 0xFF;
 }
 
 /* Convert one legacy step into the memo.  Pure: no APU writes.  Shared by
  * playback and by sfx_prewarm_def(), which fills the memo during level load
- * so the first explosion does not stall gameplay. */
+ * so the first explosion or destroyed tile does not stall gameplay. */
 static uint8_t memo_convert(const SfxDef *def, uint8_t index)
 {
     const SfxStep *s = &sfx_notes[def->note][def->first + index];
