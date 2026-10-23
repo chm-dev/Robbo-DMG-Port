@@ -1027,6 +1027,31 @@ void sfx_stop(void) BANKED
     sfx_voice_mask = 0;
 }
 
+void sfx_click(void) BANKED
+{
+    /* GBC title typewriter click: one short 15-bit noise tick.  No voice is
+     * running on the title screen (sfx_stop clears them on entry), so the
+     * noise channel can be driven directly without confusing the mixer. */
+    NR41_REG = 0x00;
+    NR42_REG = 0x51;
+    NR43_REG = 0x30;
+    NR44_REG = 0x80;
+    noise_owner = 0xFF;
+}
+
+void sfx_beep(void) BANKED
+{
+    /* Line-feed beep: pulse 1 at ~3520 Hz (one octave above A6), 50% duty.
+     * NR12 volume 4 with envelope period 1 decays to silence in roughly four
+     * frames, so the title loop does not need a timer.  The title has no
+     * other pulse voice. */
+    NR10_REG = 0x00;
+    NR11_REG = 0x80;
+    NR12_REG = 0x41;
+    NR13_REG = 0xDB;
+    NR14_REG = 0x87;
+}
+
 void sfx_prewarm_def(const SfxDef *def) BANKED
 {
     uint8_t i;

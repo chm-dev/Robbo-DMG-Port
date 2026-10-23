@@ -27,9 +27,41 @@ export const KEYMAP = {
   A: 4, B: 5, SELECT: 6, START: 7,
 };
 
-export function loadRom(romPath, saveData) {
+export function loadRom(romPath, saveData, options = {}) {
   const gb = new Gameboy();
   gb.loadRom(fs.readFileSync(romPath), saveData);
+
+  /* Every checkpoint assumes gameplay has started.  The ROM now boots to the
+   * title screen, so wait for it to hide the window, tap START, then wait for
+   * the level load to re-enable the window.  Pass { skipTitle: true } for
+   * title-screen tests and screenshots. */
+  if (!options.skipTitle) {
+    const core = coreOf(gb);
+    core.JoyPad = 0xff;
+    /* The title first blanks the display while it copies 218 tiles and the
+     * full BG map, then turns it back on for the typewriter loop.  Wait for
+     * that off->on transition before tapping START. */
+    for (let i = 0; i < 200; i++) {
+      if ((readMem(gb, 0xFF40, 1)[0] & 0x80) === 0) break;
+      gb.doFrame();
+    }
+    for (let i = 0; i < 300; i++) {
+      const lcdc = readMem(gb, 0xFF40, 1)[0];
+      /* Ignore transients that turn the display on before the title loop:
+       * require BG on and the window still hidden. */
+      if ((lcdc & 0x80) && (lcdc & 0x01) && !(lcdc & 0x20)) break;
+      gb.doFrame();
+    }
+    gb.doFrame();
+    gb.doFrame();
+    tapKey(gb, 'START', 4);
+    for (let i = 0; i < 400; i++) {
+      if (readMem(gb, 0xFF40, 1)[0] & 0x20) break;
+      gb.doFrame();
+    }
+    core.JoyPad = 0xff;
+    gb.doFrame();
+  }
   return gb;
 }
 
@@ -142,7 +174,7 @@ export function savePng(pixels, file) {
 /* ------------------------------------------------------------------ */
 
 function parseArgs(argv) {
-  const args = { frames: 60, keys: [], out: null, dump: [] };
+  const args = { frames: 60, keys: [], out: null, dump: [], title: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--rom') args.rom = argv[++i];
@@ -151,6 +183,7 @@ function parseArgs(argv) {
     else if (a === '--out') args.out = argv[++i];
     else if (a === '--dump') args.dump.push(argv[++i]);
     else if (a === '--hold') args.hold = Number(argv[++i]);
+    else if (a === '--title') args.title = true;
     else throw new Error(`Unknown argument: ${a}`);
   }
   return args;
@@ -165,11 +198,11 @@ const isMain = process.argv[1] && fileURLToPath(import.meta.url) === path.resolv
 if (isMain) {
   const args = parseArgs(process.argv.slice(2));
   if (!args.rom) {
-    console.error('Usage: gb_harness.mjs --rom <file.gb> [--frames N] [--keys A,B] [--hold F] [--out shot.png] [--dump HEX:LEN]');
+    console.error('Usage: gb_harness.mjs --rom <file.gb> [--title] [--frames N] [--keys A,B] [--hold F] [--out shot.png] [--dump HEX:LEN]');
     process.exit(2);
   }
 
-  const gb = loadRom(args.rom);
+  const gb = loadRom(args.rom, undefined, { skipTitle: args.title });
   if (args.keys.length) {
     const hold = args.hold ?? args.frames;
     gb.pressKeys(args.keys);

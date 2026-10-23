@@ -5,6 +5,7 @@
 #include <gb/gb.h>
 
 void render_init(void);
+void render_restore_tiles(void);
 void render_set_wall_style(uint8_t cell);
 void render_level(void);
 void render_hud(void);

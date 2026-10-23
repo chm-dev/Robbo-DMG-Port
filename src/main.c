@@ -21,6 +21,7 @@
 #include "core/game.h"
 #include "gb/render.h"
 #include "gb/sound.h"
+#include "gb/title.h"
 #include "gen/levels.h"
 
 #define LOGIC_TICK_FRAMES 6
@@ -66,7 +67,16 @@ void main(void)
 
     DISPLAY_OFF;
     sound_init();
-    game_init();
+    render_init();
+    render_camera_reset();
+    title_show();
+
+    /* The title screen overwrites the gameplay tile range with its logo and
+     * font; restore it before drawing level 1.  title_show() leaves the
+     * display off and the window hidden. */
+    render_restore_tiles();
+    game_load_level(1);
+    SHOW_WIN;
     DISPLAY_ON;
 
     sound_time = sys_time;

@@ -180,6 +180,16 @@ void render_init(void)
     set_interrupts(VBL_IFLAG);
 }
 
+void render_restore_tiles(void)
+{
+    /* The title screen loads its own font/logo over the gameplay tiles.
+     * Re-copy the full active set before rebuilding a level.  Must stay in
+     * bank 0: a banked function cannot switch to bank 1 and keep executing. */
+    SWITCH_ROM_MBC5(1);
+    set_bkg_data(0, TILESET_COUNT, tileset_data);
+    SWITCH_ROM_MBC5(0);
+}
+
 void render_set_wall_style(uint8_t cell)
 {
     /* Load one 16x16 wall cell from bank 8 into the reserved four-tile slot.

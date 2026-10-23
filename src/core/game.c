@@ -107,12 +107,6 @@ static void kill_robbo(void);
 static void game_teleport(uint16_t entry_idx);
 static void teleport_arrive(uint16_t idx);
 static void destroy_teleport(uint16_t idx);
-void game_init(void)
-{
-    render_init();
-    game_load_level(1);
-}
-
 void game_load_level(uint8_t level)
 {
     uint16_t i;

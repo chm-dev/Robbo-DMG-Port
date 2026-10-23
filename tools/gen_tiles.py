@@ -20,6 +20,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
+import atari_font
 import tileset
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -220,79 +221,8 @@ def sprite16(image: Image.Image, name: str) -> list[list[int]]:
     return cell
 
 
-# 5x7 text font (same glyphs as before), used for title/pause/end screens.
-FONT = {
-    "A": [".###.", "#...#", "#...#", "#####", "#...#", "#...#", "#...#"],
-    "B": ["####.", "#...#", "#...#", "####.", "#...#", "#...#", "####."],
-    "C": [".###.", "#...#", "#....", "#....", "#....", "#...#", ".###."],
-    "D": ["####.", "#...#", "#...#", "#...#", "#...#", "#...#", "####."],
-    "E": ["#####", "#....", "#....", "####.", "#....", "#....", "#####"],
-    "F": ["#####", "#....", "#....", "####.", "#....", "#....", "#...."],
-    "G": [".###.", "#...#", "#....", "#.###", "#...#", "#...#", ".###."],
-    "H": ["#...#", "#...#", "#...#", "#####", "#...#", "#...#", "#...#"],
-    "I": [".###.", "..#..", "..#..", "..#..", "..#..", "..#..", ".###."],
-    "J": ["..###", "...#.", "...#.", "...#.", "...#.", "#..#.", ".##.."],
-    "K": ["#...#", "#..#.", "#.#..", "##...", "#.#..", "#..#.", "#...#"],
-    "L": ["#....", "#....", "#....", "#....", "#....", "#....", "#####"],
-    "M": ["#...#", "##.##", "#.#.#", "#.#.#", "#...#", "#...#", "#...#"],
-    "N": ["#...#", "##..#", "#.#.#", "#..##", "#...#", "#...#", "#...#"],
-    "O": [".###.", "#...#", "#...#", "#...#", "#...#", "#...#", ".###."],
-    "P": ["####.", "#...#", "#...#", "####.", "#....", "#....", "#...."],
-    "Q": [".###.", "#...#", "#...#", "#...#", "#.#.#", "#..#.", ".##.#"],
-    "R": ["####.", "#...#", "#...#", "####.", "#.#..", "#..#.", "#...#"],
-    "S": [".####", "#....", "#....", ".###.", "....#", "....#", "####."],
-    "T": ["#####", "..#..", "..#..", "..#..", "..#..", "..#..", "..#.."],
-    "U": ["#...#", "#...#", "#...#", "#...#", "#...#", "#...#", ".###."],
-    "V": ["#...#", "#...#", "#...#", "#...#", "#...#", ".#.#.", "..#.."],
-    "W": ["#...#", "#...#", "#...#", "#.#.#", "#.#.#", "##.##", "#...#"],
-    "X": ["#...#", "#...#", ".#.#.", "..#..", ".#.#.", "#...#", "#...#"],
-    "Y": ["#...#", "#...#", ".#.#.", "..#..", "..#..", "..#..", "..#.."],
-    "Z": ["#####", "....#", "...#.", "..#..", ".#...", "#....", "#####"],
-    "0": [".###.", "#...#", "#..##", "#.#.#", "##..#", "#...#", ".###."],
-    "1": ["..#..", ".##..", "..#..", "..#..", "..#..", "..#..", ".###."],
-    "2": [".###.", "#...#", "....#", "...#.", "..#..", ".#...", "#####"],
-    "3": [".###.", "#...#", "....#", "..##.", "....#", "#...#", ".###."],
-    "4": ["...#.", "..##.", ".#.#.", "#..#.", "#####", "...#.", "...#."],
-    "5": ["#####", "#....", "####.", "....#", "....#", "#...#", ".###."],
-    "6": ["..##.", ".#...", "#....", "####.", "#...#", "#...#", ".###."],
-    "7": ["#####", "....#", "...#.", "..#..", ".#...", ".#...", ".#..."],
-    "8": [".###.", "#...#", "#...#", ".###.", "#...#", "#...#", ".###."],
-    "9": [".###.", "#...#", "#...#", ".####", "....#", "...#.", ".##.."],
-    " ": [".....", ".....", ".....", ".....", ".....", ".....", "....."],
-    "!": ["..#..", "..#..", "..#..", "..#..", "..#..", ".....", "..#.."],
-    "?": [".###.", "#...#", "....#", "...#.", "..#..", ".....", "..#.."],
-    "-": [".....", ".....", ".....", "#####", ".....", ".....", "....."],
-    ".": [".....", ".....", ".....", ".....", ".....", ".....", "..#.."],
-    ":": [".....", "..#..", "..#..", ".....", "..#..", "..#..", "....."],
-}
-
-
-def glyph8(rows: list[str]) -> list[list[int]]:
-    mapping = {".": 2, ":": 1, "+": 1, "#": 0}
-    out = []
-    for row in rows:
-        out.append([2] + [mapping[ch] for ch in row] + [2, 2])
-    out.append([2] * 8)
-    return out
-
-
-def digit16(ch: str) -> tuple[list[list[int]], list[list[int]]]:
-    """8x16 digit: 5x7 glyph scaled 2x vertically, centred in one tile column."""
-    glyph = FONT[ch]
-    # 7 rows -> 14 rows, plus one blank row above/below.
-    pixels = []
-    for row in glyph:
-        pixels.append(row)
-        pixels.append(row)
-    grid = [[3] * 8 for _ in range(16)]
-    for y in range(14):
-        for x in range(5):
-            if pixels[y][x] == "#":
-                grid[y + 1][x + 1] = 0
-    top = grid[:8]
-    bottom = grid[8:]
-    return top, bottom
-
+# The text font is the authentic Atari I.FNT set used by the GBC port (see
+# tools/atari_font.py).  Pause/victory text therefore shares the title's font.
 
 def to_tile_bytes(shades: list[list[int]]) -> bytes:
     out = bytearray()
@@ -307,6 +237,16 @@ def to_tile_bytes(shades: list[list[int]]) -> bytes:
                 high |= bit
         out.extend((low, high))
     return bytes(out)
+
+
+def font_tile(rows: list[str], fg: int = 0, bg: int = 2) -> list[list[int]]:
+    """8x8 I.FNT glyph: '#' becomes fg, '.' becomes bg."""
+    tile = [[bg] * 8 for _ in range(8)]
+    for y, row in enumerate(rows):
+        for x, ch in enumerate(row):
+            if ch == "#":
+                tile[y][x] = fg
+    return tile
 
 
 class TilePool:
@@ -631,8 +571,11 @@ def main() -> None:
         digit_tiles[str(d)] = (pool.add(top, f"digit{d}.top"), pool.add(bottom, f"digit{d}.bottom"))
 
     font_tiles: dict[str, int] = {}
-    for char, rows in FONT.items():
-        font_tiles[char] = pool.add(glyph8(rows), f"font.{ord(char):02X}")
+    game_font = dict(atari_font.FONT8)
+    for char in ("!", "?", "-", ".", ":"):
+        game_font[char] = atari_font.SPECIALS[char]
+    for char, rows in game_font.items():
+        font_tiles[char] = pool.add(font_tile(rows), f"font.{ord(char):02X}")
 
     # Reserve four consecutive VRAM slots for the dynamic visible-wall
     # metatile.  They are overwritten by sheet_load_metatile() on level load.

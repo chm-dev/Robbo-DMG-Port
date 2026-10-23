@@ -100,6 +100,14 @@ void sfx_prewarm_def(const SfxDef *def) BANKED;
 /* Silence all effect channels immediately. */
 void sfx_stop(void) BANKED;
 
+/* One short noise tick: the title screen's typewriter click.  The title is
+ * silent otherwise, so this borrows the noise channel directly. */
+void sfx_click(void) BANKED;
+
+/* Short high beep at a typewriter line break.  Uses pulse 1 and a hardware
+ * envelope that ends after about four frames. */
+void sfx_beep(void) BANKED;
+
 /* Advance the player; call once per frame (60 Hz). */
 void sfx_update(void) BANKED;
 

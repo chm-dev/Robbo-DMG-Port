@@ -109,7 +109,6 @@ extern uint8_t cam_target_x;
 extern uint8_t cam_target_y;
 extern uint8_t cam_pan_timer;
 
-void game_init(void);
 void game_load_level(uint8_t level);
 void game_tick(void);
 /* One per rendered frame: advances frame-rate animation timers. */
