@@ -7,7 +7,15 @@
 void render_init(void);
 void render_restore_tiles(void);
 void render_set_wall_style(uint8_t cell);
-void render_level(void);
+/* Row-ring slot -> source level row, managed by render_sync_rows().  The
+ * level-intro module (bank 13) paints columns directly and needs this map. */
+extern uint8_t map_row_level[];
+void render_intro_clear_dirty(void);
+/* Spawn-cell override while the intro owns the level:
+ *   0 = normal Robbo, 1 = waiting capsule,
+ *   2..5 = explosion frames 0..3 (Atari $02/$04/$06/$08), then Robbo.
+ * Robbo stays in map_type[] the whole time; only the metatile is substituted. */
+extern uint8_t render_robbo_spawn;
 void render_hud(void);
 void render_pause(void) BANKED;
 void render_flash_set(uint8_t on);

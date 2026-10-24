@@ -11,7 +11,7 @@
  * before it can scroll into view (the risky direction is upwards). */
 #define CAM_MARGIN 2
 
-static uint8_t map_row_level[MAP_METAROWS];
+uint8_t map_row_level[MAP_METAROWS];
 
 /* Dirty-cell bitmap (one bit per map cell).  Insertion is O(1); the old
  * 64-entry list cost a linear de-dup scan per mark and silently dropped
@@ -25,6 +25,8 @@ static const uint8_t turret_mt[4] = {
 };
 /* Source sprite order is [direction * 2 + step]: right, down, left, up. */
 static const uint8_t robbo_mt_base[4] = { 0, 2, 4, 6 };
+
+uint8_t render_robbo_spawn;
 
 uint8_t render_metatile_for_cell(uint8_t type, uint8_t extra)
 {
@@ -58,8 +60,13 @@ uint8_t render_metatile_for_cell(uint8_t type, uint8_t extra)
         case CT_LAVA:       return MT_LAVA_0;
         case CT_EXTRA_LIFE: return MT_EMPTY;  /* hidden easter egg */
         case CT_MAGNET:     return (extra & 2) ? MT_MAGNET_1 : MT_MAGNET_0;
-        case CT_ROBBO:      return MT_ROBBO_0 + robbo_mt_base[extra & 3] +
-                                   (robbo_step_timer ? 1 : 0);
+        case CT_ROBBO:
+            if (render_robbo_spawn == 1) return MT_SPACESHIP_0;
+            if (render_robbo_spawn >= 2) {
+                return (uint8_t)(MT_EXPLOSION_0 + (render_robbo_spawn - 2));
+            }
+            return MT_ROBBO_0 + robbo_mt_base[extra & 3] +
+                   (robbo_step_timer ? 1 : 0);
         case CT_BULLET: {
             uint8_t dir = extra & 3;
             return MT_BULLET_0 + (uint8_t)((dir & 1) * 2) + (anim_slow & 1);
@@ -197,22 +204,14 @@ void render_set_wall_style(uint8_t cell)
     sheet_load_metatile(cell, WALL_TILE_BASE);
 }
 
-void render_level(void)
+/* Keep the dirty bitmap clear while the intro owns the screen.  The death
+ * wipe may leave cells queued; flushing them after the map reload would reveal
+ * restored items before their column is painted. */
+void render_intro_clear_dirty(void)
 {
-    uint8_t row;
-    uint8_t first = (cam_y > CAM_MARGIN) ? (uint8_t)(cam_y - CAM_MARGIN) : 0;
-
-    for (row = 0; row < DIRTY_WORDS; row++) dirty_bits[row] = 0;
+    uint8_t i;
+    for (i = 0; i < DIRTY_WORDS; i++) dirty_bits[i] = 0;
     dirty_any = 0;
-
-    /* Draw 16 consecutive rows starting at the camera's band so every ring
-     * slot has a valid identity for the initial view and its margins. */
-    for (row = 0; row < MAP_METAROWS; row++) {
-        uint8_t level_y = (uint8_t)(first + row);
-        draw_level_row(level_y, level_y & (MAP_METAROWS - 1));
-    }
-
-    render_hud();
 }
 
 void render_hud(void)

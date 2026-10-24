@@ -133,8 +133,16 @@ function clearActors(ctx) {
 /* Run past the boot fanfare and leave a quiet level. */
 function quietLevel() {
   const ctx = fresh();
-  run(ctx.gb, 420);
+  /* Silence autonomous turrets before the wait: with the intro now gating
+   * gameplay for the first second, a turret shot can otherwise land in the
+   * capture window and look like a movement sound. */
   clearActors(ctx);
+  /* Reset the pad each frame: serverboy leaves its raw JoyPad register at 0
+   * (all buttons held) unless the harness does this. */
+  for (let i = 0; i < 420; i++) {
+    ctx.core.JoyPad = 0xff;
+    ctx.gb.doFrame();
+  }
   /* Clear level 1's pickups/teleport on Robbo's row so tests only see the
    * event they set up. */
   for (let x = 3; x <= 9; x++) setCell(ctx, x, 2, CT_EMPTY);

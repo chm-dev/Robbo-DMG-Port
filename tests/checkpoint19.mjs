@@ -355,16 +355,24 @@ function maxStep(values) {
 
   function warpOnce() {
     const before = ctx.byte('level_planet');
-    for (let attempt = 0; attempt < 8 && ctx.byte('level_planet') === before; attempt++) {
-      /* Hold SELECT for a few frames: the main loop can span more than one
-       * VBlank, so a single-frame tap can be missed (same rule as
-       * checkpoint18's warp helper). */
-      ctx.core.JoyPad = 0xff;
-      ctx.gb.pressKeys(['SELECT']);
-      for (let i = 0; i < 4; i++) ctx.gb.doFrame();
-      ctx.core.JoyPad = 0xff;
-      ctx.gb.doFrame();
-      for (let i = 0; i < 20 && ctx.byte('level_planet') === before; i++) ctx.gb.doFrame();
+    for (let attempt = 0; attempt < 12 && ctx.byte('level_planet') === before; attempt++) {
+      /* Hold SELECT with the harness's per-frame JoyPad refresh, then leave a
+       * long released gap so the main loop definitely sees the edge again
+       * (level loads can span several frames).
+       */
+      for (let i = 0; i < 4; i++) {
+        ctx.core.JoyPad = 0xff;
+        ctx.gb.pressKeys(['SELECT']);
+        ctx.gb.doFrame();
+      }
+      for (let i = 0; i < 12; i++) {
+        ctx.core.JoyPad = 0xff;
+        ctx.gb.doFrame();
+      }
+      for (let i = 0; i < 40 && ctx.byte('level_planet') === before; i++) {
+        ctx.core.JoyPad = 0xff;
+        ctx.gb.doFrame();
+      }
     }
     for (let i = 0; i < 10; i++) ctx.gb.doFrame();
     for (let i = 0; i < 20 && ctx.byte('screws_left') !== ctx.byte('level_screw'); i++) {
@@ -373,8 +381,13 @@ function maxStep(values) {
   }
 
   /* Level 4 has Robbo at (4,20), so the snapped camera centers him at
-   * row 20 - 3 = 17. */
+   * row 20 - 3 = 17.  The level-entry intro starts at the top of the cave and
+   * pans there, so wait for that intro to start and then finish.  The warp
+   * helper can return while the final game_load_level() is still running, so
+   * the intro may not be active yet. */
   for (let i = 0; i < 3; i++) warpOnce();
+  for (let i = 0; i < 160 && !ctx.byte('intro_active'); i++) ctx.gb.doFrame();
+  for (let i = 0; i < 700 && ctx.byte('intro_active'); i++) ctx.gb.doFrame();
   for (let i = 0; i < 120; i++) ctx.gb.doFrame();
   check('warped to level 4', ctx.byte('level_planet') === 4,
     `level=${ctx.byte('level_planet')}`);

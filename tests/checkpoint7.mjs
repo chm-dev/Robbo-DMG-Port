@@ -105,10 +105,12 @@ function waitFor(ctx, predicate, maxFrames = 3000) {
   check('death triggers restart request',
     waitFor(ctx, () => ctx.byte('game_restart_requested'), 1000),
     `request=${ctx.byte('game_restart_requested')}`);
-  for (let i = 0; i < 30; i++) ctx.gb.doFrame();
+  /* The restart now runs the level-entry intro: repaint, then pan back to the
+   * start and materialize Robbo.  Poll instead of assuming a fixed delay. */
   check('level restarted after death',
-    ctx.byte('robbo_busy') === 0 && ctx.byte('level_planet') === 1 &&
-    ctx.byte('robbo_x') === 2 && ctx.byte('robbo_y') === 2,
+    waitFor(ctx, () => ctx.byte('robbo_busy') === 0 &&
+      ctx.byte('level_planet') === 1 &&
+      ctx.byte('robbo_x') === 2 && ctx.byte('robbo_y') === 2, 800),
     `busy=${ctx.byte('robbo_busy')} level=${ctx.byte('level_planet')} pos=${ctx.byte('robbo_x')},${ctx.byte('robbo_y')}`);
 }
 

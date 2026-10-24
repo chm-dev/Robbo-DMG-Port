@@ -20,6 +20,7 @@
 
 #include "core/game.h"
 #include "gb/ending.h"
+#include "gb/intro.h"
 #include "gb/render.h"
 #include "gb/sound.h"
 #include "gb/title.h"
@@ -115,26 +116,8 @@ void main(void)
             while (elapsed--) sfx_update();
         }
 
-        /* All VRAM writes happen here, at the start of VBlank.  The camera
-         * itself is applied by the VBlank handler; this only publishes the
-         * next goal (or steps a teleport/pan). */
-        if (!pan_active) render_camera();
-        if (paused && !cam_override) cam_smooth = 0;
-        game_teleport_camera_ready();
-        render_sync_rows();
-        if (pause_draw) {
-            pause_draw = 0;
-            render_pause();
-        } else if (hud_dirty) {
-            hud_dirty = 0;
-            render_hud();
-        }
-        render_flush_cells();
-
-        /* Advance frame-rate visual timers after the cells are flushed, so a
-         * freshly queued step pose is drawn before the timer starts counting. */
-        game_frame();
-
+        /* Read input once per frame.  Keeping the edge state identical for the
+         * intro and gameplay means START/SELECT behave the same in both. */
         pad = joypad();
         debug_pad = pad;
 
@@ -149,7 +132,7 @@ void main(void)
             continue;
         }
 
-        if ((pad & J_START) && !(prev & J_START)) {
+        if ((pad & J_START) && !(prev & J_START) && !intro_active) {
             paused = !paused;
             pan_cancel(1);
             if (paused) pause_draw = 1;
@@ -183,6 +166,75 @@ void main(void)
             prev = pad;
             continue;
         }
+
+        if (game_level_advance_requested) {
+            game_level_advance_requested = 0;
+            pan_cancel(0);
+            if (level_planet >= LEVEL_COUNT) {
+                ending_show();
+                after_ending();
+            } else {
+                level = level_planet + 1;
+                /* NXCV already cleared the playfield; load and paint the next
+                 * level in without a black frame. */
+                game_load_level_after_clear(level);
+                paused = 0;
+                move_delay = 0;
+                tick_timer = 0;
+            }
+            prev = pad;
+            continue;
+        }
+
+        /* Atari NXCV level-complete clear: erase the finished room one column
+         * at a time (right to left, with the odd-column pause), then let the
+         * advance handler load the next level.  The display stays on. */
+        if (game_transition_active) {
+            if (!intro_clear_tick()) {
+                game_transition_active = 0;
+                game_level_advance_requested = 1;
+            }
+            render_flush_cells();
+            prev = pad;
+            continue;
+        }
+
+        /* Level entry / death respawn.  VRAM is written only from the intro's
+         * per-frame VBlank slice: the screen is painted a column at a time and
+         * the camera glides to the start instead of snapping behind a black
+         * frame.  game_tick() and player input stay disabled until the spawn
+         * materialize completes. */
+        if (intro_active) {
+            intro_tick();
+            render_sync_rows();
+            if (hud_dirty) {
+                hud_dirty = 0;
+                render_hud();
+            }
+            render_flush_cells();
+            prev = pad;
+            continue;
+        }
+
+        /* All VRAM writes happen here, at the start of VBlank.  The camera
+         * itself is applied by the VBlank handler; this only publishes the
+         * next goal (or steps a teleport/pan). */
+        if (!pan_active) render_camera();
+        if (paused && !cam_override) cam_smooth = 0;
+        game_teleport_camera_ready();
+        render_sync_rows();
+        if (pause_draw) {
+            pause_draw = 0;
+            render_pause();
+        } else if (hud_dirty) {
+            hud_dirty = 0;
+            render_hud();
+        }
+        render_flush_cells();
+
+        /* Advance frame-rate visual timers after the cells are flushed, so a
+         * freshly queued step pose is drawn before the timer starts counting. */
+        game_frame();
 
         if (!paused && !(pad & J_SELECT)) {
             if (++tick_timer >= LOGIC_TICK_FRAMES) {
@@ -256,32 +308,14 @@ void main(void)
         if (game_restart_requested) {
             game_restart_requested = 0;
             pan_cancel(0);
-            DISPLAY_OFF;
             level = level_planet;
-            game_load_level(level);
+            /* Keep the display on: game_respawn_level() restores the map and
+             * starts the intro, which repaints the wiped room and pans from
+             * the death view back to Robbo's start. */
+            game_respawn_level(level);
             paused = 0;
             move_delay = 0;
             tick_timer = 0;
-            DISPLAY_ON;
-            prev = pad;
-            continue;
-        }
-
-        if (game_level_advance_requested) {
-            game_level_advance_requested = 0;
-            pan_cancel(0);
-            if (level_planet >= LEVEL_COUNT) {
-                ending_show();
-                after_ending();
-            } else {
-                level = level_planet + 1;
-                DISPLAY_OFF;
-                game_load_level(level);
-                DISPLAY_ON;
-                paused = 0;
-                move_delay = 0;
-                tick_timer = 0;
-            }
             prev = pad;
             continue;
         }

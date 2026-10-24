@@ -4,6 +4,7 @@
 #include "game.h"
 #include "../gen/levels.h"
 #include "../gen/tiles.h"
+#include "../gb/intro.h"
 #include "../gb/render.h"
 #include "../gb/sound.h"
 
@@ -95,8 +96,16 @@ static uint8_t robbo_dead = 0;
 static uint8_t death_timer = 0;
 static uint8_t death_wipe_timer = 0;
 static uint8_t screen_flash_ticks = 0;
-static uint8_t transition_active = 0;
-static int8_t wipe_col = 0;
+/* Atari NXCV: the finished room is cleared column by column while the display
+ * stays on, then the next level is loaded and painted in. */
+uint8_t game_transition_active = 0;
+/* One-shot marker for game_respawn_level(); consumed by game_load_level(). */
+static uint8_t respawn_load = 0;
+/* One-shot marker for game_load_level_after_clear(). */
+static uint8_t transition_load = 0;
+/* Atari LSTE: the planet where the hidden extra life was last collected.  A
+ * respawn on that planet suppresses its '+' marker again. */
+static uint8_t bonus_taken_level = 0;
 uint8_t game_restart_requested = 0;
 uint8_t game_level_advance_requested = 0;
 
@@ -107,23 +116,63 @@ static void kill_robbo(void);
 static void game_teleport(uint16_t entry_idx);
 static void teleport_arrive(uint16_t idx);
 static void destroy_teleport(uint16_t idx);
+
+/* Death respawn: the map is reloaded while the display stays on, then the
+ * intro repaints the wiped room and pans back to Robbo's start. */
+void game_respawn_level(uint8_t level)
+{
+    respawn_load = 1;
+    game_load_level(level);
+}
+
+/* Level-complete path: the NXCV clear has already emptied the screen, so the
+ * next level can be loaded without turning the display off. */
+void game_load_level_after_clear(uint8_t level)
+{
+    transition_load = 1;
+    game_load_level(level);
+}
+
 void game_load_level(uint8_t level)
 {
     uint16_t i;
     uint8_t x, y;
+    uint16_t entry_qx = 0;
+    uint16_t entry_qy = 0;
+    uint8_t from_death = respawn_load;
+    uint8_t from_transition = transition_load;
+
+    respawn_load = 0;
+    transition_load = 0;
 
     if (level == 0) level = 1;
     if (level > LEVEL_COUNT) level = LEVEL_COUNT;
 
-    /* Freeze the VBlank ease while the level is rebuilt; it is re-enabled
-     * after the camera has been snapped to the new start. */
+    if (from_death || from_transition) {
+        /* Keep the view where the previous level ended: PLA1 leaves DLSA at
+         * the exit, and only SETU (a fresh boot/level load) writes SCRN.  The
+         * snapshot is atomic because the VBlank ISR may update half of the
+         * Q4 pair. */
+        __critical {
+            entry_qx = cam_qx;
+            entry_qy = cam_qy;
+        }
+    }
+
+    /* Freeze the VBlank ease while the level is rebuilt; the intro starts it
+     * again after the playfield has been painted. */
     cam_smooth = 0;
 
     load_level_data(level);
 
-    /* One wall texture per four-level block, loaded from the full sheet. */
+    /* One wall texture per four-level block, loaded from the full sheet.  A
+     * respawn is the same planet, so the dynamic metatile is already resident;
+     * an after-clear transition defers it to the intro's first VBlank slice.
+     * Both keep bulk VRAM writes out of the display-on load. */
     level_wall_cell = wall_rotation_cells[(uint8_t)((level - 1) >> 2)];
-    render_set_wall_style(level_wall_cell);
+    if (!from_death && !from_transition) {
+        render_set_wall_style(level_wall_cell);
+    }
 
     for (i = 0; i < BONUS_WORDS; i++) {
         bonus_bits[i] = 0;
@@ -133,8 +182,12 @@ void game_load_level(uint8_t level)
         if (map_type[i] == CT_EXTRA_LIFE) {
             /* Invisible easter egg: empty for every actor, but Robbo's entry
              * triggers the bonus.  Scan the full array, including rows past
-             * the current height (some Atari bonuses sit on the bottom row). */
-            bonus_bits[i >> 3] |= (uint8_t)(1u << (i & 7));
+             * the current height (some Atari bonuses sit on the bottom row).
+             * Atari LSTE keeps it consumed when the same planet is reloaded
+             * after a death; only a different planet re-arms it. */
+            if (bonus_taken_level != level) {
+                bonus_bits[i >> 3] |= (uint8_t)(1u << (i & 7));
+            }
             map_type[i] = CT_EMPTY;
             map_extra[i] = 0;
         }
@@ -176,18 +229,30 @@ void game_load_level(uint8_t level)
     game_restart_requested = 0;
     game_level_advance_requested = 0;
     screen_flash_ticks = 0;
-    transition_active = 0;
-    wipe_col = 0;
+    game_transition_active = 0;
     anim_frame = 0;
     anim_slow = 0;
     robbo_step_timer = 0;
     render_flash_set(0);
 
+    /* render_camera_snap() publishes the start-centered goal used by the end
+     * of the intro's pan.  A fresh boot/debug load starts at the top-left of
+     * the cave (Atari SETU writes SCRN into DLSA); a death respawn and a
+     * level-complete transition start at the camera position where the
+     * previous view ended (PLA1 leaves DLSA untouched). */
     render_camera_snap();
-    render_level();
-    hud_dirty = 0;
-    render_apply_camera();
-    cam_smooth = 1;
+    if (from_death || from_transition) {
+        render_camera_set_q(entry_qx, entry_qy);
+        hud_dirty = 1;
+    } else {
+        render_camera_set_q(0, 0);
+        render_apply_camera();
+        /* The display is off for a new level, so the HUD can be published now;
+         * the intro will paint the playfield in from an empty map. */
+        render_hud();
+        hud_dirty = 0;
+    }
+    cam_smooth = 0;
 
     /* Fill the legacy SFX conversion cache while the display is off: the
      * first explosion or destroyed tile must not pay those divisions
@@ -196,7 +261,15 @@ void game_load_level(uint8_t level)
     sfx_prewarm_def(&sfx_explosion);
     sfx_prewarm_def(&sfx_destroy);
 
-    sfx_play_note(SFX_LEVEL_START);
+    /* The entry jingle now plays from the intro once the camera has settled
+     * on the spawn cell (Atari WFAC), not at the instant the map is loaded. */
+    if (from_death) {
+        intro_begin(INTRO_MODE_RESPAWN);
+    } else if (from_transition) {
+        intro_begin(INTRO_MODE_AFTER_CLEAR);
+    } else {
+        intro_begin(INTRO_MODE_NEW);
+    }
 }
 
 static uint8_t is_demolishable(uint8_t type)
@@ -316,6 +389,9 @@ static void move_robbo_to(uint8_t nx, uint8_t ny, uint8_t dir)
 static void collect_bonus(uint16_t idx)
 {
     bonus_bits[idx >> 3] &= (uint8_t)~(1u << (idx & 7));
+    /* Atari LSTE: remember the planet so ENTCV does not draw the '+' again
+     * after a death on this same level. */
+    bonus_taken_level = level_planet;
     /* Easter egg: the hidden extra-life cell uses the last-bolt flash and the
      * extra-life jingle, but awards nothing. */
     screen_flash_ticks = 1;
@@ -578,8 +654,8 @@ uint8_t game_try_move(uint8_t dir)
             map_extra[robbo_idx] = 0;
             render_cell(robbo_x, robbo_y);
             robbo_busy = 1;
-            transition_active = 1;
-            wipe_col = MAP_W - 1;
+            game_transition_active = 1;
+            intro_clear_begin();
             sfx_play_note(SFX_LEVEL_END);
             return 0;
         }
@@ -872,7 +948,9 @@ static void kill_robbo(void)
 
     robbo_dead = 1;
     robbo_busy = 1;
-    death_timer = 6;
+    /* Atari WYBC waits 48 jiffies before the room-wide explosion.  The logic
+     * tick is 6 frames, so 8 ticks is 48 frames on the DMG. */
+    death_timer = 8;
     death_wipe_timer = 0;
 
     idx = (uint16_t)robbo_y * MAP_W + robbo_x;
@@ -1413,6 +1491,10 @@ void game_tick(void)
     uint16_t ei;
     uint16_t eidx;
 
+    /* A level-complete clear owns the screen; the advance request is handled
+     * by main on a frame boundary, so do not run another logic tick. */
+    if (game_transition_active || game_level_advance_requested) return;
+
     if (fire_delay != 0) fire_delay--;
     anim_frame = (anim_frame + 1) & 1;
     /* Bullets, capsule and teleports swap frames every other logic tick. */
@@ -1424,7 +1506,7 @@ void game_tick(void)
             death_timer--;
             if (death_timer == 0) {
                 destroy_all_items();
-                death_wipe_timer = 6;
+                death_wipe_timer = 8;
             }
         } else if (death_wipe_timer != 0) {
             death_wipe_timer--;
@@ -1435,23 +1517,6 @@ void game_tick(void)
     if (screen_flash_ticks != 0) {
         screen_flash_ticks--;
         if (screen_flash_ticks == 0) render_flash_set(0);
-    }
-
-    if (transition_active) {
-        if (wipe_col >= 0) {
-            uint8_t y;
-            for (y = 0; y < level_height; y++) {
-                uint16_t widx = (uint16_t)y * MAP_W + (uint8_t)wipe_col;
-                map_type[widx] = CT_WALL_0;
-                map_extra[widx] = 0;
-                render_cell((uint8_t)wipe_col, y);
-            }
-            wipe_col--;
-        } else {
-            transition_active = 0;
-            game_level_advance_requested = 1;
-        }
-        return;
     }
 
     /* Clear the per-tick processed bit on all live bullets. */

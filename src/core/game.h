@@ -115,6 +115,16 @@ extern uint8_t cam_target_y;
 extern uint8_t cam_pan_timer;
 
 void game_load_level(uint8_t level);
+/* Reload the current planet after a death.  Unlike game_load_level() this
+ * keeps the display on and leaves the wiped screen in place so the intro can
+ * repaint it and pan from the death view back to Robbo's start. */
+void game_respawn_level(uint8_t level);
+/* Load the next level after the NXCV column-clear.  The screen is already
+ * empty, so no display-off/bulk draw is needed. */
+void game_load_level_after_clear(uint8_t level);
+/* Set while the level-complete clear is running.  Main drives it with
+ * intro_clear_tick() and then requests the level advance. */
+extern uint8_t game_transition_active;
 void game_tick(void);
 /* One per rendered frame: advances frame-rate animation timers. */
 void game_frame(void);
