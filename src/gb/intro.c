@@ -64,17 +64,18 @@ static void intro_blank(void)
 }
 
 /* Paint one source-map column across the ring.  The 2x32-tile column is built
- * in a small buffer and then written directly to the BG map; GBDK's
- * set_bkg_tiles(2,32) spends about 8 ms per call in per-row overhead and makes
- * the sweep miss every other VBlank.  The intro runs at the start of VBlank,
- * so the 64 direct writes are safe. */
-static void intro_paint_column(uint8_t col)
+ * in this buffer during the *previous* frame; the VBlank tick then only does
+ * the 64 VRAM writes.  Building the column at VBlank time used to push the
+ * writes into mode 3, where SameBoy/real hardware discard them (Gearboy is
+ * lenient, which made the bug look emulator-specific). */
+static uint8_t intro_col_buf[64];
+static uint8_t intro_write_x;
+
+static void intro_prepare_column(uint8_t col)
 {
-    uint8_t buf[64];
     uint8_t first = (cam_y > INTRO_CAM_MARGIN) ?
         (uint8_t)(cam_y - INTRO_CAM_MARGIN) : 0;
     uint8_t r;
-    volatile uint8_t *vram;
 
     for (r = 0; r < INTRO_RING_ROWS; r++) {
         uint8_t level_y = (uint8_t)(first + r);
@@ -92,19 +93,19 @@ static void intro_paint_column(uint8_t col)
         }
 
         t = &metatile_tiles[mt << 2];
-        buf[(map_row << 2) + 0] = t[0];
-        buf[(map_row << 2) + 1] = t[1];
-        buf[(map_row << 2) + 2] = t[2];
-        buf[(map_row << 2) + 3] = t[3];
+        intro_col_buf[(map_row << 2) + 0] = t[0];
+        intro_col_buf[(map_row << 2) + 1] = t[1];
+        intro_col_buf[(map_row << 2) + 2] = t[2];
+        intro_col_buf[(map_row << 2) + 3] = t[3];
     }
 
-    /* Direct BG-map writes (see intro_paint_column). */
-    vram = (volatile uint8_t *)(0x9800u + (uint16_t)(col << 1));
-    for (r = 0; r < 32; r++) {
-        vram[0] = buf[r << 1];
-        vram[1] = buf[(r << 1) + 1];
-        vram += 32;
-    }
+    intro_write_x = (uint8_t)(col << 1);
+}
+
+/* One GBDK map write; the library handles VRAM access timing. */
+static void intro_write_column(void)
+{
+    set_bkg_tiles(intro_write_x, 0, 2, 32, intro_col_buf);
 }
 
 /* Intro pan step: the normal VBlank ease has a very long 1/16-px tail (about
@@ -140,19 +141,15 @@ static uint8_t clear_left;
 static uint8_t clear_wait;
 
 /* Fill one 2x32-tile BG-map column with the empty tile.  Used by the NXCV
- * level-complete clear, which sweeps the screen right-to-left before the next
- * level is loaded. */
+ * level-complete clear.  Use GBDK's map write (same reason as the intro
+ * paint): direct writes can land outside VBlank and be discarded. */
 static void intro_clear_column(uint8_t col)
 {
     uint8_t empty = metatile_tiles[MT_EMPTY << 2];
-    volatile uint8_t *vram = (volatile uint8_t *)(0x9800u + (uint16_t)(col << 1));
-    uint8_t r;
+    uint8_t i;
 
-    for (r = 0; r < 32; r++) {
-        vram[0] = empty;
-        vram[1] = empty;
-        vram += 32;
-    }
+    for (i = 0; i < 64; i++) intro_col_buf[i] = empty;
+    set_bkg_tiles((uint8_t)(col << 1), 0, 2, 32, intro_col_buf);
 }
 
 void intro_clear_begin(void) BANKED
@@ -204,7 +201,11 @@ void intro_begin(uint8_t mode) BANKED
     cam_smooth = 0;
     intro_wall_pending = (uint8_t)(mode == INTRO_MODE_AFTER_CLEAR);
     render_intro_clear_dirty();
+    /* Bind the ring before preparing the first column: otherwise that column
+     * is filled from whatever identities the previous level left behind and
+     * its non-empty cells are painted as empty. */
     intro_bind_rows();
+    intro_prepare_column(intro_col);
 
     /* A fresh level starts behind a black frame and is painted from empty.
      * A respawn paints over the wiped room; after the NXCV clear the screen is
@@ -226,11 +227,14 @@ void intro_tick(void) BANKED
             return;
         }
         if (intro_wait) {
+            /* No VRAM work this frame; build the next column for the next
+             * VBlank slice. */
             intro_wait = 0;
+            intro_prepare_column(intro_col);
             return;
         }
 
-        intro_paint_column(intro_col);
+        intro_write_column();
         intro_left--;
 
         if (intro_left == 0) {
@@ -244,6 +248,7 @@ void intro_tick(void) BANKED
         /* Match ENTCV's extra VBlank after every other column. */
         intro_wait = (uint8_t)(intro_col & 1);
         intro_col = intro_col ? (uint8_t)(intro_col - 1) : (MAP_W - 1);
+        if (!intro_wait) intro_prepare_column(intro_col);
         return;
     }
 

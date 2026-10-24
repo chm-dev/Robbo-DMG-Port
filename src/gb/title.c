@@ -239,7 +239,14 @@ void title_show(void) BANKED
         if (joypad() & (J_START | J_A)) break;
     }
 
-    waitpadup();
+    /* Release wait is bounded: a stuck harness/emulator input must not leave
+     * the title spinning forever, and 30 frames is imperceptible on hardware. */
+    {
+        uint8_t release_wait = 30;
+        while (release_wait-- && (joypad() & (J_START | J_A))) {
+            title_wait_vbl();
+        }
+    }
     sfx_stop();
     DISPLAY_OFF;
 }
