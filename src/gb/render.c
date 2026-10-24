@@ -253,11 +253,24 @@ void render_hud(void)
     set_win_tiles(0, 0, 20, 2, win);
 }
 
+/* One palette per level inside a four-level wall block.  Shade 0 may become
+ * white or light gray (never dark gray/black), so Robbo always stays bright:
+ *   normal, rotated (white->light gray), black background, white background. */
+static const uint8_t level_bgp[4]       = { 0xE4, 0xC9, 0x9C, 0xE1 };
+static const uint8_t level_flash_bgp[4] = { 0xE0, 0xC1, 0x90, 0xC1 };
+static uint8_t level_palette;
+
+void render_set_level_palette(uint8_t level)
+{
+    level_palette = (uint8_t)((level - 1) & 3);
+    BGP_REG = level_bgp[level_palette];
+}
+
 void render_flash_set(uint8_t on)
 {
-    /* Background is shade 1 now; map only that shade to white so walls stay
-     * dark during the last-bolt flash. */
-    BGP_REG = on ? 0xE0 : 0xE4;
+    /* Brighten the background for the last-bolt flash, then restore the
+     * current level's palette (not a fixed 0xE4). */
+    BGP_REG = on ? level_flash_bgp[level_palette] : level_bgp[level_palette];
 }
 
 void render_sync_rows(void)

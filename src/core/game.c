@@ -170,6 +170,7 @@ void game_load_level(uint8_t level)
      * an after-clear transition defers it to the intro's first VBlank slice.
      * Both keep bulk VRAM writes out of the display-on load. */
     level_wall_cell = wall_rotation_cells[(uint8_t)((level - 1) >> 2)];
+    render_set_level_palette(level);
     if (!from_death && !from_transition) {
         render_set_wall_style(level_wall_cell);
     }

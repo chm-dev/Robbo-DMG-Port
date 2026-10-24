@@ -135,8 +135,14 @@ void main(void)
         if ((pad & J_START) && !(prev & J_START) && !intro_active) {
             paused = !paused;
             pan_cancel(1);
-            if (paused) pause_draw = 1;
-            else hud_dirty = 1;
+            if (paused) {
+                /* PAUSED text needs a readable palette on every level. */
+                BGP_REG = 0xE4;
+                pause_draw = 1;
+            } else {
+                render_set_level_palette(level_planet);
+                hud_dirty = 1;
+            }
         }
 
         if ((pad & J_SELECT) && !(prev & J_SELECT)) {
