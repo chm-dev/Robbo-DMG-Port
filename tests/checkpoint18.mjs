@@ -199,6 +199,7 @@ function capture(frames, keys = null) {
     core.JoyPad = 0xff;
     if (keys) gb.pressKeys(keys);
     gb.doFrame();
+    /* Level 1 has a light background, so the last-bolt flash turns it white. */
     if (mem[0xFF47] === 0xE0) flash = true;
     samples.push(...leftSamples());
   }
