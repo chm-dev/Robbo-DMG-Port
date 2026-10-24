@@ -2,17 +2,17 @@
 /*
  * Checkpoint 19: smooth sub-cell camera.
  *
- * The camera keeps the existing 2-cell dead zone but glides in Q4 pixels
- * toward a cell-aligned goal (robbo-gbc's 1/8-distance ease, capped at
- * 3 px/frame).  The VBlank handler is the only writer of SCX/SCY.
+ * The camera glides in Q4 pixels toward a cell-aligned goal that centers
+ * Robbo (clamped at the map edges), using robbo-gbc's 1/8-distance ease,
+ * capped at 3 px/frame.  The VBlank handler is the only writer of SCX/SCY.
  *
  * Covered:
- *   - resting camera is still cell-aligned and identical to the old snap;
+ *   - resting camera is cell-aligned and centered where the map allows;
  *   - horizontal and vertical glides have intermediates, <=3 px steps and
  *     settle exactly on the target cell;
  *   - the 2-row row-ring margin survives pan eviction/redraw at both ends;
  *   - B-pan restores the exact Q4 position, including mid-glide;
- *   - a level whose Robbo starts low snaps the ring to that row on load.
+ *   - a level whose Robbo starts low snaps the ring to his centered row.
  *
  * Run: node gb/tests/checkpoint19.mjs
  */
@@ -157,7 +157,7 @@ function maxStep(values) {
 }
 
 /* ------------------------------------------------------------------ */
-/* 2. Horizontal glide across the right dead-zone edge.               */
+/* 2. Horizontal follow as Robbo leaves the left clamp.                */
 /* ------------------------------------------------------------------ */
 {
   const ctx = boot();
@@ -185,6 +185,9 @@ function maxStep(values) {
     samples[samples.length - 1] === 16 && ctx.byte('cam_x') === 1 &&
     ctx.u16('cam_qx') === 256,
     `scx=${samples[samples.length - 1]} cam_x=${ctx.byte('cam_x')} q=${ctx.u16('cam_qx')}`);
+  check('camera centers Robbo horizontally',
+    ctx.byte('robbo_x') - ctx.byte('cam_x') === 4,
+    `x=${ctx.byte('robbo_x')} cam=${ctx.byte('cam_x')}`);
 }
 
 /* ------------------------------------------------------------------ */
@@ -214,6 +217,9 @@ function maxStep(values) {
     downY[downY.length - 1] === 16 && ctx.byte('cam_y') === 1 &&
     ctx.u16('cam_qy') === 256,
     `scy=${downY[downY.length - 1]} cam_y=${ctx.byte('cam_y')} q=${ctx.u16('cam_qy')}`);
+  check('camera centers Robbo vertically',
+    ctx.byte('robbo_y') - ctx.byte('cam_y') === 3,
+    `y=${ctx.byte('robbo_y')} cam=${ctx.byte('cam_y')}`);
 
   let backSeen = false;
   for (let i = 0; i < 240 && !backSeen; i++) {
@@ -282,7 +288,7 @@ function maxStep(values) {
 }
 
 /* ------------------------------------------------------------------ */
-/* 5. B-pan restores the exact Q4 position, including mid-glide.      */
+/* 5. B-pan restores the exact Q4 position after a mid-glide freeze.  */
 /* ------------------------------------------------------------------ */
 {
   const ctx = boot();
@@ -298,22 +304,40 @@ function maxStep(values) {
   check('caught the camera mid-glide', midGlide,
     `scx=${ctx.byte('cam_scx')} goal=${ctx.byte('cam_goal_x')}`);
 
-  /* Freeze on B, then pan down and release. */
-  for (let i = 0; i < 3; i++) ctx.frame(['B']);
+  /* The main loop can span more than one VBlank, so hold B until it has
+   * actually been sampled and the glide is frozen. */
+  let frozenSeen = false;
+  for (let i = 0; i < 12; i++) {
+    ctx.frame(['B']);
+    if (ctx.byte('cam_smooth') === 0) {
+      frozenSeen = true;
+      break;
+    }
+  }
   const frozenX = ctx.byte('cam_scx');
   const frozenY = ctx.byte('cam_scy');
   const frozenQx = ctx.u16('cam_qx');
   const frozenQy = ctx.u16('cam_qy');
-  check('B freezes the glide', ctx.byte('cam_smooth') === 0,
+  check('B freezes the glide', frozenSeen,
     `smooth=${ctx.byte('cam_smooth')} scx=${frozenX}`);
 
   for (let i = 0; i < 40; i++) ctx.frame(['B', 'DOWN']);
-  for (let i = 0; i < 4; i++) ctx.frame();
-  check('pan release restores the exact horizontal Q4 position',
-    ctx.byte('cam_scx') === frozenX && ctx.u16('cam_qx') === frozenQx,
+
+  /* Restore first, then normal centering resumes.  Poll for the restored
+   * Q4 position instead of assuming the release is sampled on a fixed
+   * frame. */
+  let restoreX = false;
+  let restoreY = false;
+  for (let i = 0; i < 40 && !(restoreX && restoreY); i++) {
+    ctx.frame();
+    if (ctx.u16('cam_qx') === frozenQx && ctx.u16('cam_qy') === frozenQy) {
+      restoreX = ctx.byte('cam_scx') === frozenX;
+      restoreY = ctx.byte('cam_scy') === frozenY;
+    }
+  }
+  check('pan release restores the exact horizontal Q4 position', restoreX,
     `scx=${ctx.byte('cam_scx')} want=${frozenX} q=${ctx.u16('cam_qx')} want=${frozenQx}`);
-  check('pan release restores the exact vertical Q4 position',
-    ctx.byte('cam_scy') === frozenY && ctx.u16('cam_qy') === frozenQy,
+  check('pan release restores the exact vertical Q4 position', restoreY,
     `scy=${ctx.byte('cam_scy')} want=${frozenY} q=${ctx.u16('cam_qy')} want=${frozenQy}`);
 }
 
@@ -348,17 +372,18 @@ function maxStep(values) {
     }
   }
 
-  /* Level 4 has Robbo at (4,20), so the snapped camera base is 15. */
+  /* Level 4 has Robbo at (4,20), so the snapped camera centers him at
+   * row 20 - 3 = 17. */
   for (let i = 0; i < 3; i++) warpOnce();
   for (let i = 0; i < 120; i++) ctx.gb.doFrame();
   check('warped to level 4', ctx.byte('level_planet') === 4,
     `level=${ctx.byte('level_planet')}`);
-  check('low-start level snaps to the correct camera row',
-    ctx.byte('robbo_y') === 20 && ctx.byte('cam_y') === 15 &&
-    ctx.byte('cam_goal_y') === 15,
+  check('low-start level snaps to the centered camera row',
+    ctx.byte('robbo_y') === 20 && ctx.byte('cam_y') === 17 &&
+    ctx.byte('cam_goal_y') === 17,
     `robbo_y=${ctx.byte('robbo_y')} cam_y=${ctx.byte('cam_y')} goal=${ctx.byte('cam_goal_y')}`);
   check('low-start level applies the wrapped pixel scroll',
-    ctx.byte('cam_scy') === ((15 * 16) & 0xff),
+    ctx.byte('cam_scy') === ((17 * 16) & 0xff),
     `scy=${ctx.byte('cam_scy')}`);
 
   const bg = ctx.core.BGCHRBank1;

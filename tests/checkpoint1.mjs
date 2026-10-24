@@ -55,7 +55,7 @@ for (let i = 0; i < 10 && byte(SYM.level_planet) !== 5; i++) {
 state('level5');
 savePng(gb.getScreen(), path.join(out, 'cp1-level5-start.png'));
 
-// Walk left: camera should scroll left once Robbo crosses the dead zone.
+// Walk left: the camera should follow Robbo's centering target.
 holdKey(gb, 'LEFT', 96);
 state('level5 after LEFT');
 savePng(gb.getScreen(), path.join(out, 'cp1-level5-left.png'));

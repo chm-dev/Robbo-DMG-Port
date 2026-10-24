@@ -59,12 +59,14 @@ function frame(keys) {
   gb.doFrame();
 }
 
-/* Top-left 8x8 tile of the 2x2 metatile on screen. */
+/* Top-left 8x8 tile of the 2x2 metatile in the BG map.  The map is stored at
+ * absolute level coordinates; the camera only changes SCX/SCY, so indexing
+ * by screen position would read the wrong cell once the view scrolls. */
 function tileAtCell(cx, cy) {
   return bg[(0x9800 + cy * 2 * 32 + cx * 2) & 0x7ff];
 }
 function robboTile() {
-  return tileAtCell(byte('robbo_x') - byte('cam_x'), byte('robbo_y') - byte('cam_y'));
+  return tileAtCell(byte('robbo_x'), byte('robbo_y'));
 }
 
 /* Clear the corridor east of the start so the test only measures movement. */
@@ -84,8 +86,7 @@ check('idle step timer is zero', byte('robbo_step_timer') === 0,
 
 const neutral = robboTile();
 const startX = byte('robbo_x');
-const staleNext = tileAtCell(startX + 1 - byte('cam_x'),
-  byte('robbo_y') - byte('cam_y'));
+const staleNext = tileAtCell(startX + 1, byte('robbo_y'));
 
 /* One tap: find the redrawn walk pose before the step timer expires.  Hold
  * for a few frames so a slow main-loop iteration cannot miss the press. */
