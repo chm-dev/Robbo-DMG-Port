@@ -12,8 +12,15 @@ uint16_t bear_step(uint16_t idx, uint8_t state) BANKED;
 
 /* Retained effects from the previous sound set.  The new sound-port2 set
  * removed EXPLOSION and DESTRUCT, so these keep the old SfxDef rendering.
- * DOOR OPEN now uses the GBC CH3 wave conversion via sfx_play_note(). */
-static const SfxDef sfx_destroy   = { 17, 0, 16, 512, 2, 0, 0, 0, 0, 0, 0, 0, 1, 1, 7, 1, 3 };
+ * DOOR OPEN now uses the GBC CH3 wave conversion via sfx_play_note().
+ *
+ * DESTROY is tuned below the sound-port2 preset: pitch_q8 406 drops the
+ * attack roughly six semitones (the nearest DMG noise rate from 512),
+ * master 2 keeps the attack peak at 5/15, and env 5 with step_frames 3
+ * stretches the hit to a little over the Atari DESTRUCT note 10 (~560 ms).
+ * The 5-step attack uses attack_env 3, so its rising envelope reaches only
+ * the 5/15 peak instead of blipping to full volume before the decay. */
+static const SfxDef sfx_destroy   = { 17, 0, 16, 406, 3, 0, 0, 0, 0, 0, 0, 0, 1, 5, 5, 3, 2 };
 const SfxDef sfx_explosion = { 16, 0, 16, 16, 4, 0, 0, 0, 0, 0, 0, 0, 1, 4 };
 
 uint8_t map_type[MAP_CELLS];

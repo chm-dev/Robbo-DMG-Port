@@ -417,6 +417,7 @@ static void apply_legacy_noise(uint8_t vi, uint8_t index, uint8_t vol,
     SfxVoice *v = &voices[vi];
     const SfxDef *def = v->def;
     uint8_t envbits = (uint8_t)(def->env & 0x07);
+    uint8_t peak;
 
     (void)dist;
     /* A tone voice may borrow the noise channel for the noisy steps of a
@@ -438,9 +439,15 @@ static void apply_legacy_noise(uint8_t vi, uint8_t index, uint8_t vol,
             NR43_REG = nr43;
         }
     } else if (def->attack_steps != 0 && index == def->attack_steps) {
-        /* Peak reached: retrigger at full volume with a decaying
-         * envelope for the fade-out. */
-        NR42_REG = (uint8_t)(0xF0 | envbits);
+        /* Peak reached: retrigger with a decaying envelope for the fade-out.
+         * The fade-in starts from volume 0, so this is the first audible
+         * level; apply SfxDef.master here too, otherwise the peak would
+         * always be full scale and the per-sound volume control would have
+         * no effect. */
+        peak = (def->master >= 1 && def->master < 8)
+            ? (uint8_t)(((uint16_t)(def->master + 1u) * 15u) / 8u)
+            : 15u;
+        NR42_REG = (uint8_t)((peak << 4) | envbits);
         NR43_REG = nr43;
         NR44_REG = 0x80;
     } else if (!def->smooth || v->last_type != 2) {
