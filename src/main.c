@@ -19,6 +19,7 @@
 #include <stdint.h>
 
 #include "core/game.h"
+#include "gb/ending.h"
 #include "gb/render.h"
 #include "gb/sound.h"
 #include "gb/title.h"
@@ -33,7 +34,6 @@ static uint8_t paused = 0;
 static uint8_t move_delay = 0;
 static uint8_t tick_timer = 0;
 static uint8_t pause_draw = 0;
-static uint8_t game_complete = 0;
 static uint8_t pan_active = 0;
 static uint8_t pan_delay = 0;
 static uint16_t pan_saved_x = 0;
@@ -59,6 +59,29 @@ static void wait_vbl(void)
     while (!VBL_DONE) {}
 }
 
+/* Restore the gameplay tiles the title overwrote, then rebuild level 1. */
+static void load_first_level(void)
+{
+    render_restore_tiles();
+    level = 1;
+    game_load_level(level);
+    paused = 0;
+    move_delay = 0;
+    tick_timer = 0;
+    SHOW_WIN;
+    DISPLAY_ON;
+}
+
+/* The ending leaves the display off and the HUD hidden. */
+static void after_ending(void)
+{
+    DISPLAY_OFF;
+    HIDE_WIN;
+    sfx_stop();
+    title_show();
+    load_first_level();
+}
+
 void main(void)
 {
     uint8_t pad, prev = 0;
@@ -72,12 +95,8 @@ void main(void)
     title_show();
 
     /* The title screen overwrites the gameplay tile range with its logo and
-     * font; restore it before drawing level 1.  title_show() leaves the
-     * display off and the window hidden. */
-    render_restore_tiles();
-    game_load_level(1);
-    SHOW_WIN;
-    DISPLAY_ON;
+     * font; load_first_level() restores it before drawing level 1. */
+    load_first_level();
 
     sound_time = sys_time;
 
@@ -94,23 +113,6 @@ void main(void)
             sound_time = now;
             if (elapsed > 4) elapsed = 4;
             while (elapsed--) sfx_update();
-        }
-
-        if (game_complete) {
-            pad = joypad();
-            if ((pad & (J_START | J_SELECT)) && !(prev & (J_START | J_SELECT))) {
-                game_complete = 0;
-                level = 1;
-                pan_cancel(0);
-                paused = 0;
-                move_delay = 0;
-                tick_timer = 0;
-                DISPLAY_OFF;
-                game_load_level(level);
-                DISPLAY_ON;
-            }
-            prev = pad;
-            continue;
         }
 
         /* All VRAM writes happen here, at the start of VBlank.  The camera
@@ -135,6 +137,17 @@ void main(void)
 
         pad = joypad();
         debug_pad = pad;
+
+        /* Test hook: START+SELECT previews the end-game sequence.  Checked
+         * before the pause/warp handlers so neither single button fires. */
+        if ((pad & (J_START | J_SELECT)) == (J_START | J_SELECT) &&
+            (prev & (J_START | J_SELECT)) != (J_START | J_SELECT)) {
+            pan_cancel(0);
+            ending_show();
+            after_ending();
+            prev = joypad();
+            continue;
+        }
 
         if ((pad & J_START) && !(prev & J_START)) {
             paused = !paused;
@@ -258,20 +271,17 @@ void main(void)
             game_level_advance_requested = 0;
             pan_cancel(0);
             if (level_planet >= LEVEL_COUNT) {
-                game_complete = 1;
-                render_camera_reset();
-                DISPLAY_OFF;
-                render_victory();
-                DISPLAY_ON;
+                ending_show();
+                after_ending();
             } else {
                 level = level_planet + 1;
                 DISPLAY_OFF;
                 game_load_level(level);
                 DISPLAY_ON;
+                paused = 0;
+                move_delay = 0;
+                tick_timer = 0;
             }
-            paused = 0;
-            move_delay = 0;
-            tick_timer = 0;
             prev = pad;
             continue;
         }

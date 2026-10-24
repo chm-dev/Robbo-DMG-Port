@@ -71,6 +71,10 @@ typedef struct {
     uint8_t master;      /* 1..7 = attenuate this sound (3 = half), 0 = full */
 } SfxDef;
 
+/* The long noise explosion, kept for bomb blasts, Robbo's death wipe and the
+ * ending's text reveal (the sound-port2 set no longer carries POKEY note 0). */
+extern const SfxDef sfx_explosion;
+
 /* Bit per active voice (0 = pulse 1, 1 = pulse 2, 2 = noise, 3 = CH3 wave).
  * Exposed so the emulator tests can assert that effects really overlap. */
 extern uint8_t sfx_voice_mask;
@@ -104,9 +108,13 @@ void sfx_stop(void) BANKED;
  * silent otherwise, so this borrows the noise channel directly. */
 void sfx_click(void) BANKED;
 
-/* Short high beep at a typewriter line break.  Uses pulse 1 and a hardware
- * envelope that ends after about four frames. */
+/* Short high beep at a typewriter line feed.  Uses pulse 1; the title loop
+ * calls sfx_update() each frame, which stops it after four frames. */
 void sfx_beep(void) BANKED;
+
+/* Remaining frames of the line-feed beep (0 = silent).  Exposed for the title
+ * regression test; the title is the only caller of sfx_beep(). */
+extern uint8_t sfx_beep_frames;
 
 /* Advance the player; call once per frame (60 Hz). */
 void sfx_update(void) BANKED;

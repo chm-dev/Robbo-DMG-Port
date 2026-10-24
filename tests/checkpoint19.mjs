@@ -332,9 +332,12 @@ function maxStep(values) {
   function warpOnce() {
     const before = ctx.byte('level_planet');
     for (let attempt = 0; attempt < 8 && ctx.byte('level_planet') === before; attempt++) {
+      /* Hold SELECT for a few frames: the main loop can span more than one
+       * VBlank, so a single-frame tap can be missed (same rule as
+       * checkpoint18's warp helper). */
       ctx.core.JoyPad = 0xff;
       ctx.gb.pressKeys(['SELECT']);
-      ctx.gb.doFrame();
+      for (let i = 0; i < 4; i++) ctx.gb.doFrame();
       ctx.core.JoyPad = 0xff;
       ctx.gb.doFrame();
       for (let i = 0; i < 20 && ctx.byte('level_planet') === before; i++) ctx.gb.doFrame();

@@ -75,6 +75,7 @@ static uint8_t noise_owner;   /* voice driving the noise channel, 0xFF none */
 static uint8_t wave_id;       /* CH3 wave image currently loaded, 0xFF none */
 
 uint8_t sfx_voice_mask;
+uint8_t sfx_beep_frames;       /* title line-feed beep: frames left, 0 idle */
 
 /* Pulse channel register views, so one code path can drive either channel. */
 static volatile uint8_t *const pulse_duty[2] = { &NR11_REG, &NR21_REG };
@@ -1025,6 +1026,11 @@ void sfx_stop(void) BANKED
     }
     wave_id = 0xFF;
     sfx_voice_mask = 0;
+    if (sfx_beep_frames) {
+        sfx_beep_frames = 0;
+        NR12_REG = 0x00;
+        NR14_REG = 0x80;
+    }
 }
 
 void sfx_click(void) BANKED
@@ -1042,14 +1048,16 @@ void sfx_click(void) BANKED
 void sfx_beep(void) BANKED
 {
     /* Line-feed beep: pulse 1 at ~3520 Hz (one octave above A6), 50% duty.
-     * NR12 volume 4 with envelope period 1 decays to silence in roughly four
-     * frames, so the title loop does not need a timer.  The title has no
-     * other pulse voice. */
+     * Volume 4 with envelope period 1 decays in about four real frames.
+     * sfx_update() also tracks a four-frame logical window so sfx_stop() can
+     * silence a beep if the player starts the game mid-line.  The title is
+     * the only caller and has no other pulse voice. */
     NR10_REG = 0x00;
     NR11_REG = 0x80;
     NR12_REG = 0x41;
     NR13_REG = 0xDB;
     NR14_REG = 0x87;
+    sfx_beep_frames = 4;
 }
 
 void sfx_prewarm_def(const SfxDef *def) BANKED
@@ -1071,6 +1079,13 @@ void sfx_prewarm_def(const SfxDef *def) BANKED
 void sfx_update(void) BANKED
 {
     uint8_t i;
+
+    if (sfx_beep_frames) {
+        if (--sfx_beep_frames == 0) {
+            NR12_REG = 0x00;
+            NR14_REG = 0x80;
+        }
+    }
 
     for (i = 0; i < VOICE_COUNT; i++) {
         SfxVoice *v = &voices[i];

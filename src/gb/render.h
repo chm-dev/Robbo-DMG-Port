@@ -10,7 +10,6 @@ void render_set_wall_style(uint8_t cell);
 void render_level(void);
 void render_hud(void);
 void render_pause(void) BANKED;
-void render_victory(void) BANKED;
 void render_flash_set(uint8_t on);
 void render_camera(void) BANKED;
 void render_camera_snap(void) BANKED;

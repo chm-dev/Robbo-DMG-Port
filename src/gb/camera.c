@@ -2,9 +2,10 @@
  * Smooth camera target and position helpers.
  *
  * The camera position lives in Q4 (1/16 px).  Main publishes a cell-aligned
- * goal using the classic 2-cell dead zone; the VBlank handler in render.c
- * eases the Q4 position toward it (see cam_ease_step).  Keeping this code out
- * of bank 0 pays for that VBlank handler.
+ * goal that keeps Robbo on the view's center cell, clamped at the map edges;
+ * the VBlank handler in render.c eases the Q4 position toward it (see
+ * cam_ease_step).  Keeping this code out of bank 0 pays for that VBlank
+ * handler.
  *
  * Q4 layout: one cell = 16 px = 256 Q4, so cell = q >> 8 and px = q >> 4.
  */
@@ -16,14 +17,12 @@
 #include "render.h"
 #include "../core/game.h"
 
-static uint8_t cam_goal_axis(uint8_t robbo, uint8_t goal,
-                             uint8_t lo, uint8_t hi, uint8_t max)
+/* Cell origin that puts `robbo` on the view's center cell.  Near the map
+ * edges the goal clamps, so Robbo moves off-center instead of showing
+ * outside the level. */
+static uint8_t cam_center_goal(uint8_t robbo, uint8_t center, uint8_t max)
 {
-    if (robbo < (uint8_t)(goal + lo)) {
-        goal = (robbo >= lo) ? (uint8_t)(robbo - lo) : 0;
-    } else if (robbo > (uint8_t)(goal + hi)) {
-        goal = (uint8_t)(robbo - hi);
-    }
+    uint8_t goal = (robbo > center) ? (uint8_t)(robbo - center) : 0;
     return (goal > max) ? max : goal;
 }
 
@@ -49,8 +48,8 @@ static void cam_sync(void)
 void render_camera_snap(void) BANKED
 {
     cam_smooth = 0;
-    cam_goal_x = cam_goal_axis(robbo_x, 0, 2, 7, cam_max_x());
-    cam_goal_y = cam_goal_axis(robbo_y, 0, 2, 5, cam_max_y());
+    cam_goal_x = cam_center_goal(robbo_x, VIEW_CENTER_X, cam_max_x());
+    cam_goal_y = cam_center_goal(robbo_y, VIEW_CENTER_Y, cam_max_y());
     cam_qx = (uint16_t)((uint16_t)cam_goal_x << 8);
     cam_qy = (uint16_t)((uint16_t)cam_goal_y << 8);
     cam_sync();
@@ -117,9 +116,9 @@ void render_camera(void) BANKED
         return;
     }
 
-    /* Hysteresis is measured against the goal, not the transient Q4 position,
-     * so a direction change during a glide cannot make the view wobble. */
-    cam_goal_x = cam_goal_axis(robbo_x, cam_goal_x, 2, 7, cam_max_x());
-    cam_goal_y = cam_goal_axis(robbo_y, cam_goal_y, 2, 5, cam_max_y());
+    /* Center Robbo every frame.  The VBlank ease turns the per-cell goal
+     * changes into the smooth glide while the camera is not at a map edge. */
+    cam_goal_x = cam_center_goal(robbo_x, VIEW_CENTER_X, cam_max_x());
+    cam_goal_y = cam_center_goal(robbo_y, VIEW_CENTER_Y, cam_max_y());
     cam_smooth = 1;
 }

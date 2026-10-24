@@ -36,3 +36,21 @@ Pass `--gnu` to regenerate the previous `robboJS`/GNU fixture instead. The ROM
 ships the Atari set by default. `gb/tests/fixtures/levels.json` and
 `levels.summary.json` remain the legacy GNU fixture used by `gen_tiles.py`'s
 preview and the `--gnu` path; they no longer describe the shipped ROM levels.
+
+# Ending tile sheet
+
+`ending_tiles.dat` is the 640-byte (40 × 8×8, 2bpp) scene sheet used by the
+Atari/GBC ending, extracted verbatim from
+`robbo-gbc/src/gen/gfx_tiles.c` (`ending_tiles[640]`). The two message pages in
+`gb/tools/gen_ending.py` are copied from `robbo-gbc/src/ending.c`.
+
+DMG mapping applied by `gb/tools/gen_ending.py`:
+
+- The scene runs with `BGP = 0x1B` (index 0 → black, 1 → dark, 2 → light,
+  3 → white). Palette-0 tiles keep the source indices; palette-1 tiles (ground
+  and the ship's inverse-colour flash) map source index 3 (Atari PF3 orange)
+  to shade 2.
+- The sprite copy keeps the raw 2bpp indices; `OBP0 = 0x18` renders 1 → dark,
+  2 → light, 3 → white and index 0 is transparent.
+- Sprite tiles are loaded at VRAM 128..167 so they do not overwrite the
+  background scene tiles (DMG BG and sprites share one 256-tile bank).

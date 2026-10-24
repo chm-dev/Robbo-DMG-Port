@@ -13,7 +13,7 @@ uint16_t bear_step(uint16_t idx, uint8_t state) BANKED;
  * removed EXPLOSION and DESTRUCT, so these keep the old SfxDef rendering.
  * DOOR OPEN now uses the GBC CH3 wave conversion via sfx_play_note(). */
 static const SfxDef sfx_destroy   = { 17, 0, 16, 512, 2, 0, 0, 0, 0, 0, 0, 0, 1, 1, 7, 1, 3 };
-static const SfxDef sfx_explosion = { 16, 0, 16, 16, 4, 0, 0, 0, 0, 0, 0, 0, 1, 4 };
+const SfxDef sfx_explosion = { 16, 0, 16, 16, 4, 0, 0, 0, 0, 0, 0, 0, 1, 4 };
 
 uint8_t map_type[MAP_CELLS];
 uint8_t map_extra[MAP_CELLS];
@@ -402,8 +402,8 @@ static void game_teleport(uint16_t entry_idx)
         uint8_t max_x = MAP_W - VIEW_COLS;
         uint8_t max_y = (level_height > VIEW_ROWS) ? (level_height - VIEW_ROWS) : 0;
 
-        cam_target_x = (tx > 4) ? (uint8_t)(tx - 4) : 0;
-        cam_target_y = (ty > 3) ? (uint8_t)(ty - 3) : 0;
+        cam_target_x = (tx > VIEW_CENTER_X) ? (uint8_t)(tx - VIEW_CENTER_X) : 0;
+        cam_target_y = (ty > VIEW_CENTER_Y) ? (uint8_t)(ty - VIEW_CENTER_Y) : 0;
         if (cam_target_x > max_x) cam_target_x = max_x;
         if (cam_target_y > max_y) cam_target_y = max_y;
         cam_override = 1;

@@ -1,14 +1,14 @@
 /* Atari/GBC title screen, adapted to the DMG palette.
  *
  * Layout is the same 20x18 grid as robbo-gbc/src/menu.c:
- *   rows 0..2   authentic RoDDo logo (highlight pulse)
+ *   rows 0..2   authentic RoDDo logo (three-phase shade rotation)
  *   rows 4..6   credits
  *   rows 8..10  controls
  *   row 11/17   rules around a 5-line typewriter window
  *
- * The GBC palette bands and rainbow become separate 1bpp tile sets plus a
- * two-variant logo; see gb/tools/gen_title.py.  Kept in bank 11 to leave
- * bank 0 for the gameplay loop.
+ * The GBC palette bands become separate 1bpp I.FNT tile sets; the logo's
+ * temporal hue cycle becomes three pre-rendered bevel-shade variants.  See
+ * gb/tools/gen_title.py.  Kept in bank 11 to leave bank 0 for gameplay.
  */
 #pragma bank 11
 
@@ -31,7 +31,7 @@
 #define HOLD_LINE       28
 #define HOLD_BLANK      12
 #define HOLD_END       180
-#define LOGO_PHASE_FRAMES 8
+#define LOGO_PHASE_FRAMES 16
 #define LOGO_PHASES       3
 
 static void title_wait_vbl(void)

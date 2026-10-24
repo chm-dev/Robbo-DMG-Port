@@ -12,6 +12,11 @@
 #define MAP_CELLS (MAP_W * MAP_H)
 #define VIEW_COLS 10
 #define VIEW_ROWS 8
+/* View cell Robbo occupies when the camera can center him.  Both view
+ * dimensions are even, so this picks the top-left of the two middle cells
+ * (column 4 of 0..9, row 3 of 0..7). */
+#define VIEW_CENTER_X ((VIEW_COLS - 1) / 2)
+#define VIEW_CENTER_Y ((VIEW_ROWS - 1) / 2)
 #define MAX_TELEPORTS 64
 #define BONUS_WORDS ((MAP_CELLS + 7) / 8)
 
@@ -78,7 +83,7 @@ extern uint8_t keys;
 /* Smooth camera.  cam_qx/cam_qy are Q4 (1/16 px) absolute positions, kept by
  * the VBlank handler while cam_smooth is set.  cam_x/cam_y are the derived
  * cell origin used by the row ring, the teleport check and the tests.
- * cam_goal_x/y are the dead-zone target in cells; cam_scx/scy are the pixel
+ * cam_goal_x/y are the centered target in cells; cam_scx/scy are the pixel
  * scroll values applied to SCX/SCY. */
 extern volatile uint16_t cam_qx;
 extern volatile uint16_t cam_qy;
