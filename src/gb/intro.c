@@ -63,9 +63,11 @@ static void intro_blank(void)
     fill_bkg_rect(0, 0, 32, 32, metatile_tiles[MT_EMPTY << 2]);
 }
 
-/* Paint one source-map column across the ring.  Build the complete 2x32-tile
- * column and publish it in one set_bkg_tiles() call; 16 separate 2x2 writes
- * miss VBlanks and stretch the sweep to twice its intended length. */
+/* Paint one source-map column across the ring.  The 2x32-tile column is built
+ * in a small buffer and then written directly to the BG map; GBDK's
+ * set_bkg_tiles(2,32) spends about 8 ms per call in per-row overhead and makes
+ * the sweep miss every other VBlank.  The intro runs at the start of VBlank,
+ * so the 64 direct writes are safe. */
 static void intro_paint_column(uint8_t col)
 {
     uint8_t buf[64];
@@ -96,9 +98,7 @@ static void intro_paint_column(uint8_t col)
         buf[(map_row << 2) + 3] = t[3];
     }
 
-    /* Direct BG-map writes.  set_bkg_tiles(2,32) spends about 8 ms per call
-     * in per-row overhead, which makes the paint miss every other VBlank.  The
-     * intro runs at the start of VBlank, so 64 direct writes are safe. */
+    /* Direct BG-map writes (see intro_paint_column). */
     vram = (volatile uint8_t *)(0x9800u + (uint16_t)(col << 1));
     for (r = 0; r < 32; r++) {
         vram[0] = buf[r << 1];

@@ -94,9 +94,10 @@ const killed = waitFor(() => byte('robbo_busy') !== 0, 300);
 check('bomb kills Robbo', killed,
   `busy=${byte('robbo_busy')} pos=${byte('robbo_x')},${byte('robbo_y')}`);
 
-/* The source waits six ticks after the death explosion before wiping.  The
- * wipe itself can straddle a VBlank, so wait until every non-wall item has
- * become an explosion rather than sampling a partially processed map. */
+/* The Atari WYBC/WHIL sequence waits 48 frames (eight 6-frame logic ticks)
+ * after the death explosion before wiping.  The wipe itself can straddle a
+ * VBlank, so wait until every non-wall item has become an explosion rather
+ * than sampling a partially processed map. */
 function nonWallSurvivors() {
   let survivors = 0;
   for (let i = 0; i < MAP_CELLS; i++) {

@@ -98,6 +98,7 @@ function fireAt(ctx, targetX, targetType) {
   const frames = [];
   let hit = -1;
   let previousAtHit = -1;
+  let previousAfter = -1;
   let previousExploded = false;
 
   setCell(ctx, targetX, ry, targetType);
@@ -132,7 +133,9 @@ function fireAt(ctx, targetX, targetType) {
     if (hit >= 0 && f >= hit + 30) break;
   }
 
-  return { frames, hit, ry, previousAtHit, previousExploded };
+  previousAfter = ctx.mem[S.map_type + ry * 16 + targetX - 1];
+
+  return { frames, hit, ry, previousAtHit, previousAfter, previousExploded };
 }
 
 /* --- Ground shot: only the destroyed tile perishes, with DESTROY audio. --- */
@@ -148,8 +151,8 @@ function fireAt(ctx, targetX, targetType) {
     const target = ctx.mem[S.map_type + shot.ry * 16 + targetX];
     check('destroyed tile shows the perish animation', target === CT_EXPLOSION,
       `cell=${target}`);
-    check('projectile cell is empty on impact', shot.previousAtHit === CT_EMPTY,
-      `previous=${shot.previousAtHit}`);
+    check('projectile cell is empty after impact', shot.previousAfter === CT_EMPTY,
+      `atHit=${shot.previousAtHit} after=${shot.previousAfter}`);
     check('projectile never shows a perish animation', !shot.previousExploded);
 
     const tail = shot.frames.slice(shot.hit + 20, shot.hit + 28).flat();
@@ -168,8 +171,9 @@ function fireAt(ctx, targetX, targetType) {
   check('question is destroyed on impact', shot.hit >= 0, `hit=${shot.hit}`);
 
   if (shot.hit >= 0) {
-    check('question projectile cell is empty on impact',
-      shot.previousAtHit === CT_EMPTY, `previous=${shot.previousAtHit}`);
+    check('question projectile cell is empty after impact',
+      shot.previousAfter === CT_EMPTY,
+      `atHit=${shot.previousAtHit} after=${shot.previousAfter}`);
     check('question projectile never perishes', !shot.previousExploded);
 
     const tail = shot.frames.slice(shot.hit + 20, shot.hit + 28).flat();

@@ -7,7 +7,7 @@
  *
  * Run: node gb/tests/checkpoint6.mjs
  */
-import { loadRom, run, readMem } from '../tools/gb_harness.mjs';
+import { loadRom, readMem } from '../tools/gb_harness.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -39,11 +39,17 @@ function check(label, ok, detail = '') {
 
 function fresh() {
   const gb = loadRom(rom);
-  run(gb, 150);
   const core = gb[Object.keys(gb)[0]].gameboy;
   const mem = core.memory;
-  const byte = (name) => readMem(gb, S[name], 1)[0];
-  return { gb, core, mem, byte };
+  /* Wait out the ENTCV/WFAC spawn intro.  It keeps robbo_busy set, and the
+   * teleport trigger below treats robbo_busy as "teleport started". */
+  for (let i = 0; i < 700; i++) {
+    core.JoyPad = 0xff;
+    if (readMem(gb, S.intro_active, 1)[0] === 0 &&
+        readMem(gb, S.robbo_busy, 1)[0] === 0) break;
+    gb.doFrame();
+  }
+  return { gb, core, mem, byte: (name) => readMem(gb, S[name], 1)[0] };
 }
 
 function setCell(mem, x, y, type, extra = 0) {
