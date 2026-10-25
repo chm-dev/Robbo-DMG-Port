@@ -367,3 +367,20 @@ void sheet_load_metatile(uint8_t cell, uint8_t dest) BANKED
     }
 }
 
+/* Wall variant for palette 1: swap art shades 0 (white) and 2 (light gray). */
+void sheet_load_metatile_swap02(uint8_t cell, uint8_t dest) BANKED
+{
+    uint8_t buf[16];
+    const uint8_t *mt = &sheet_metatile_tiles[(uint16_t)cell * 4];
+    uint8_t i, j, lo;
+    for (i = 0; i < 4; i++) {
+        const uint8_t *src = &sheet_tiles_data[(uint16_t)mt[i] * 16];
+        for (j = 0; j < 16; j += 2) {
+            lo = src[j];
+            buf[j] = lo;
+            buf[j + 1] = (uint8_t)(src[j + 1] ^ (uint8_t)~lo);
+        }
+        set_bkg_data((uint8_t)(dest + i), 1, buf);
+    }
+}
+

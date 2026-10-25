@@ -523,7 +523,8 @@ def emit(metatiles: dict[str, list[list[int]]], pool: TilePool,
         bank_lines.append("    " + ", ".join(f"0x{b:02X}" for b in data) + f",  /* {i} {pool.names[i]} */")
     bank_lines.append("};")
     bank_lines.append("")
-    for key in ("bullet", "blaster", "baddie", "bear", "stone", "pushable"):
+    for key in ("bullet", "bullet_black", "blaster", "blaster_black",
+                "baddie", "bear", "stone", "pushable", "robbo", "robbo_swap02"):
         _, _, data = variants[key]
         bank_lines.append(f"/* Shade-shifted {key} tiles, loaded by variants.c. */")
         bank_lines.append(f"const uint8_t {key}_variant_tiles[{len(data)}] = {{")
@@ -571,6 +572,23 @@ def emit(metatiles: dict[str, list[list[int]]], pool: TilePool,
     sheet_lines.append("    }")
     sheet_lines.append("}")
     sheet_lines.append("")
+    sheet_lines.append("/* Wall variant for palette 1: swap art shades 0 (white) and 2 (light gray). */")
+    sheet_lines.append("void sheet_load_metatile_swap02(uint8_t cell, uint8_t dest) BANKED")
+    sheet_lines.append("{")
+    sheet_lines.append("    uint8_t buf[16];")
+    sheet_lines.append("    const uint8_t *mt = &sheet_metatile_tiles[(uint16_t)cell * 4];")
+    sheet_lines.append("    uint8_t i, j, lo;")
+    sheet_lines.append("    for (i = 0; i < 4; i++) {")
+    sheet_lines.append("        const uint8_t *src = &sheet_tiles_data[(uint16_t)mt[i] * 16];")
+    sheet_lines.append("        for (j = 0; j < 16; j += 2) {")
+    sheet_lines.append("            lo = src[j];")
+    sheet_lines.append("            buf[j] = lo;")
+    sheet_lines.append("            buf[j + 1] = (uint8_t)(src[j + 1] ^ (uint8_t)~lo);")
+    sheet_lines.append("        }")
+    sheet_lines.append("        set_bkg_data((uint8_t)(dest + i), 1, buf);")
+    sheet_lines.append("    }")
+    sheet_lines.append("}")
+    sheet_lines.append("")
     (GEN / "sheet_bank.c").write_text("\n".join(sheet_lines) + "\n", encoding="utf-8")
 
     hlines = [
@@ -593,7 +611,8 @@ def emit(metatiles: dict[str, list[list[int]]], pool: TilePool,
     ]
     for i, name in enumerate(mt_names):
         hlines.append(f"#define MT_{name} {i}")
-    for key in ("bullet", "blaster", "baddie", "bear", "stone", "pushable"):
+    for key in ("bullet", "bullet_black", "blaster", "blaster_black",
+                "baddie", "bear", "stone", "pushable", "robbo", "robbo_swap02"):
         base, count, _ = variants[key]
         hlines.append(f"#define {key.upper()}_VARIANT_BASE {base}")
         hlines.append(f"#define {key.upper()}_VARIANT_COUNT {count}")
@@ -611,13 +630,18 @@ def emit(metatiles: dict[str, list[list[int]]], pool: TilePool,
         "extern const uint8_t digit_tiles[10][2];",
         "extern const uint8_t font_tiles[128];",
         "extern const uint8_t bullet_variant_tiles[];",
+        "extern const uint8_t bullet_black_variant_tiles[];",
         "extern const uint8_t blaster_variant_tiles[];",
+        "extern const uint8_t blaster_black_variant_tiles[];",
         "extern const uint8_t baddie_variant_tiles[];",
         "extern const uint8_t bear_variant_tiles[];",
         "extern const uint8_t stone_variant_tiles[];",
         "extern const uint8_t pushable_variant_tiles[];",
+        "extern const uint8_t robbo_variant_tiles[];",
+        "extern const uint8_t robbo_swap02_variant_tiles[];",
         "void sheet_load_tiles(uint8_t first, uint8_t count, uint8_t dest) BANKED;",
         "void sheet_load_metatile(uint8_t cell, uint8_t dest) BANKED;",
+        "void sheet_load_metatile_swap02(uint8_t cell, uint8_t dest) BANKED;",
         "",
         "#endif",
     ]
@@ -721,25 +745,38 @@ def main() -> None:
 
     # Palette-dependent object tiles.  Background/transparent shade 1 is kept;
     # only the visible object shades change:
-    #   bullets 0 -> 2: white on the dark gray floor, darker on the white floor
+    #   bullets 0 -> 2: dark gray on the white floor, white on the dark gray floor
+    #   bullets 0 -> 3: black on the default light-gray floor
     #   baddies 3 -> 2, 2 -> 0: one rendered shade brighter on the black floor
     #   boxes on the dark gray floor: stone reflection 2 -> 0 (light gray),
     #                                 pushable reflection 0 -> 2 (white)
+    #   robbo on the default light-gray floor: eyes 3 -> 2, shadow 2 -> 3
+    #   robbo on palette 1 (level 2/6/...): white 0 <-> light gray 2
     variant_meta = {
         "bullet": ["BULLET_0", "BULLET_1", "BULLET_2", "BULLET_3"],
+        "bullet_black": ["BULLET_0", "BULLET_1", "BULLET_2", "BULLET_3"],
         "blaster": ["BLASTER"],
+        "blaster_black": ["BLASTER"],
         "baddie": ["MUSTACHE_0", "MUSTACHE_1", "BUTTERFLY_0", "BUTTERFLY_1"],
         "bear": ["BEAR_0", "BEAR_1", "BEAR_2", "BEAR_3"],
         "stone": ["STONE"],
         "pushable": ["PUSHABLE"],
+        "robbo": ["ROBBO_0", "ROBBO_1", "ROBBO_2", "ROBBO_3",
+                  "ROBBO_4", "ROBBO_5", "ROBBO_6", "ROBBO_7"],
+        "robbo_swap02": ["ROBBO_0", "ROBBO_1", "ROBBO_2", "ROBBO_3",
+                         "ROBBO_4", "ROBBO_5", "ROBBO_6", "ROBBO_7"],
     }
     variant_maps = {
         "bullet": {0: 2, 1: 1, 2: 2, 3: 3},
+        "bullet_black": {0: 3, 1: 1, 2: 3, 3: 3},
         "blaster": {0: 2, 1: 1, 2: 2, 3: 3},
+        "blaster_black": {0: 3, 1: 1, 2: 3, 3: 3},
         "baddie": {0: 0, 1: 1, 2: 0, 3: 2},
         "bear": {0: 0, 1: 1, 2: 0, 3: 2},
         "stone": {0: 0, 1: 1, 2: 0, 3: 3},
         "pushable": {0: 2, 1: 1, 2: 2, 3: 3},
+        "robbo": {0: 0, 1: 1, 2: 3, 3: 2},
+        "robbo_swap02": {0: 2, 1: 1, 2: 0, 3: 3},
     }
     variants: dict[str, tuple[int, int, bytes]] = {}
     for key, names in variant_meta.items():
@@ -752,8 +789,10 @@ def main() -> None:
             data.extend(shifted_tile_bytes(pool.data[idx], variant_maps[key]))
         variants[key] = (indices[0], len(indices), bytes(data))
     expected_counts = {
-        "bullet": 8, "blaster": 2, "baddie": 16, "bear": 16,
-        "stone": 2, "pushable": 2,
+        "bullet": 8, "bullet_black": 8,
+        "blaster": 2, "blaster_black": 2,
+        "baddie": 16, "bear": 16, "stone": 2, "pushable": 2,
+        "robbo": 30, "robbo_swap02": 30,
     }
     for key, count in expected_counts.items():
         if variants[key][1] != count:

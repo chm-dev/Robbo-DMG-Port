@@ -73,8 +73,12 @@
 #define MT_TELEPORT_CGB 56
 #define BULLET_VARIANT_BASE 78
 #define BULLET_VARIANT_COUNT 8
+#define BULLET_BLACK_VARIANT_BASE 78
+#define BULLET_BLACK_VARIANT_COUNT 8
 #define BLASTER_VARIANT_BASE 62
 #define BLASTER_VARIANT_COUNT 2
+#define BLASTER_BLACK_VARIANT_BASE 62
+#define BLASTER_BLACK_VARIANT_COUNT 2
 #define BADDIE_VARIANT_BASE 86
 #define BADDIE_VARIANT_COUNT 16
 #define BEAR_VARIANT_BASE 134
@@ -83,6 +87,10 @@
 #define STONE_VARIANT_COUNT 2
 #define PUSHABLE_VARIANT_BASE 8
 #define PUSHABLE_VARIANT_COUNT 2
+#define ROBBO_VARIANT_BASE 150
+#define ROBBO_VARIANT_COUNT 30
+#define ROBBO_SWAP02_VARIANT_BASE 150
+#define ROBBO_SWAP02_VARIANT_COUNT 30
 
 extern const uint8_t tileset_data[];
 extern const uint8_t tileset_count;
@@ -96,12 +104,17 @@ extern const uint8_t sheet_tiles_data[];
 extern const uint8_t digit_tiles[10][2];
 extern const uint8_t font_tiles[128];
 extern const uint8_t bullet_variant_tiles[];
+extern const uint8_t bullet_black_variant_tiles[];
 extern const uint8_t blaster_variant_tiles[];
+extern const uint8_t blaster_black_variant_tiles[];
 extern const uint8_t baddie_variant_tiles[];
 extern const uint8_t bear_variant_tiles[];
 extern const uint8_t stone_variant_tiles[];
 extern const uint8_t pushable_variant_tiles[];
+extern const uint8_t robbo_variant_tiles[];
+extern const uint8_t robbo_swap02_variant_tiles[];
 void sheet_load_tiles(uint8_t first, uint8_t count, uint8_t dest) BANKED;
 void sheet_load_metatile(uint8_t cell, uint8_t dest) BANKED;
+void sheet_load_metatile_swap02(uint8_t cell, uint8_t dest) BANKED;
 
 #endif

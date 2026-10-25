@@ -21,6 +21,7 @@
 #include "color.h"
 #include "render.h"
 #include "screens.h"
+#include "sound.h"
 
 #define MENU_W 15
 #define MENU_H 9
@@ -182,6 +183,7 @@ void pause_menu_open(uint8_t level, uint8_t max_level) BANKED
     menu_repeat = 0;
     menu_dirty = 0;
     pause_menu_state = PAUSE_STATE_OPENING;
+    sfx_play_note(SFX_EXTRA_LIFE);
 }
 
 void pause_menu_begin_close(void) BANKED

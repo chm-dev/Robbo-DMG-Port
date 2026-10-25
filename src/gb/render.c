@@ -213,11 +213,20 @@ void render_restore_tiles(void)
     variants_reset();
 }
 
+/* Set by render_set_level_palette(); the wall loader needs it. */
+static uint8_t level_palette;
+
 void render_set_wall_style(uint8_t cell)
 {
     /* Load one 16x16 wall cell from bank 8 into the reserved four-tile slot.
-     * game_load_level() calls this while the display is off. */
-    sheet_load_metatile(cell, WALL_TILE_BASE);
+     * game_load_level() calls this while the display is off.
+     * Palette 1 (level 2, 6, ...) swaps the wall's white/light-gray shades;
+     * the other DMG palettes and CGB keep the sheet's original wall art. */
+    if (!color_on && level_palette == 1) {
+        sheet_load_metatile_swap02(cell, WALL_TILE_BASE);
+    } else {
+        sheet_load_metatile(cell, WALL_TILE_BASE);
+    }
 }
 
 /* Keep the dirty bitmap clear while the intro owns the screen.  The death
@@ -236,7 +245,6 @@ void render_intro_clear_dirty(void)
  * white or light gray (never dark gray/black), so Robbo always stays bright:
  *   normal, rotated (white->light gray), black background, white background. */
 static const uint8_t level_bgp[4] = { 0xE4, 0xC9, 0x9C, 0xE1 };
-static uint8_t level_palette;
 
 void render_set_level_palette(uint8_t level)
 {
@@ -249,8 +257,8 @@ uint8_t render_level_background(void)
 {
     /* CGB uses the authentic per-level palette, where object colours already
      * contrast with the floor: the DMG shade-shift tile variants are not
-     * needed.  Value 1 matches no variant condition in game.c. */
-    if (color_on) return 1;
+     * needed.  Value 4 matches no variant condition in game.c. */
+    if (color_on) return 4;
     return (uint8_t)((level_bgp[level_palette] >> 2) & 3);
 }
 

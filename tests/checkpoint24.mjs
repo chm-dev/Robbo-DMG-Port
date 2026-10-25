@@ -217,9 +217,10 @@ if (head) {
   check('blaster leaves an explosion trail', trail);
 }
 
-/* Palette variants: L49 has the normal floor (no projectile swap), L50 is
- * the dark-floor palette (VAR_BULLETS_ALT).  Both the bullet metatiles and
- * the separate blaster head range must actually change in VRAM. */
+/* Palette variants: L49 is the default light-gray floor and loads the black
+ * projectile variant.  L50's dark-gray floor uses the shifted variant, and
+ * L51's black floor restores the base tiles.  Both the bullet metatiles and
+ * the separate blaster head range are checked. */
 const tilesH = fs.readFileSync(path.join(root, 'gb/src/gen/tiles.h'), 'utf8');
 const define = (name) => Number(tilesH.match(new RegExp(`#define ${name} (\\d+)`))[1]);
 const bulletBase = define('BULLET_VARIANT_BASE');
@@ -231,19 +232,24 @@ const stoneCount = define('STONE_VARIANT_COUNT');
 const pushableBase = define('PUSHABLE_VARIANT_BASE');
 const pushableCount = define('PUSHABLE_VARIANT_COUNT');
 const readTiles = (base, count) => readMem(gb, 0x8000 + base * 16, count * 16);
+const bulletAlt = symbolBytes('bullet_variant_tiles', 0, bulletCount * 16);
+const blasterAlt = symbolBytes('blaster_variant_tiles', 0, blasterCount * 16);
+const bulletBlack = symbolBytes('bullet_black_variant_tiles', 0, bulletCount * 16);
+const blasterBlack = symbolBytes('blaster_black_variant_tiles', 0, blasterCount * 16);
 const beforeBullet = readTiles(bulletBase, bulletCount);
 const beforeBlaster = readTiles(blasterBase, blasterCount);
 const beforeStone = readTiles(stoneBase, stoneCount);
 const beforePushable = readTiles(pushableBase, pushableCount);
+check('L49 projectiles are black', same(beforeBullet, bulletBlack));
+check('L49 blaster is black', same(beforeBlaster, blasterBlack));
+
 warpTo(50);
 const afterBullet = readTiles(bulletBase, bulletCount);
 const afterBlaster = readTiles(blasterBase, blasterCount);
 const afterStone = readTiles(stoneBase, stoneCount);
 const afterPushable = readTiles(pushableBase, pushableCount);
-const changed = (a, b) => a.some((v, i) => v !== b[i]);
-check('bullet palette variant still swaps', changed(beforeBullet, afterBullet));
-check('blaster palette variant swaps with bullets',
-  changed(beforeBlaster, afterBlaster));
+check('L50 projectiles use the shifted variant', same(afterBullet, bulletAlt));
+check('L50 blaster uses the shifted variant', same(afterBlaster, blasterAlt));
 
 check('L49 stone box uses base tiles',
   same(beforeStone, symbolBytes('tileset_data', stoneBase * 16, stoneCount * 16)));
@@ -253,6 +259,14 @@ check('L50 stone box reflection is light gray',
   same(afterStone, symbolBytes('stone_variant_tiles', 0, stoneCount * 16)));
 check('L50 sliding box reflection is white',
   same(afterPushable, symbolBytes('pushable_variant_tiles', 0, pushableCount * 16)));
+
+warpTo(51);
+const baseBullet = readTiles(bulletBase, bulletCount);
+const baseBlaster = readTiles(blasterBase, blasterCount);
+check('L51 restores base projectile tiles',
+  same(baseBullet, symbolBytes('tileset_data', bulletBase * 16, bulletCount * 16)));
+check('L51 restores base blaster tiles',
+  same(baseBlaster, symbolBytes('tileset_data', blasterBase * 16, blasterCount * 16)));
 
 console.log(failures ? `\n${failures} checkpoint(s) failed` : '\nCheckpoint 24 passed');
 process.exit(failures ? 1 : 0);
