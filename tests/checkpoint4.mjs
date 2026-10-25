@@ -126,10 +126,10 @@ if (exploded) {
   savePng(gb.getScreen(), path.join(out, 'cp4-bomb.png'));
 }
 
-// The adjacent bomb blast kills Robbo, so wait for the automatic restart
-// before continuing with the question test.
-waitFor(() => byte('robbo_busy') === 0 &&
-  byte('robbo_x') === 2 && byte('robbo_y') === 2, 800);
+// The adjacent bomb blast kills Robbo, so wait for the respawn intro to
+// finish.  (There is a transient busy==0 frame before the intro starts.)
+waitFor(() => byte('intro_active') !== 0, 1200);
+waitFor(() => byte('intro_active') === 0 && byte('robbo_busy') === 0, 1200);
 run(gb, 40);
 clearActors();
 

@@ -70,8 +70,10 @@ uint8_t render_metatile_for_cell(uint8_t type, uint8_t extra)
                    (robbo_step_timer ? 1 : 0);
         case CT_BULLET: {
             uint8_t dir = extra & 3;
+            if (((extra >> 2) & 3) == 2) return MT_BLASTER;
             return MT_BULLET_0 + (uint8_t)((dir & 1) * 2) + (anim_slow & 1);
         }
+        case CT_BARRIER:    return MT_BARRIER_0 + (anim_slow & 1);
         case CT_EXPLOSION: {
             uint8_t t = extra & 7;
             uint8_t frame;

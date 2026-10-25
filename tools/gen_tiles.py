@@ -123,6 +123,80 @@ CUSTOM_16 = {
     "WALL": WALL_16,
 }
 
+# Objects that are not in the robboJS sprite sheet.  Patterns are the Atari
+# playfield glyphs used by the GBC port (F.FNT), converted to DMG shades:
+#   barrier = inverse glyph $1E,  blaster head = normal glyph $02.
+# Shade mapping for the GBC glyph's colour indices:
+#   barrier: 0 floor, 1 black, 2 dark, 3 light
+#   blaster: 0 floor, 3 bright
+# The barrier is intentionally dense: at 16x16 it reads as a solid field with
+# a moving gap rather than as a decorative line.
+_CUSTOM_PATTERNS = {
+    "BARRIER_0": (
+        "1100001111000011",
+        "1111111111111111",
+        "3311113333111133",
+        "1133331111333311",
+        "1111111111111111",
+        "2211112222111122",
+        "1122221111222211",
+        "1111111111111111",
+        "1100001111000011",
+        "1111111111111111",
+        "3311113333111133",
+        "1133331111333311",
+        "1111111111111111",
+        "2211112222111122",
+        "1122221111222211",
+        "1111111111111111",
+    ),
+    "BARRIER_1": (
+        "1100001111000011",
+        "1111111111111111",
+        "2211112222111122",
+        "1122221111222211",
+        "1111111111111111",
+        "3311113333111133",
+        "1133331111333311",
+        "1111111111111111",
+        "1111111111111111",
+        "2211112222111122",
+        "1122221111222211",
+        "1111111111111111",
+        "3311113333111133",
+        "1133331111333311",
+        "1111111111111111",
+        "0011110000111100",
+    ),
+    "BLASTER": (
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000330000",
+        "0000000000000000",
+        "0000330000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "0000000000330000",
+        "0000000000000000",
+        "0000330000000000",
+        "0000000000000000",
+        "0000000000000000",
+    ),
+}
+_CUSTOM_SHADES = {
+    "BARRIER_0": {0: 1, 1: 3, 2: 2, 3: 0},
+    "BARRIER_1": {0: 1, 1: 3, 2: 2, 3: 0},
+    "BLASTER": {0: 1, 3: 0},
+}
+CUSTOM_METATILES = {
+    name: [[_CUSTOM_SHADES[name][int(c)] for c in row] for row in rows]
+    for name, rows in _CUSTOM_PATTERNS.items()
+}
+
 # Full-cell textures keep their framing; objects are cropped to their pixels so
 # they read at 16x16.
 NO_CROP = {"GROUND", "LAVA_0", "LAVA_1", "TELEPORT_0"}
@@ -343,7 +417,7 @@ GLYPH_MT = {
     "D": "DOOR", "!": "SPACESHIP_0", "?": "QUESTION", "b": "BOMB", "%": "KEY",
     "T": "SCREW", "x": "SCREW", "}": "TURRET_R", "'": "AMMO", "&": "TELEPORT_0",
     "^": "MUSTACHE_0", "V": "BUTTERFLY_0", "@": "BEAR_0", "*": "BEAR_2",
-    "M": "MAGNET_0", "=": "LAVA_0", "R": "ROBBO_2",
+    "M": "MAGNET_0", "=": "BARRIER_0", "R": "ROBBO_2",
 }
 for glyph in tileset.WALL_GLYPHS:
     GLYPH_MT[glyph] = "WALL_CAVE" if glyph == "-" else "WALL"
@@ -449,7 +523,7 @@ def emit(metatiles: dict[str, list[list[int]]], pool: TilePool,
         bank_lines.append("    " + ", ".join(f"0x{b:02X}" for b in data) + f",  /* {i} {pool.names[i]} */")
     bank_lines.append("};")
     bank_lines.append("")
-    for key in ("bullet", "baddie", "bear"):
+    for key in ("bullet", "blaster", "baddie", "bear"):
         _, _, data = variants[key]
         bank_lines.append(f"/* Shade-shifted {key} tiles, loaded by variants.c. */")
         bank_lines.append(f"const uint8_t {key}_variant_tiles[{len(data)}] = {{")
@@ -519,7 +593,7 @@ def emit(metatiles: dict[str, list[list[int]]], pool: TilePool,
     ]
     for i, name in enumerate(mt_names):
         hlines.append(f"#define MT_{name} {i}")
-    for key in ("bullet", "baddie", "bear"):
+    for key in ("bullet", "blaster", "baddie", "bear"):
         base, count, _ = variants[key]
         hlines.append(f"#define {key.upper()}_VARIANT_BASE {base}")
         hlines.append(f"#define {key.upper()}_VARIANT_COUNT {count}")
@@ -537,6 +611,7 @@ def emit(metatiles: dict[str, list[list[int]]], pool: TilePool,
         "extern const uint8_t digit_tiles[10][2];",
         "extern const uint8_t font_tiles[128];",
         "extern const uint8_t bullet_variant_tiles[];",
+        "extern const uint8_t blaster_variant_tiles[];",
         "extern const uint8_t baddie_variant_tiles[];",
         "extern const uint8_t bear_variant_tiles[];",
         "void sheet_load_tiles(uint8_t first, uint8_t count, uint8_t dest) BANKED;",
@@ -574,6 +649,17 @@ def main() -> None:
     metatiles: dict[str, list[list[int]]] = {}
     for name in SPRITES:
         metatiles[name] = sprite16(image, name)
+    # BLASTER shares the projectile tile range with the four BULLET metatiles,
+    # so it is inserted directly after them: variant swaps must cover it too.
+    ordered: dict[str, list[list[int]]] = {}
+    for name, cell in metatiles.items():
+        ordered[name] = cell
+        if name == "BULLET_3":
+            ordered["BLASTER"] = CUSTOM_METATILES["BLASTER"]
+    metatiles = ordered
+    for name, cell in CUSTOM_METATILES.items():
+        if name not in metatiles:
+            metatiles[name] = cell
 
     # Keep the complete sheet in ROM for future animation/wall work.  The
     # current build only loads the active metatiles above into VRAM.
@@ -623,11 +709,13 @@ def main() -> None:
     #   baddies 3 -> 2, 2 -> 0: one rendered shade brighter on the black floor
     variant_meta = {
         "bullet": ["BULLET_0", "BULLET_1", "BULLET_2", "BULLET_3"],
+        "blaster": ["BLASTER"],
         "baddie": ["MUSTACHE_0", "MUSTACHE_1", "BUTTERFLY_0", "BUTTERFLY_1"],
         "bear": ["BEAR_0", "BEAR_1", "BEAR_2", "BEAR_3"],
     }
     variant_maps = {
         "bullet": {0: 2, 1: 1, 2: 2, 3: 3},
+        "blaster": {0: 2, 1: 1, 2: 2, 3: 3},
         "baddie": {0: 0, 1: 1, 2: 0, 3: 2},
         "bear": {0: 0, 1: 1, 2: 0, 3: 2},
     }
@@ -641,7 +729,7 @@ def main() -> None:
         for idx in indices:
             data.extend(shifted_tile_bytes(pool.data[idx], variant_maps[key]))
         variants[key] = (indices[0], len(indices), bytes(data))
-    expected_counts = {"bullet": 8, "baddie": 16, "bear": 16}
+    expected_counts = {"bullet": 8, "blaster": 2, "baddie": 16, "bear": 16}
     for key, count in expected_counts.items():
         if variants[key][1] != count:
             raise RuntimeError(f"unexpected {key} variant count: {variants[key][1]}")

@@ -31,6 +31,8 @@ const S = symbols();
 const CT_EMPTY = 0;
 const CT_GROUND = 9;
 const CT_QUESTION = 14;
+const CT_SCREW = 17;
+const CT_ROBBO = 26;
 const CT_BULLET = 27;
 const CT_EXPLOSION = 28;
 const CT_TURRET = 18;
@@ -93,7 +95,7 @@ function quietLevel() {
 
 /* Fire one shot to the right.  Collect one audio buffer per frame and record
  * the frame where the target cell first becomes an explosion. */
-function fireAt(ctx, targetX, targetType) {
+function fireAt(ctx, targetX, targetType, extra = 0) {
   const ry = 2;
   const frames = [];
   let hit = -1;
@@ -101,7 +103,7 @@ function fireAt(ctx, targetX, targetType) {
   let previousAfter = -1;
   let previousExploded = false;
 
-  setCell(ctx, targetX, ry, targetType);
+  setCell(ctx, targetX, ry, targetType, extra);
   ctx.mem[S.ammo] = 9;
 
   /* Hold the shot until the loop observes the ammo decrement.  The main loop
@@ -180,6 +182,65 @@ function fireAt(ctx, targetX, targetType) {
     check('question plays the destroy sound', peak(tail) > 0.01,
       `peak=${peak(tail).toFixed(3)}`);
   }
+}
+
+/* --- Question bolt: the payload is a bonus, so the HUD counter is not
+ * increased when it appears and collecting it still takes one off.  The
+ * counter must also clamp at zero like controller.set('screw', ...). --- */
+{
+  const ctx = quietLevel();
+  const ry = 2;
+  const rx = ctx.byte('robbo_x');
+  const targetX = rx + 6;
+  ctx.mem[S.screws_left] = 5;
+
+  fireAt(ctx, targetX, CT_QUESTION, 4);  /* randomCfg[4] = Screw */
+
+  let bolt = -1;
+  for (let f = 0; f < 180; f++) {
+    ctx.core.JoyPad = 0xff;
+    ctx.gb.doFrame();
+    if (ctx.mem[S.map_type + ry * 16 + targetX] === CT_SCREW) {
+      bolt = f;
+      break;
+    }
+  }
+  check('question reveals a bolt', bolt >= 0, `frame=${bolt}`);
+  check('question bolt does not change the level total',
+    ctx.byte('screws_left') === 5, `screws=${ctx.byte('screws_left')}`);
+
+  let reachedBolt = false;
+  for (let f = 0; f < 240; f++) {
+    ctx.core.JoyPad = 0xff;
+    if (!reachedBolt) ctx.gb.pressKeys(['RIGHT']);
+    ctx.gb.doFrame();
+    if (ctx.byte('robbo_x') === targetX) {
+      reachedBolt = true;
+      break;
+    }
+  }
+  check('question bolt is collected',
+    reachedBolt && ctx.mem[S.map_type + ry * 16 + targetX] === CT_ROBBO,
+    `x=${ctx.byte('robbo_x')} cell=${ctx.mem[S.map_type + ry * 16 + targetX]}`);
+  check('question bolt subtracts one from bolts to collect',
+    ctx.byte('screws_left') === 4, `screws=${ctx.byte('screws_left')}`);
+
+  /* Already-open capsule: an extra bolt must not wrap the uint8 counter. */
+  ctx.mem[S.screws_left] = 0;
+  setCell(ctx, targetX + 1, ry, CT_SCREW);
+  let reachedZeroBolt = false;
+  for (let f = 0; f < 160; f++) {
+    ctx.core.JoyPad = 0xff;
+    if (!reachedZeroBolt) ctx.gb.pressKeys(['RIGHT']);
+    ctx.gb.doFrame();
+    if (ctx.byte('robbo_x') === targetX + 1) {
+      reachedZeroBolt = true;
+      break;
+    }
+  }
+  check('bolt pickup at zero keeps the counter at zero',
+    reachedZeroBolt && ctx.byte('screws_left') === 0,
+    `screws=${ctx.byte('screws_left')}`);
 }
 
 console.log(failures ? `\n${failures} checkpoint(s) failed` : '\nCheckpoint 20 passed');

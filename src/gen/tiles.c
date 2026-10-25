@@ -2,12 +2,12 @@
 #include <stdint.h>
 #include "tiles.h"
 
-const uint8_t tileset_count = 241;
+const uint8_t tileset_count = 244;
 const uint8_t hud_bg_tile = 0;
 
-const uint8_t metatile_tiles[212] = {
+const uint8_t metatile_tiles[224] = {
     1, 1, 1, 1,  /* 0 EMPTY */
-    237, 238, 239, 240,  /* 1 WALL */
+    240, 241, 242, 243,  /* 1 WALL */
     2, 3, 4, 5,  /* 2 GROUND */
     6, 6, 7, 7,  /* 3 STONE */
     8, 8, 9, 9,  /* 4 PUSHABLE */
@@ -33,35 +33,38 @@ const uint8_t metatile_tiles[212] = {
     80, 80, 81, 81,  /* 24 BULLET_1 */
     82, 83, 82, 83,  /* 25 BULLET_2 */
     84, 85, 84, 85,  /* 26 BULLET_3 */
-    86, 87, 88, 89,  /* 27 MUSTACHE_0 */
-    90, 91, 92, 93,  /* 28 MUSTACHE_1 */
-    94, 95, 96, 97,  /* 29 BUTTERFLY_0 */
-    98, 99, 100, 101,  /* 30 BUTTERFLY_1 */
-    102, 102, 103, 103,  /* 31 LAVA_0 */
-    104, 104, 105, 105,  /* 32 LAVA_1 */
-    106, 107, 108, 109,  /* 33 MAGNET_0 */
-    110, 111, 112, 113,  /* 34 MAGNET_1 */
-    114, 115, 116, 117,  /* 35 HUD_SCREW */
-    118, 119, 120, 121,  /* 36 HUD_AMMO */
-    122, 123, 124, 125,  /* 37 HUD_KEY */
-    126, 127, 128, 129,  /* 38 HUD_LIVES */
-    130, 131, 132, 133,  /* 39 HUD_PLANET */
-    134, 135, 136, 137,  /* 40 BEAR_0 */
-    138, 139, 140, 141,  /* 41 BEAR_1 */
-    142, 143, 144, 145,  /* 42 BEAR_2 */
-    146, 147, 148, 149,  /* 43 BEAR_3 */
-    150, 151, 152, 153,  /* 44 ROBBO_0 */
-    154, 155, 156, 157,  /* 45 ROBBO_1 */
-    158, 159, 160, 161,  /* 46 ROBBO_2 */
-    162, 151, 163, 164,  /* 47 ROBBO_3 */
-    165, 166, 167, 168,  /* 48 ROBBO_4 */
-    169, 170, 171, 172,  /* 49 ROBBO_5 */
-    173, 174, 160, 175,  /* 50 ROBBO_6 */
-    176, 177, 178, 179,  /* 51 ROBBO_7 */
-    0, 0, 0, 0,  /* 52 WALL_CAVE */
+    62, 63, 62, 63,  /* 27 BLASTER */
+    86, 87, 88, 89,  /* 28 MUSTACHE_0 */
+    90, 91, 92, 93,  /* 29 MUSTACHE_1 */
+    94, 95, 96, 97,  /* 30 BUTTERFLY_0 */
+    98, 99, 100, 101,  /* 31 BUTTERFLY_1 */
+    102, 102, 103, 103,  /* 32 LAVA_0 */
+    104, 104, 105, 105,  /* 33 LAVA_1 */
+    106, 107, 108, 109,  /* 34 MAGNET_0 */
+    110, 111, 112, 113,  /* 35 MAGNET_1 */
+    114, 115, 116, 117,  /* 36 HUD_SCREW */
+    118, 119, 120, 121,  /* 37 HUD_AMMO */
+    122, 123, 124, 125,  /* 38 HUD_KEY */
+    126, 127, 128, 129,  /* 39 HUD_LIVES */
+    130, 131, 132, 133,  /* 40 HUD_PLANET */
+    134, 135, 136, 137,  /* 41 BEAR_0 */
+    138, 139, 140, 141,  /* 42 BEAR_1 */
+    142, 143, 144, 145,  /* 43 BEAR_2 */
+    146, 147, 148, 149,  /* 44 BEAR_3 */
+    150, 151, 152, 153,  /* 45 ROBBO_0 */
+    154, 155, 156, 157,  /* 46 ROBBO_1 */
+    158, 159, 160, 161,  /* 47 ROBBO_2 */
+    162, 151, 163, 164,  /* 48 ROBBO_3 */
+    165, 166, 167, 168,  /* 49 ROBBO_4 */
+    169, 170, 171, 172,  /* 50 ROBBO_5 */
+    173, 174, 160, 175,  /* 51 ROBBO_6 */
+    176, 177, 178, 179,  /* 52 ROBBO_7 */
+    0, 0, 0, 0,  /* 53 WALL_CAVE */
+    180, 180, 180, 180,  /* 54 BARRIER_0 */
+    181, 181, 182, 182,  /* 55 BARRIER_1 */
 };
 
-const uint8_t metatile_count = 53;
+const uint8_t metatile_count = 56;
 
 const uint8_t wall_rotation_cells[14] = {
     3, 2, 27, 84, 64, 84, 75, 10, 86, 87, 74, 63, 85, 20,
@@ -70,25 +73,25 @@ const uint8_t wall_rotation_cells[14] = {
 const uint8_t sheet_tile_count = 253;
 
 const uint8_t digit_tiles[10][2] = {
-    { 180, 181 },  /* 0 */
-    { 182, 182 },  /* 1 */
-    { 183, 184 },  /* 2 */
-    { 183, 185 },  /* 3 */
-    { 186, 187 },  /* 4 */
-    { 188, 189 },  /* 5 */
-    { 190, 191 },  /* 6 */
-    { 192, 182 },  /* 7 */
-    { 193, 191 },  /* 8 */
-    { 180, 194 },  /* 9 */
+    { 183, 184 },  /* 0 */
+    { 185, 185 },  /* 1 */
+    { 186, 187 },  /* 2 */
+    { 186, 188 },  /* 3 */
+    { 189, 190 },  /* 4 */
+    { 191, 192 },  /* 5 */
+    { 193, 194 },  /* 6 */
+    { 195, 185 },  /* 7 */
+    { 196, 194 },  /* 8 */
+    { 183, 197 },  /* 9 */
 };
 
 const uint8_t font_tiles[128] = {
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-    0xE7, 0xE8, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xEA, 0xEB, 0xFF,
-    0xDD, 0xDE, 0xDF, 0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xEC, 0xFF, 0xFF, 0xFF, 0xFF, 0xE9,
-    0xFF, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF, 0xD0, 0xD1,
-    0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD7, 0xD8, 0xD9, 0xDA, 0xDB, 0xDC, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+    0xEA, 0xEB, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xED, 0xEE, 0xFF,
+    0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEF, 0xFF, 0xFF, 0xFF, 0xFF, 0xEC,
+    0xFF, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF, 0xD0, 0xD1, 0xD2, 0xD3, 0xD4,
+    0xD5, 0xD6, 0xD7, 0xD8, 0xD9, 0xDA, 0xDB, 0xDC, 0xDD, 0xDE, 0xDF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 };

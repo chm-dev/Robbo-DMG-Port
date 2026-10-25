@@ -10,6 +10,8 @@
 #include "../gb/variants.h"
 
 uint16_t bear_step(uint16_t idx, uint8_t state) BANKED;
+uint16_t blaster_step(uint16_t bidx, uint8_t extra) BANKED;
+void barrier_tick(uint16_t row_lo, uint16_t row_hi, uint8_t animate) BANKED;
 
 /* Retained effects from the previous sound set.  The new sound-port2 set
  * removed EXPLOSION and DESTRUCT, so these keep the old SfxDef rendering.
@@ -93,6 +95,11 @@ static uint8_t magnet_count;
 static uint8_t spaceship_count;
 static uint8_t teleport_count;
 static uint8_t bullet_count;
+/* Rows containing at least one live barrier cell, one bit per row (0..15 and
+ * 16..30).  Filled by collect_actors() and consumed by the banked barrier
+ * sweep, so the hot map scan pays only one bit-set per barrier cell. */
+static uint16_t barrier_row_lo;
+static uint16_t barrier_row_hi;
 #define BULLET_LASER_WAIT   1
 #define BULLET_LASER_RETURN 2
 static uint8_t fire_delay = 0;
@@ -119,8 +126,8 @@ uint8_t game_level_advance_requested = 0;
 
 #define QUESTION_UNROLLED 0xFF
 
-static void spawn_explosion_timer(uint16_t idx, uint8_t timer);
-static void kill_robbo(void);
+void spawn_explosion_timer(uint16_t idx, uint8_t timer);
+void kill_robbo(void);
 static void game_teleport(uint16_t entry_idx);
 static void teleport_arrive(uint16_t idx);
 static void destroy_teleport(uint16_t idx);
@@ -291,7 +298,7 @@ void game_load_level(uint8_t level)
     }
 }
 
-static uint8_t is_demolishable(uint8_t type)
+uint8_t is_demolishable(uint8_t type)
 {
     /* Matches the JS objects that define demolishable: true.  Keys, screws,
      * doors and stones are explodable but not demolishable, so a sliding box
@@ -304,6 +311,7 @@ static uint8_t is_demolishable(uint8_t type)
         case CT_BEAR:
         case CT_BUTTERFLY:
         case CT_MUSTACHE:
+        case CT_BARRIER:
             return 1;
         default:
             return 0;
@@ -329,6 +337,7 @@ static uint8_t is_explodable(uint8_t type)
         case CT_BEAR:
         case CT_LAVA:
         case CT_EXTRA_LIFE:
+        case CT_BARRIER:
             return 1;
         default:
             return 0;
@@ -605,18 +614,22 @@ uint8_t game_try_move(uint8_t dir)
     }
 
     if (target == CT_SCREW) {
-        screws_left--;
+        /* controller.set('screw', ...) clamps at zero: a bolt from a question
+         * is not added to the level total when it appears, so collecting it
+         * still takes one off the HUD counter. */
+        uint8_t was_last = (screws_left == 1);
+        if (screws_left > 0) screws_left--;
         map_type[new_idx] = CT_EMPTY;
         map_extra[new_idx] = 0;
         hud_dirty = 1;
-        if (screws_left == 0) {
+        if (was_last) {
             screen_flash_ticks = 1;
             render_flash_set(1);
             refresh_spaceships();
         }
         move_robbo_to(nx, ny, dir);
         /* The last bolt uses the GBC capsule-open jingle. */
-        sfx_play_note(screws_left == 0 ? SFX_LAST_BOLT : SFX_BOLT);
+        sfx_play_note(was_last ? SFX_LAST_BOLT : SFX_BOLT);
         return 1;
     }
 
@@ -725,7 +738,7 @@ uint8_t game_try_move(uint8_t dir)
     return 0;
 }
 
-static void spawn_explosion_timer(uint16_t idx, uint8_t timer)
+void spawn_explosion_timer(uint16_t idx, uint8_t timer)
 {
     map_type[idx] = CT_EXPLOSION;
     map_extra[idx] = timer;
@@ -780,9 +793,10 @@ static void spawn_question_payload(uint16_t idx, uint8_t payload)
         case 2:  type = CT_STONE; break;
         case 3:  type = CT_GROUND; break;
         case 4:
+            /* Screw.js only counts bolts while the level is loading; a bolt
+             * revealed by a question is a bonus, so the HUD counter is not
+             * increased here.  Collecting it decrements the counter. */
             type = CT_SCREW;
-            screws_left++;
-            hud_dirty = 1;
             break;
         case 5:  type = CT_KEY; break;
         case 6:  type = CT_AMMO; break;
@@ -801,7 +815,7 @@ static void spawn_question_payload(uint16_t idx, uint8_t payload)
     render_cell(x, y);
 }
 
-static void demolish_cell(uint16_t idx)
+void demolish_cell(uint16_t idx)
 {
     uint8_t type = map_type[idx];
 
@@ -826,7 +840,7 @@ static void demolish_cell(uint16_t idx)
     sfx_play_def(&sfx_destroy);
 }
 
-static void blast_cell(uint16_t idx, uint8_t timer)
+void blast_cell(uint16_t idx, uint8_t timer)
 {
     uint8_t type = map_type[idx];
 
@@ -862,6 +876,9 @@ static void blast_cell(uint16_t idx, uint8_t timer)
         spawn_explosion_timer(idx, timer);
     }
 }
+
+/* Barrier/ZAPO sweep hit lives in barrier.c (bank 14), where the wave needs
+ * it; its destruction helpers are exported above. */
 
 /* A chain can detonate several bombs in the same logic tick. Restarting the
  * effect repeatedly within that tick only replays step 0, so coalesce it to
@@ -959,7 +976,7 @@ static void destroy_all_items(void)
     play_explosion_sfx();
 }
 
-static void kill_robbo(void)
+void kill_robbo(void)
 {
     uint16_t idx;
 
@@ -1238,7 +1255,8 @@ static uint16_t mustache_step(uint16_t idx, uint8_t state)
 #define CAT_MAGNET 5
 #define CAT_SPACESHIP 6
 #define CAT_TELEPORT 7
-static const uint8_t type_cat[30] = {
+#define CAT_BARRIER 8
+static const uint8_t type_cat[31] = {
     CAT_NONE,       /* CT_EMPTY */
     CAT_NONE, CAT_NONE, CAT_NONE, CAT_NONE, CAT_NONE, CAT_NONE, CAT_NONE, CAT_NONE,
     CAT_NONE,       /* CT_GROUND */
@@ -1262,6 +1280,7 @@ static const uint8_t type_cat[30] = {
     CAT_NONE,       /* CT_BULLET */
     CAT_EXPLOSION,  /* CT_EXPLOSION */
     CAT_NONE,       /* CT_EXTRA_LIFE */
+    CAT_BARRIER,    /* CT_BARRIER */
 };
 
 static void collect_actors(void)
@@ -1276,6 +1295,8 @@ static void collect_actors(void)
     magnet_count = 0;
     spaceship_count = 0;
     teleport_count = 0;
+    barrier_row_lo = 0;
+    barrier_row_hi = 0;
 
     while (p != end) {
         uint8_t cat = type_cat[*p++];
@@ -1301,6 +1322,10 @@ static void collect_actors(void)
             break;
         case CAT_SPACESHIP:
             if (spaceship_count < MAX_SPACESHIP_LIST) spaceship_list[spaceship_count++] = idx;
+            break;
+        case CAT_BARRIER:
+            if (idx < 256) barrier_row_lo |= (uint16_t)(1u << (idx >> 4));
+            else barrier_row_hi |= (uint16_t)(1u << ((idx >> 4) - 16));
             break;
         default:    /* CAT_TELEPORT */
             if (teleport_count < MAX_TELEPORT_LIST) teleport_list[teleport_count++] = idx;
@@ -1428,6 +1453,9 @@ static void animate_static_objects(void)
             render_cell(idx % MAP_W, idx / MAP_W);
         }
     }
+
+    /* Barricades use the second F.FNT animation frame (glyph $1E's S.FNT
+     * +64 variant); barrier_tick handles the dirty marks in bank 14. */
 }
 
 void game_check_enemies(void)
@@ -1652,6 +1680,19 @@ void game_tick(void)
             continue;
         }
 
+        if (btype == 2) {
+            /* Blaster (Atari DZ3): banked, because its head/trail/consume
+             * rules are sizable and have no business in bank 0. */
+            uint16_t moved = blaster_step(bidx, be);
+            if (moved == 0xFFFF) {
+                remove_bullet_at(i);
+            } else {
+                bullet_cells[i] = moved;
+                i++;
+            }
+            continue;
+        }
+
         if (nbx >= MAP_W || nby >= level_height) {
             sfx_play_note(SFX_HIT_WALL);
             spawn_explosion_timer(bidx, 3);
@@ -1712,6 +1753,9 @@ void game_tick(void)
     }
 
     collect_actors();
+    if (barrier_row_lo | barrier_row_hi) {
+        barrier_tick(barrier_row_lo, barrier_row_hi, (uint8_t)!anim_frame);
+    }
     turret_tick();
     enemy_tick();
 

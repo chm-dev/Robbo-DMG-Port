@@ -53,6 +53,7 @@ enum {
     CT_BULLET = 27,
     CT_EXPLOSION = 28,
     CT_EXTRA_LIFE = 29,
+    CT_BARRIER = 30,
 };
 
 #define IS_WALL(t) ((t) >= CT_WALL_0 && (t) <= CT_WALL_7)
@@ -133,5 +134,17 @@ uint8_t game_fire(void);
 void game_face(uint8_t dir);
 void game_check_enemies(void);
 void game_teleport_camera_ready(void);
+/* Barrier/ZAPO sweep helper: destroy/consume whatever the moving field is
+ * about to cover.  Lives in bank 0 because the destruction helpers are static
+ * here; the barrier wave itself is banked (barrier.c). */
+void game_barrier_hit(uint16_t idx) BANKED;
+/* Shared destruction helpers (bank 0); banked object code calls these. */
+uint8_t is_demolishable(uint8_t type);
+void demolish_cell(uint16_t idx);
+void blast_cell(uint16_t idx, uint8_t timer);
+void kill_robbo(void);
+/* Start/refresh an explosion animation in one cell.  Shared with the banked
+ * projectile code, which leaves its fading trail behind. */
+void spawn_explosion_timer(uint16_t idx, uint8_t timer);
 
 #endif /* GAME_H */

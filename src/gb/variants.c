@@ -17,16 +17,31 @@
 static uint8_t desired_mask;
 static uint8_t current_mask;
 static uint8_t baddie_stage;
+static uint8_t bullet_stage;
+static uint8_t blaster_done;
 
-static void load_bullets(uint8_t alt)
+static void load_bullet_chunk(uint8_t alt)
 {
-    if (alt) {
-        set_bkg_data(BULLET_VARIANT_BASE, BULLET_VARIANT_COUNT,
-                     bullet_variant_tiles);
-    } else {
-        set_bkg_data(BULLET_VARIANT_BASE, BULLET_VARIANT_COUNT,
-                     &tileset_data[(uint16_t)BULLET_VARIANT_BASE * 16]);
-    }
+    /* Projectile tiles are 8 per chunk (BULLET_VARIANT_COUNT is currently 8);
+     * the blaster head is a separate two-tile range, loaded on the next step. */
+    uint8_t first = (uint8_t)(bullet_stage * VAR_CHUNK);
+    uint8_t count = (uint8_t)(BULLET_VARIANT_COUNT - first);
+    uint8_t dest = (uint8_t)(BULLET_VARIANT_BASE + first);
+    const uint8_t *src;
+
+    if (count > VAR_CHUNK) count = VAR_CHUNK;
+    src = alt ? &bullet_variant_tiles[(uint16_t)first * 16]
+              : &tileset_data[(uint16_t)dest * 16];
+    set_bkg_data(dest, count, src);
+    bullet_stage++;
+}
+
+static void load_blaster(uint8_t alt)
+{
+    set_bkg_data(BLASTER_VARIANT_BASE, BLASTER_VARIANT_COUNT,
+                 alt ? blaster_variant_tiles
+                     : &tileset_data[(uint16_t)BLASTER_VARIANT_BASE * 16]);
+    blaster_done = 1;
 }
 
 static void load_baddie_chunk(uint8_t bright)
@@ -68,7 +83,17 @@ static void load_baddie_chunk(uint8_t bright)
 static uint8_t load_next_chunk(void)
 {
     if ((desired_mask ^ current_mask) & VAR_BULLETS_ALT) {
-        load_bullets((uint8_t)(desired_mask & VAR_BULLETS_ALT));
+        uint8_t alt = (uint8_t)(desired_mask & VAR_BULLETS_ALT);
+        if ((uint16_t)bullet_stage * VAR_CHUNK < BULLET_VARIANT_COUNT) {
+            load_bullet_chunk(alt);
+            return 1;
+        }
+        if (!blaster_done) {
+            load_blaster(alt);
+            return 1;
+        }
+        bullet_stage = 0;
+        blaster_done = 0;
         current_mask ^= VAR_BULLETS_ALT;
         return 1;
     }
@@ -86,12 +111,16 @@ void variants_reset(void) BANKED
     desired_mask = 0;
     current_mask = 0;
     baddie_stage = 0;
+    bullet_stage = 0;
+    blaster_done = 0;
 }
 
 void variants_request(uint8_t mask, uint8_t apply_now) BANKED
 {
     desired_mask = mask;
     baddie_stage = 0;
+    bullet_stage = 0;
+    blaster_done = 0;
     if (apply_now) {
         while (load_next_chunk()) {}
     }

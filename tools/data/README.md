@@ -21,8 +21,10 @@ DMG mapping applied by `gb/tools/gen_levels.py`:
 - `+` (extra life / score bonus) becomes a hidden easter egg: the loader
   converts the cell to empty and records it in `bonus_bits[]`. Stepping on it
   plays `SFX_EXTRA_LIFE` and the last-bolt flash, but awards no life/score.
-- `=` (ZAPO force field) stays `CT_LAVA`, which is currently static in this
-  port. See the barrier TODO in `AGENTS.md`.
+- `=` (ZAPO force field) becomes `CT_BARRIER`. It is a destructible horizontal
+  field that sweeps one cell per logic tick and wraps inside its wall-to-wall
+  run, so a shot gap travels along the row. The two authentic F.FNT animation
+  frames alternate every other tick.
 - Teleports are linked to the next cell in the same group (scan order), with
   wrap-around; Robbo starts facing down.
 

@@ -5,9 +5,9 @@
 #include <stdint.h>
 #include <gb/gb.h>
 
-#define TILESET_COUNT 241
-#define METATILE_COUNT 53
-#define WALL_TILE_BASE 237
+#define TILESET_COUNT 244
+#define METATILE_COUNT 56
+#define WALL_TILE_BASE 240
 #define WALL_ROTATION_COUNT 14
 #define SHEET_COLS 11
 #define SHEET_ROWS 8
@@ -41,34 +41,39 @@
 #define MT_BULLET_1 24
 #define MT_BULLET_2 25
 #define MT_BULLET_3 26
-#define MT_MUSTACHE_0 27
-#define MT_MUSTACHE_1 28
-#define MT_BUTTERFLY_0 29
-#define MT_BUTTERFLY_1 30
-#define MT_LAVA_0 31
-#define MT_LAVA_1 32
-#define MT_MAGNET_0 33
-#define MT_MAGNET_1 34
-#define MT_HUD_SCREW 35
-#define MT_HUD_AMMO 36
-#define MT_HUD_KEY 37
-#define MT_HUD_LIVES 38
-#define MT_HUD_PLANET 39
-#define MT_BEAR_0 40
-#define MT_BEAR_1 41
-#define MT_BEAR_2 42
-#define MT_BEAR_3 43
-#define MT_ROBBO_0 44
-#define MT_ROBBO_1 45
-#define MT_ROBBO_2 46
-#define MT_ROBBO_3 47
-#define MT_ROBBO_4 48
-#define MT_ROBBO_5 49
-#define MT_ROBBO_6 50
-#define MT_ROBBO_7 51
-#define MT_WALL_CAVE 52
+#define MT_BLASTER 27
+#define MT_MUSTACHE_0 28
+#define MT_MUSTACHE_1 29
+#define MT_BUTTERFLY_0 30
+#define MT_BUTTERFLY_1 31
+#define MT_LAVA_0 32
+#define MT_LAVA_1 33
+#define MT_MAGNET_0 34
+#define MT_MAGNET_1 35
+#define MT_HUD_SCREW 36
+#define MT_HUD_AMMO 37
+#define MT_HUD_KEY 38
+#define MT_HUD_LIVES 39
+#define MT_HUD_PLANET 40
+#define MT_BEAR_0 41
+#define MT_BEAR_1 42
+#define MT_BEAR_2 43
+#define MT_BEAR_3 44
+#define MT_ROBBO_0 45
+#define MT_ROBBO_1 46
+#define MT_ROBBO_2 47
+#define MT_ROBBO_3 48
+#define MT_ROBBO_4 49
+#define MT_ROBBO_5 50
+#define MT_ROBBO_6 51
+#define MT_ROBBO_7 52
+#define MT_WALL_CAVE 53
+#define MT_BARRIER_0 54
+#define MT_BARRIER_1 55
 #define BULLET_VARIANT_BASE 78
 #define BULLET_VARIANT_COUNT 8
+#define BLASTER_VARIANT_BASE 62
+#define BLASTER_VARIANT_COUNT 2
 #define BADDIE_VARIANT_BASE 86
 #define BADDIE_VARIANT_COUNT 16
 #define BEAR_VARIANT_BASE 134
@@ -86,6 +91,7 @@ extern const uint8_t sheet_tiles_data[];
 extern const uint8_t digit_tiles[10][2];
 extern const uint8_t font_tiles[128];
 extern const uint8_t bullet_variant_tiles[];
+extern const uint8_t blaster_variant_tiles[];
 extern const uint8_t baddie_variant_tiles[];
 extern const uint8_t bear_variant_tiles[];
 void sheet_load_tiles(uint8_t first, uint8_t count, uint8_t dest) BANKED;

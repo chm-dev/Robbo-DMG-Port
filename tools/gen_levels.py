@@ -55,6 +55,7 @@ LAVA = 24
 MAGNET = 25
 ROBBO = 26
 EXTRA_LIFE = 29
+BARRIER = 30
 
 TYPE_ID = {
     "Empty": EMPTY,
@@ -77,6 +78,7 @@ TYPE_ID = {
     "Magnet": MAGNET,
     "Robbo": ROBBO,
     "ExtraLife": EXTRA_LIFE,
+    "Barrier": BARRIER,
 }
 
 BULLET_TYPE = {"gun": 0, "laser": 1, "antimatter": 2}
@@ -103,7 +105,7 @@ def pack_extra(cell: list, teleports: list[int]) -> int:
         return (cell[1] & 3) | ((1 if cell[2] else 0) << 2)
     if t == "Bear":
         return (cell[1] & 3) | ((1 if cell[2] else 0) << 2)
-    if t in ("Magnet", "Lava"):
+    if t in ("Magnet", "Lava", "Barrier"):
         return cell[1] & 3
     if t == "Question":
         return cell[1] & 15
@@ -228,7 +230,7 @@ def load_atari_levels(path: Path = ATARI_LEVELS) -> list[dict]:
                     row.append(["Magnet", v[0] & 3])
                 elif ch == "=":
                     v = _pad(vals, 1)
-                    row.append(["Lava", v[0] & 3])
+                    row.append(["Barrier", v[0] & 3])
                 elif ch == "!":
                     row.append(["Spaceship", 0])
                 elif ch == "?":
