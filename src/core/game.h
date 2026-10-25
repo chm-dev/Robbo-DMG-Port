@@ -20,6 +20,16 @@
 #define MAX_TELEPORTS 64
 #define BONUS_WORDS ((MAP_CELLS + 7) / 8)
 
+/* Actor list capacities.  The lists are filled by the banked collect_actors()
+ * once per logic tick and consumed by the per-type loops in game_tick. */
+#define MAX_TURRET_LIST 32
+#define MAX_ENEMY_LIST 40
+#define MAX_BOMB_LIST 160
+#define MAX_EXPLOSION_LIST 496
+#define MAX_MAGNET_LIST 16
+#define MAX_SPACESHIP_LIST 8
+#define MAX_TELEPORT_LIST 24
+
 /* Cell type ids.  Generated level packs and the renderer depend on these
  * values; walls occupy 1..8 and encode their texture slot. */
 enum {
@@ -65,6 +75,27 @@ extern uint8_t map_type[MAP_CELLS];
 extern uint8_t map_extra[MAP_CELLS];
 extern uint8_t map_obj[MAP_CELLS];
 
+/* Per-type actor lists and counts, rebuilt each logic tick by the banked
+ * collect_actors().  Stale entries are tolerated: consumers re-check map_type
+ * before acting. */
+extern uint16_t turret_list[MAX_TURRET_LIST];
+extern uint16_t enemy_list[MAX_ENEMY_LIST];
+extern uint16_t bomb_list[MAX_BOMB_LIST];
+extern uint16_t explosion_list[MAX_EXPLOSION_LIST];
+extern uint16_t magnet_list[MAX_MAGNET_LIST];
+extern uint16_t spaceship_list[MAX_SPACESHIP_LIST];
+extern uint16_t teleport_list[MAX_TELEPORT_LIST];
+extern uint8_t turret_count;
+extern uint8_t enemy_count;
+extern uint8_t bomb_count;
+extern uint16_t explosion_count;
+extern uint8_t magnet_count;
+extern uint8_t spaceship_count;
+extern uint8_t teleport_count;
+/* One bit per map row containing at least one live barrier cell. */
+extern uint16_t barrier_row_lo;
+extern uint16_t barrier_row_hi;
+
 extern uint16_t teleport_dest[MAX_TELEPORTS];
 extern uint8_t level_height;
 extern uint8_t level_screw;
@@ -106,6 +137,10 @@ extern uint8_t cam_override;
 extern uint8_t anim_frame;
 /* Toggles every other logic tick; drives bullets, the capsule and teleports. */
 extern uint8_t anim_slow;
+/* Split-tick phase counter: 0 idle, 1..4 the phase game_tick_step() runs next.
+ * The main loop arms a tick by writing 1, then calls game_tick_step() once per
+ * frame to amortize the tick over several frames. */
+extern uint8_t tick_phase;
 /* Frames left in the current step.  The walk pose is shown while this is
  * non-zero; when it expires Robbo redraws in the neutral frame.  Mirrors the
  * GBC renderer's `robbo.moved > 0 ? walk : neutral` rule. */
@@ -126,7 +161,10 @@ void game_load_level_after_clear(uint8_t level);
 /* Set while the level-complete clear is running.  Main drives it with
  * intro_clear_tick() and then requests the level advance. */
 extern uint8_t game_transition_active;
-void game_tick(void);
+void game_tick_step(void);
+/* Rebuild the per-type actor lists by scanning the map once.  Banked to keep
+ * bank 0's budget; called once per logic tick. */
+void collect_actors(void) BANKED;
 /* One per rendered frame: advances frame-rate animation timers. */
 void game_frame(void);
 uint8_t game_try_move(uint8_t dir);

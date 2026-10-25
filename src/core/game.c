@@ -73,33 +73,26 @@ static uint8_t sliding_count;
 
 #define MAX_BULLETS 96
 static uint16_t bullet_cells[MAX_BULLETS];
-#define MAX_TURRET_LIST 32
-#define MAX_ENEMY_LIST 40
-#define MAX_BOMB_LIST 160
-#define MAX_EXPLOSION_LIST 496
-#define MAX_MAGNET_LIST 16
-#define MAX_SPACESHIP_LIST 8
-#define MAX_TELEPORT_LIST 24
-static uint16_t turret_list[MAX_TURRET_LIST];
-static uint16_t enemy_list[MAX_ENEMY_LIST];
-static uint16_t bomb_list[MAX_BOMB_LIST];
-static uint16_t explosion_list[MAX_EXPLOSION_LIST];
-static uint16_t magnet_list[MAX_MAGNET_LIST];
-static uint16_t spaceship_list[MAX_SPACESHIP_LIST];
-static uint16_t teleport_list[MAX_TELEPORT_LIST];
-static uint8_t turret_count;
-static uint8_t enemy_count;
-static uint8_t bomb_count;
-static uint16_t explosion_count;
-static uint8_t magnet_count;
-static uint8_t spaceship_count;
-static uint8_t teleport_count;
+uint16_t turret_list[MAX_TURRET_LIST];
+uint16_t enemy_list[MAX_ENEMY_LIST];
+uint16_t bomb_list[MAX_BOMB_LIST];
+uint16_t explosion_list[MAX_EXPLOSION_LIST];
+uint16_t magnet_list[MAX_MAGNET_LIST];
+uint16_t spaceship_list[MAX_SPACESHIP_LIST];
+uint16_t teleport_list[MAX_TELEPORT_LIST];
+uint8_t turret_count;
+uint8_t enemy_count;
+uint8_t bomb_count;
+uint16_t explosion_count;
+uint8_t magnet_count;
+uint8_t spaceship_count;
+uint8_t teleport_count;
 static uint8_t bullet_count;
 /* Rows containing at least one live barrier cell, one bit per row (0..15 and
  * 16..30).  Filled by collect_actors() and consumed by the banked barrier
  * sweep, so the hot map scan pays only one bit-set per barrier cell. */
-static uint16_t barrier_row_lo;
-static uint16_t barrier_row_hi;
+uint16_t barrier_row_lo;
+uint16_t barrier_row_hi;
 #define BULLET_LASER_WAIT   1
 #define BULLET_LASER_RETURN 2
 static uint8_t fire_delay = 0;
@@ -111,6 +104,10 @@ static uint8_t robbo_dead = 0;
 static uint8_t death_timer = 0;
 static uint8_t death_wipe_timer = 0;
 static uint8_t screen_flash_ticks = 0;
+/* Split logic tick: 0 = idle, 1..4 = the phase game_tick_step() runs next.
+ * The main loop sets this to 1 to arm a tick; each subsequent frame advances
+ * one phase so the ~2.5-frame tick never spikes a single frame. */
+uint8_t tick_phase = 0;
 /* Atari NXCV: the finished room is cleared column by column while the display
  * stays on, then the next level is loaded and painted in. */
 uint8_t game_transition_active = 0;
@@ -259,6 +256,7 @@ void game_load_level(uint8_t level)
     anim_frame = 0;
     anim_slow = 0;
     robbo_step_timer = 0;
+    tick_phase = 0;
     render_flash_set(0);
 
     /* render_camera_snap() publishes the start-centered goal used by the end
@@ -1082,8 +1080,7 @@ static void turret_tick(void)
         }
 
         if (rotatable && (next_rand8() & 15) == 0) {
-            uint8_t r = next_rand8();
-            int8_t delta = (r < 85) ? -1 : (r < 170) ? 0 : 1;
+            int8_t delta = (int8_t)(next_rand8() % 3) - 1;
             dir = (uint8_t)((dir + delta + 4) & 3);
             extra = (uint8_t)((extra & ~3) | dir);
             map_extra[idx] = extra;
@@ -1243,96 +1240,6 @@ static uint16_t mustache_step(uint16_t idx, uint8_t state)
 
     map_obj[cur] = state;
     return cur;
-}
-
-/* Category lookup for collect_actors(): 0 = not tracked, else which list.
- * A table probe beats the 7-way type compare chain in the per-tick scan;
- * walls/ground/empty (the bulk of the map) exit the loop body in two loads. */
-#define CAT_NONE 0
-#define CAT_TURRET 1
-#define CAT_ENEMY 2
-#define CAT_BOMB 3
-#define CAT_EXPLOSION 4
-#define CAT_MAGNET 5
-#define CAT_SPACESHIP 6
-#define CAT_TELEPORT 7
-#define CAT_BARRIER 8
-static const uint8_t type_cat[31] = {
-    CAT_NONE,       /* CT_EMPTY */
-    CAT_NONE, CAT_NONE, CAT_NONE, CAT_NONE, CAT_NONE, CAT_NONE, CAT_NONE, CAT_NONE,
-    CAT_NONE,       /* CT_GROUND */
-    CAT_NONE,       /* CT_STONE */
-    CAT_NONE,       /* CT_PUSHABLE */
-    CAT_NONE,       /* CT_DOOR */
-    CAT_SPACESHIP,  /* CT_SPACESHIP */
-    CAT_NONE,       /* CT_QUESTION */
-    CAT_BOMB,       /* CT_BOMB */
-    CAT_NONE,       /* CT_KEY */
-    CAT_NONE,       /* CT_SCREW */
-    CAT_TURRET,     /* CT_TURRET */
-    CAT_NONE,       /* CT_AMMO */
-    CAT_TELEPORT,   /* CT_TELEPORT */
-    CAT_ENEMY,      /* CT_MUSTACHE */
-    CAT_ENEMY,      /* CT_BUTTERFLY */
-    CAT_ENEMY,      /* CT_BEAR */
-    CAT_NONE,       /* CT_LAVA */
-    CAT_MAGNET,     /* CT_MAGNET */
-    CAT_NONE,       /* CT_ROBBO */
-    CAT_NONE,       /* CT_BULLET */
-    CAT_EXPLOSION,  /* CT_EXPLOSION */
-    CAT_NONE,       /* CT_EXTRA_LIFE */
-    CAT_BARRIER,    /* CT_BARRIER */
-};
-
-static void collect_actors(void)
-{
-    uint16_t i;
-
-    turret_count = 0;
-    enemy_count = 0;
-    bomb_count = 0;
-    explosion_count = 0;
-    magnet_count = 0;
-    spaceship_count = 0;
-    teleport_count = 0;
-    barrier_row_lo = 0;
-    barrier_row_hi = 0;
-
-    /* Count down from MAP_CELLS so the index lives in a register pair and the
-     * loop is a single 16-bit decrement + zero test, rather than the previous
-     * pointer scan that kept p on the stack and re-derived idx per hit. */
-    for (i = MAP_CELLS; i != 0; ) {
-        uint8_t cat = type_cat[map_type[--i]];
-
-        if (cat == CAT_NONE) continue;
-        switch (cat) {
-        case CAT_TURRET:
-            if (turret_count < MAX_TURRET_LIST) turret_list[turret_count++] = i;
-            break;
-        case CAT_ENEMY:
-            if (enemy_count < MAX_ENEMY_LIST) enemy_list[enemy_count++] = i;
-            break;
-        case CAT_BOMB:
-            if (bomb_count < MAX_BOMB_LIST) bomb_list[bomb_count++] = i;
-            break;
-        case CAT_EXPLOSION:
-            if (explosion_count < MAX_EXPLOSION_LIST) explosion_list[explosion_count++] = i;
-            break;
-        case CAT_MAGNET:
-            if (magnet_count < MAX_MAGNET_LIST) magnet_list[magnet_count++] = i;
-            break;
-        case CAT_SPACESHIP:
-            if (spaceship_count < MAX_SPACESHIP_LIST) spaceship_list[spaceship_count++] = i;
-            break;
-        case CAT_BARRIER:
-            if (i < 256) barrier_row_lo |= (uint16_t)(1u << (i >> 4));
-            else barrier_row_hi |= (uint16_t)(1u << ((i >> 4) - 16));
-            break;
-        default:    /* CAT_TELEPORT */
-            if (teleport_count < MAX_TELEPORT_LIST) teleport_list[teleport_count++] = i;
-            break;
-        }
-    }
 }
 
 static void enemy_tick(void)
@@ -1532,21 +1439,16 @@ void game_frame(void)
     }
 }
 
-void game_tick(void)
+static void game_tick_phase1(void)
 {
     uint8_t i = 0;
-    uint16_t ei;
-    uint16_t eidx;
     uint8_t anim_changed;
 
-    /* A level-complete clear owns the screen; the advance request is handled
-     * by main on a frame boundary, so do not run another logic tick. */
-    if (game_transition_active || game_level_advance_requested) return;
-
     if (fire_delay != 0) fire_delay--;
-    anim_frame = (anim_frame + 1) & 1;
-    /* Bullets, capsule and teleports swap frames every other logic tick. */
-    anim_changed = (anim_frame == 0);
+    /* anim_frame toggles 0/1 each tick; the bullet/capsule/teleport frame swaps
+     * on the tick where anim_frame returns to 0 (i.e. when the old value was 1). */
+    anim_changed = anim_frame;
+    anim_frame ^= 1;
     if (anim_changed) anim_slow ^= 1;
     explosion_sfx_started = 0;
 
@@ -1580,7 +1482,8 @@ void game_tick(void)
     /* Bullets: player and turret projectiles share one list. */
     while (i < bullet_count) {
         uint16_t bidx = bullet_cells[i];
-        uint8_t be, bdir, btype, owner;
+        uint8_t be;
+        uint8_t bdir, btype, owner;
         uint8_t bx, by, nbx, nby;
         uint8_t target;
         uint16_t nidx;
@@ -1590,13 +1493,26 @@ void game_tick(void)
             continue;
         }
 
-        if (map_extra[bidx] & 0x80) {
+        be = map_extra[bidx];
+        if (be & 0x80) {
             i++;
             continue;
         }
-        map_extra[bidx] |= 0x80;
+        be |= 0x80;
+        map_extra[bidx] = be;
 
-        be = map_extra[bidx];
+        /* Fast path: a stationary laser beam segment (btype 1, WAIT).  The
+         * beam body is the common case on turret levels, and it skips the
+         * full direction/coordinate setup below.  Bits: btype==1 -> bit2 set,
+         * bit3 clear; lstate WAIT==1 -> bit5 set, bit6 clear. */
+        if ((be & 0x6C) == 0x24) {
+            if (anim_changed) {
+                render_cell((uint8_t)(bidx & 0x0F), (uint8_t)(bidx >> 4));
+            }
+            i++;
+            continue;
+        }
+
         bdir = be & 3;
         btype = (be >> 2) & 3;
         owner = (be >> 4) & 1;
@@ -1612,14 +1528,6 @@ void game_tick(void)
 
         if (btype == 1) {
             uint8_t lstate = (be >> 5) & 3;
-
-            if (lstate == BULLET_LASER_WAIT) {
-                /* A stationary beam segment only changes look when the bullet
-                 * animation frame toggles; re-mark it then, not every tick. */
-                if (anim_changed) render_cell(bx, by);
-                i++;
-                continue;
-            }
 
             if (lstate == BULLET_LASER_RETURN) {
                 int16_t px = (int16_t)bx - tp_dx[bdir];
@@ -1756,13 +1664,23 @@ void game_tick(void)
             remove_bullet_at(i);
         }
     }
+}
 
+static void game_tick_phase2(void)
+{
     collect_actors();
     if (barrier_row_lo | barrier_row_hi) {
         barrier_tick(barrier_row_lo, barrier_row_hi, (uint8_t)!anim_frame);
     }
     turret_tick();
     enemy_tick();
+}
+
+static void game_tick_phase3(void)
+{
+    uint8_t i = 0;
+    uint16_t ei;
+    uint16_t eidx;
 
     /* Bomb fuses.  map_extra 0 = idle; 1..2 = remaining ticks. */
     for (i = 0; i < bomb_count; i++) {
@@ -1854,7 +1772,20 @@ void game_tick(void)
             remove_sliding(i);
         }
     }
+}
 
+static void game_tick_phase4(void)
+{
     animate_static_objects();
     magnet_tick();
+}
+
+void game_tick_step(void)
+{
+    switch (tick_phase) {
+        case 1: game_tick_phase1(); tick_phase = 2; break;
+        case 2: game_tick_phase2(); tick_phase = 3; break;
+        case 3: game_tick_phase3(); tick_phase = 4; break;
+        case 4: game_tick_phase4(); tick_phase = 0; break;
+    }
 }

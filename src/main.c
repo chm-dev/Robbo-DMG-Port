@@ -239,8 +239,9 @@ void main(void)
         if (!paused && !(pad & J_SELECT)) {
             if (++tick_timer >= LOGIC_TICK_FRAMES) {
                 tick_timer = 0;
-                game_tick();
+                tick_phase = 1;  /* arm the split logic tick */
             }
+            game_tick_step();
 
             if (pad & J_RIGHT) dir = 0;
             else if (pad & J_DOWN) dir = 1;
