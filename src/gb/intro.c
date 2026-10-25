@@ -28,6 +28,7 @@
 #include "intro.h"
 #include "render.h"
 #include "sound.h"
+#include "variants.h"
 #include "../core/game.h"
 #include "../gen/tiles.h"
 
@@ -218,6 +219,10 @@ void intro_tick(void) BANKED
     if (!intro_active) return;
 
     if (intro_phase == INTRO_PAINT) {
+        /* Palette-dependent object tiles change with the four-level palette.
+         * One 8-tile chunk per VBlank keeps the upload safe while the display
+         * is on during a level-complete transition. */
+        if (variants_step()) return;
         if (intro_wall_pending) {
             /* The wall glyph changes every four levels.  Load the new 16x16
              * cell here, in this frame's VBlank slice, before anything is

@@ -7,6 +7,7 @@
 #include "../gb/intro.h"
 #include "../gb/render.h"
 #include "../gb/sound.h"
+#include "../gb/variants.h"
 
 uint16_t bear_step(uint16_t idx, uint8_t state) BANKED;
 
@@ -178,6 +179,16 @@ void game_load_level(uint8_t level)
      * Both keep bulk VRAM writes out of the display-on load. */
     level_wall_cell = wall_rotation_cells[(uint8_t)((level - 1) >> 2)];
     render_set_level_palette(level);
+    {
+        uint8_t bg = render_level_background();
+        uint8_t mask = 0;
+        /* Projectiles: white on a dark gray floor, darker on a white floor. */
+        if (bg == 0 || bg == 2) mask |= VAR_BULLETS_ALT;
+        if (bg == 3) mask |= VAR_BADDIES_BRIGHT;
+        /* A fresh/debug load runs with the display off.  Respawn/transition
+         * keep it on, so the intro uploads the variants in VBlank slices. */
+        variants_request(mask, (uint8_t)(!from_death && !from_transition));
+    }
     if (!from_death && !from_transition) {
         render_set_wall_style(level_wall_cell);
     }

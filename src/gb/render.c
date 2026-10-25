@@ -2,6 +2,7 @@
 #include <stdint.h>
 
 #include "render.h"
+#include "variants.h"
 #include "../core/game.h"
 #include "../gen/tiles.h"
 
@@ -195,6 +196,9 @@ void render_restore_tiles(void)
     SWITCH_ROM_MBC5(1);
     set_bkg_data(0, TILESET_COUNT, tileset_data);
     SWITCH_ROM_MBC5(0);
+    /* The title/ending overwrote the active tiles; the object variants are
+     * gone too, so the next level load starts from the base set. */
+    variants_reset();
 }
 
 void render_set_wall_style(uint8_t cell)
@@ -263,6 +267,11 @@ void render_set_level_palette(uint8_t level)
 {
     level_palette = (uint8_t)((level - 1) & 3);
     BGP_REG = level_bgp[level_palette];
+}
+
+uint8_t render_level_background(void)
+{
+    return (uint8_t)((level_bgp[level_palette] >> 2) & 3);
 }
 
 void render_flash_set(uint8_t on)

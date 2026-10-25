@@ -8,6 +8,7 @@ void render_init(void);
 void render_restore_tiles(void);
 void render_set_wall_style(uint8_t cell);
 void render_set_level_palette(uint8_t level);
+uint8_t render_level_background(void);
 /* Row-ring slot -> source level row, managed by render_sync_rows().  The
  * level-intro module (bank 13) paints columns directly and needs this map. */
 extern uint8_t map_row_level[];

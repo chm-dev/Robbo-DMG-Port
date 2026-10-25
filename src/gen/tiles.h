@@ -67,6 +67,12 @@
 #define MT_ROBBO_6 50
 #define MT_ROBBO_7 51
 #define MT_WALL_CAVE 52
+#define BULLET_VARIANT_BASE 78
+#define BULLET_VARIANT_COUNT 8
+#define BADDIE_VARIANT_BASE 86
+#define BADDIE_VARIANT_COUNT 16
+#define BEAR_VARIANT_BASE 134
+#define BEAR_VARIANT_COUNT 16
 
 extern const uint8_t tileset_data[];
 extern const uint8_t tileset_count;
@@ -79,6 +85,9 @@ extern const uint8_t sheet_tile_count;
 extern const uint8_t sheet_tiles_data[];
 extern const uint8_t digit_tiles[10][2];
 extern const uint8_t font_tiles[128];
+extern const uint8_t bullet_variant_tiles[];
+extern const uint8_t baddie_variant_tiles[];
+extern const uint8_t bear_variant_tiles[];
 void sheet_load_tiles(uint8_t first, uint8_t count, uint8_t dest) BANKED;
 void sheet_load_metatile(uint8_t cell, uint8_t dest) BANKED;
 
