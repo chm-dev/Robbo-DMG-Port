@@ -5,9 +5,9 @@
 #include <stdint.h>
 #include <gb/gb.h>
 
-#define TILESET_COUNT 244
+#define TILESET_COUNT 245
 #define METATILE_COUNT 56
-#define WALL_TILE_BASE 240
+#define WALL_TILE_BASE 241
 #define WALL_ROTATION_COUNT 14
 #define SHEET_COLS 11
 #define SHEET_ROWS 8

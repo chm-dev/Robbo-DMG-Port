@@ -694,10 +694,13 @@ def main() -> None:
 
     font_tiles: dict[str, int] = {}
     game_font = dict(atari_font.FONT8)
-    for char in ("!", "?", "-", ".", ":"):
+    for char in ("!", "?", "-", ".", ":", "<", ">"):
         game_font[char] = atari_font.SPECIALS[char]
+    # The pause menu draws these glyphs over a solid shade-3 panel.  Matching
+    # the glyph background keeps the text cells seamless with that panel on
+    # every level palette (the old shade-2 HUD boxes were only the pause text).
     for char, rows in game_font.items():
-        font_tiles[char] = pool.add(font_tile(rows), f"font.{ord(char):02X}")
+        font_tiles[char] = pool.add(font_tile(rows, 0, 3), f"font.{ord(char):02X}")
 
     # Reserve four consecutive VRAM slots for the dynamic visible-wall
     # metatile.  They are overwritten by sheet_load_metatile() on level load.

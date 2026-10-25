@@ -7,7 +7,9 @@
  *   D-pad  move / push
  *   A + direction  face/fire
  *   B + direction  pan the camera; release B to restore the view
- *   Start  pause / resume
+ *   Start  open the pause menu
+ *   Pause menu: Up/Down select, Left/Right set the warp level,
+ *               A activates, Start/B close and resume
  *   Select next level (debug)
  *   Select + Right / Left  +10 / -10 levels
  *   Select + Up            previous level
@@ -22,6 +24,7 @@
 #include "gb/ending.h"
 #include "gb/intro.h"
 #include "gb/render.h"
+#include "gb/screens.h"
 #include "gb/sound.h"
 #include "gb/title.h"
 #include "gen/levels.h"
@@ -30,11 +33,15 @@
 #define MOVE_REPEAT_FRAMES 6
 #define PAN_REPEAT_FRAMES 3
 
+#define PAUSE_PENDING_NONE    0
+#define PAUSE_PENDING_RESUME  1
+#define PAUSE_PENDING_RESTART 2
+
 static uint8_t level = 1;
 static uint8_t paused = 0;
+static uint8_t pause_pending = PAUSE_PENDING_NONE;
 static uint8_t move_delay = 0;
 static uint8_t tick_timer = 0;
-static uint8_t pause_draw = 0;
 static uint8_t pan_active = 0;
 static uint8_t pan_delay = 0;
 static uint16_t pan_saved_x = 0;
@@ -63,19 +70,23 @@ static void wait_vbl(void)
 /* Restore the gameplay tiles the title overwrote, then rebuild level 1. */
 static void load_first_level(void)
 {
+    pause_menu_abort();
     render_restore_tiles();
     level = 1;
     game_load_level(level);
     paused = 0;
+    pause_pending = PAUSE_PENDING_NONE;
     move_delay = 0;
     tick_timer = 0;
     SHOW_WIN;
     DISPLAY_ON;
 }
 
-/* The ending leaves the display off and the HUD hidden. */
-static void after_ending(void)
+/* The ending leaves the display off and the HUD hidden.  The pause menu's
+ * EXIT entry uses the same return-to-title path. */
+static void return_to_title(void)
 {
+    pause_menu_abort();
     DISPLAY_OFF;
     HIDE_WIN;
     sfx_stop();
@@ -127,16 +138,9 @@ void main(void)
             (prev & (J_START | J_SELECT)) != (J_START | J_SELECT)) {
             pan_cancel(0);
             ending_show();
-            after_ending();
+            return_to_title();
             prev = joypad();
             continue;
-        }
-
-        if ((pad & J_START) && !(prev & J_START) && !intro_active) {
-            paused = !paused;
-            pan_cancel(1);
-            if (paused) pause_draw = 1;
-            else hud_dirty = 1;
         }
 
         if ((pad & J_SELECT) && !(prev & J_SELECT)) {
@@ -157,9 +161,11 @@ void main(void)
                 if (level > LEVEL_COUNT) level = 1;
             }
             pan_cancel(0);
+            pause_menu_abort();
             DISPLAY_OFF;
             game_load_level(level);
             paused = 0;
+            pause_pending = PAUSE_PENDING_NONE;
             move_delay = 0;
             tick_timer = 0;
             DISPLAY_ON;
@@ -170,15 +176,17 @@ void main(void)
         if (game_level_advance_requested) {
             game_level_advance_requested = 0;
             pan_cancel(0);
+            pause_menu_abort();
             if (level_planet >= LEVEL_COUNT) {
                 ending_show();
-                after_ending();
+                return_to_title();
             } else {
                 level = level_planet + 1;
                 /* NXCV already cleared the playfield; load and paint the next
                  * level in without a black frame. */
                 game_load_level_after_clear(level);
                 paused = 0;
+                pause_pending = PAUSE_PENDING_NONE;
                 move_delay = 0;
                 tick_timer = 0;
             }
@@ -216,25 +224,89 @@ void main(void)
             continue;
         }
 
+        /* Pause menu.  It only opens during live gameplay; the intro,
+         * transition and advance handlers above run to completion first.
+         * While paused the menu is the only input consumer and the logic
+         * tick / movement block at the bottom is skipped. */
+        if (!paused) {
+            if ((pad & J_START) && !(prev & J_START)) {
+                paused = 1;
+                pause_pending = PAUSE_PENDING_NONE;
+                cam_smooth = 0;
+                pan_cancel(1);
+                pause_menu_open(level);
+            }
+        } else {
+            uint8_t warp_level;
+            uint8_t pause_action = pause_menu_update(pad, prev, &warp_level);
+
+            if (pause_action == PAUSE_ACTION_WARP) {
+                pause_menu_abort();
+                paused = 0;
+                pause_pending = PAUSE_PENDING_NONE;
+                level = warp_level;
+                pan_cancel(0);
+                move_delay = 0;
+                tick_timer = 0;
+                DISPLAY_OFF;
+                game_load_level(level);
+                DISPLAY_ON;
+                prev = pad;
+                continue;
+            }
+            if (pause_action == PAUSE_ACTION_RESTART) {
+                /* Restore the playfield first, then run the normal death
+                 * sequence so the explosion is not hidden by the menu. */
+                pause_menu_begin_close();
+                pause_pending = PAUSE_PENDING_RESTART;
+            } else if (pause_action == PAUSE_ACTION_CLOSE) {
+                pause_menu_begin_close();
+                pause_pending = PAUSE_PENDING_RESUME;
+            } else if (pause_action == PAUSE_ACTION_EXIT) {
+                pause_menu_abort();
+                paused = 0;
+                pause_pending = PAUSE_PENDING_NONE;
+                return_to_title();
+                prev = joypad();
+                continue;
+            }
+        }
+
         /* All VRAM writes happen here, at the start of VBlank.  The camera
          * itself is applied by the VBlank handler; this only publishes the
-         * next goal (or steps a teleport/pan). */
-        if (!pan_active) render_camera();
-        if (paused && !cam_override) cam_smooth = 0;
-        game_teleport_camera_ready();
-        render_sync_rows();
-        if (pause_draw) {
-            pause_draw = 0;
-            render_pause();
-        } else if (hud_dirty) {
+         * next goal (or steps a teleport/pan).  While paused the playfield and
+         * BG overlay are frozen: do not run row sync/dirty flushes or the
+         * step-pose timer, or they could draw over the menu. */
+        if (!paused) {
+            if (!pan_active) render_camera();
+            game_teleport_camera_ready();
+            render_sync_rows();
+        }
+        if (hud_dirty) {
             hud_dirty = 0;
             render_hud();
         }
-        render_flush_cells();
+        if (paused) {
+            if (pause_menu_step()) {
+                if (pause_pending == PAUSE_PENDING_RESTART) {
+                    pause_pending = PAUSE_PENDING_NONE;
+                    paused = 0;
+                    pan_cancel(0);
+                    kill_robbo();
+                } else {
+                    pause_pending = PAUSE_PENDING_NONE;
+                    paused = 0;
+                }
+            }
+        }
+        if (!paused) {
+            render_flush_cells();
 
-        /* Advance frame-rate visual timers after the cells are flushed, so a
-         * freshly queued step pose is drawn before the timer starts counting. */
-        game_frame();
+            /* Advance frame-rate visual timers after the cells are flushed, so
+             * a freshly queued step pose is drawn before the timer starts
+             * counting.  Frozen while the pause overlay is on screen. */
+            game_frame();
+        }
 
         if (!paused && !(pad & J_SELECT)) {
             if (++tick_timer >= LOGIC_TICK_FRAMES) {
@@ -309,12 +381,14 @@ void main(void)
         if (game_restart_requested) {
             game_restart_requested = 0;
             pan_cancel(0);
+            pause_menu_abort();
             level = level_planet;
             /* Keep the display on: game_respawn_level() restores the map and
              * starts the intro, which repaints the wiped room and pans from
              * the death view back to Robbo's start. */
             game_respawn_level(level);
             paused = 0;
+            pause_pending = PAUSE_PENDING_NONE;
             move_delay = 0;
             tick_timer = 0;
             prev = pad;
