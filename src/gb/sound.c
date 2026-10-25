@@ -690,27 +690,99 @@ static void apply_last_bolt_step(uint8_t vi, uint8_t index)
     v->last_type = 2;
 }
 
+/* Cache of converted pattern steps.  apply_pattern_step() used to pay the
+ * 32-bit POKEY -> DMG divisions on every step; laser turret levels retrigger
+ * SFX_HIT_WALL constantly, so memoize the conversion exactly like the legacy
+ * apply_legacy_step() path.  Keyed by (note, step) because every input to the
+ * conversion derives from those two.  vol/dist are derived cheaply from AUDC
+ * and kept local, so only the expensive nr43/period/duty go in the memo. */
+typedef struct {
+    uint8_t note;
+    uint8_t index;
+    uint8_t nr43;      /* valid when dist <= 4 */
+    uint16_t period;   /* valid when dist > 4 */
+    uint8_t duty;
+} PatternMemo;
+
+#define PATTERN_MEMO 24
+static PatternMemo pattern_memo[PATTERN_MEMO];
+static uint8_t pattern_memo_next;
+
+static PatternMemo *pattern_memo_find(uint8_t note, uint8_t index)
+{
+    uint8_t i;
+    for (i = 0; i < PATTERN_MEMO; i++) {
+        if (pattern_memo[i].note == note && pattern_memo[i].index == index) {
+            return &pattern_memo[i];
+        }
+    }
+    return 0;
+}
+
+static PatternMemo *pattern_memo_slot(void)
+{
+    PatternMemo *m = &pattern_memo[pattern_memo_next];
+    pattern_memo_next = (uint8_t)((pattern_memo_next + 1) % PATTERN_MEMO);
+    return m;
+}
+
+/* Convert one POKEY step into DMG hardware values.  Pure: no APU writes. */
+static void pattern_convert(uint8_t audc, uint8_t audf, uint8_t dist,
+                            PatternMemo *m)
+{
+    uint32_t clock = (audc & 0x10) ? POKEY_CLOCK_179M : POKEY_CLOCK_64K;
+    uint32_t div = (uint32_t)audf + 1UL;
+    uint32_t hz;
+
+    if (dist <= 4) {
+        hz = clock / div;
+        if (dist <= 3) hz = (hz * 16UL) / 31UL;
+        if (hz < 4UL) hz = 4UL;
+        if (hz > 262144UL) hz = 262144UL;
+        m->nr43 = pattern_noise_nr43(hz);
+        m->period = 0;
+        m->duty = 0;
+    } else {
+        uint16_t period;
+        uint8_t duty;
+
+        if (dist == 6) {
+            hz = clock / (15UL * div);
+            duty = 1; /* 25% duty */
+        } else {
+            hz = clock / (2UL * div);
+            duty = 2; /* 50% duty */
+        }
+        if (hz < 31UL) hz = 31UL;
+        if (hz > 65535UL) hz = 65535UL;
+        period = 2048UL - (131072UL / hz);
+        if (period > 2047UL) period = 2047UL;
+        m->nr43 = 0;
+        m->period = period;
+        m->duty = duty;
+    }
+}
+
 static void apply_pattern_step(uint8_t vi, uint8_t index)
 {
     SfxVoice *v = &voices[vi];
-    const SfxStep *s = &sfx_notes[v->note][index];
+    uint8_t note = v->note;
+    const SfxStep *s = &sfx_notes[note][index];
     uint8_t audc = s->audc;
     uint8_t vol;
     uint8_t dist;
-    uint32_t clock;
-    uint32_t div;
-    uint32_t hz;
+    PatternMemo *m;
 
     /* The level-start fanfare now uses the GBC conversion for its noise
      * sweep and square tone.  The POKEY table is still used for its audible
      * step shape and end detection. */
-    if (v->note == SFX_LEVEL_START) {
+    if (note == SFX_LEVEL_START) {
         apply_level_start_step(vi, index);
         return;
     }
 
     /* Last bolt / capsule open: GBC gated-noise fade. */
-    if (v->note == SFX_LAST_BOLT) {
+    if (note == SFX_LAST_BOLT) {
         apply_last_bolt_step(vi, index);
         return;
     }
@@ -728,17 +800,16 @@ static void apply_pattern_step(uint8_t vi, uint8_t index)
     }
 
     dist = (uint8_t)(audc >> 5);
-    clock = (audc & 0x10) ? POKEY_CLOCK_179M : POKEY_CLOCK_64K;
-    div = (uint32_t)s->audf + 1UL;
+
+    m = pattern_memo_find(note, index);
+    if (!m) {
+        m = pattern_memo_slot();
+        m->note = note;
+        m->index = index;
+        pattern_convert(audc, s->audf, dist, m);
+    }
 
     if (dist <= 4) {
-        uint8_t nr43;
-
-        hz = clock / div;
-        if (dist <= 3) hz = (hz * 16UL) / 31UL;
-        if (hz < 4UL) hz = 4UL;
-        if (hz > 262144UL) hz = 262144UL;
-
         /* A tone voice may borrow the noise channel; release its pulse
          * channel first. */
         if (v->last_type == 1) {
@@ -748,15 +819,11 @@ static void apply_pattern_step(uint8_t vi, uint8_t index)
 
         NR41_REG = 0x00;
         NR42_REG = (uint8_t)(vol << 4);
-        nr43 = pattern_noise_nr43(hz);
-        NR43_REG = nr43;
+        NR43_REG = m->nr43;
         NR44_REG = 0x80;
         noise_owner = vi;
         v->last_type = 2;
     } else {
-        uint16_t period;
-        uint8_t duty;
-
         /* Back on this voice's pulse channel. */
         if (v->last_type == 2 && noise_owner == vi) {
             NR42_REG = 0x00;
@@ -764,25 +831,13 @@ static void apply_pattern_step(uint8_t vi, uint8_t index)
             noise_owner = 0xFF;
         }
 
-        if (dist == 6) {
-            hz = clock / (15UL * div);
-            duty = 1; /* 25% duty */
-        } else {
-            hz = clock / (2UL * div);
-            duty = 2; /* 50% duty */
-        }
-        if (hz < 31UL) hz = 31UL;
-        if (hz > 65535UL) hz = 65535UL;
-        period = 2048UL - (131072UL / hz);
-        if (period > 2047UL) period = 2047UL;
-
-        *pulse_duty[vi] = (uint8_t)(duty << 6);
+        *pulse_duty[vi] = (uint8_t)(m->duty << 6);
         *pulse_vol[vi] = (uint8_t)(vol << 4);
-        *pulse_period_lo[vi] = (uint8_t)(period & 0xFF);
-        *pulse_period_hi[vi] = (uint8_t)(0x80 | ((period >> 8) & 0x07));
+        *pulse_period_lo[vi] = (uint8_t)(m->period & 0xFF);
+        *pulse_period_hi[vi] = (uint8_t)(0x80 | ((m->period >> 8) & 0x07));
         v->last_type = 1;
-        v->last_period = period;
-        v->last_duty = duty;
+        v->last_period = m->period;
+        v->last_duty = m->duty;
     }
 }
 

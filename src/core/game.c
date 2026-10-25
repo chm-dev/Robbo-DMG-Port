@@ -1082,12 +1082,13 @@ static void turret_tick(void)
         }
 
         if (rotatable && (next_rand8() & 15) == 0) {
-            int8_t delta = (int8_t)(next_rand8() % 3) - 1;
+            uint8_t r = next_rand8();
+            int8_t delta = (r < 85) ? -1 : (r < 170) ? 0 : 1;
             dir = (uint8_t)((dir + delta + 4) & 3);
             extra = (uint8_t)((extra & ~3) | dir);
             map_extra[idx] = extra;
             render_cell(idx % MAP_W, idx / MAP_W);
-        } else if ((next_rand8() % 12) == 0 && !was_shot) {
+        } else if ((next_rand8() < 22) && !was_shot) {
             state |= TURRET_SHOT;
             turret_fire(idx, dir, btype);
         }
@@ -1285,8 +1286,7 @@ static const uint8_t type_cat[31] = {
 
 static void collect_actors(void)
 {
-    const uint8_t *p = map_type;
-    const uint8_t *end = map_type + MAP_CELLS;
+    uint16_t i;
 
     turret_count = 0;
     enemy_count = 0;
@@ -1298,39 +1298,39 @@ static void collect_actors(void)
     barrier_row_lo = 0;
     barrier_row_hi = 0;
 
-    while (p != end) {
-        uint8_t cat = type_cat[*p++];
+    /* Count down from MAP_CELLS so the index lives in a register pair and the
+     * loop is a single 16-bit decrement + zero test, rather than the previous
+     * pointer scan that kept p on the stack and re-derived idx per hit. */
+    for (i = MAP_CELLS; i != 0; ) {
+        uint8_t cat = type_cat[map_type[--i]];
 
         if (cat == CAT_NONE) continue;
-        {
-            uint16_t idx = (uint16_t)(p - map_type) - 1;
-            switch (cat) {
+        switch (cat) {
         case CAT_TURRET:
-            if (turret_count < MAX_TURRET_LIST) turret_list[turret_count++] = idx;
+            if (turret_count < MAX_TURRET_LIST) turret_list[turret_count++] = i;
             break;
         case CAT_ENEMY:
-            if (enemy_count < MAX_ENEMY_LIST) enemy_list[enemy_count++] = idx;
+            if (enemy_count < MAX_ENEMY_LIST) enemy_list[enemy_count++] = i;
             break;
         case CAT_BOMB:
-            if (bomb_count < MAX_BOMB_LIST) bomb_list[bomb_count++] = idx;
+            if (bomb_count < MAX_BOMB_LIST) bomb_list[bomb_count++] = i;
             break;
         case CAT_EXPLOSION:
-            if (explosion_count < MAX_EXPLOSION_LIST) explosion_list[explosion_count++] = idx;
+            if (explosion_count < MAX_EXPLOSION_LIST) explosion_list[explosion_count++] = i;
             break;
         case CAT_MAGNET:
-            if (magnet_count < MAX_MAGNET_LIST) magnet_list[magnet_count++] = idx;
+            if (magnet_count < MAX_MAGNET_LIST) magnet_list[magnet_count++] = i;
             break;
         case CAT_SPACESHIP:
-            if (spaceship_count < MAX_SPACESHIP_LIST) spaceship_list[spaceship_count++] = idx;
+            if (spaceship_count < MAX_SPACESHIP_LIST) spaceship_list[spaceship_count++] = i;
             break;
         case CAT_BARRIER:
-            if (idx < 256) barrier_row_lo |= (uint16_t)(1u << (idx >> 4));
-            else barrier_row_hi |= (uint16_t)(1u << ((idx >> 4) - 16));
+            if (i < 256) barrier_row_lo |= (uint16_t)(1u << (i >> 4));
+            else barrier_row_hi |= (uint16_t)(1u << ((i >> 4) - 16));
             break;
         default:    /* CAT_TELEPORT */
-            if (teleport_count < MAX_TELEPORT_LIST) teleport_list[teleport_count++] = idx;
+            if (teleport_count < MAX_TELEPORT_LIST) teleport_list[teleport_count++] = i;
             break;
-            }
         }
     }
 }
@@ -1537,6 +1537,7 @@ void game_tick(void)
     uint8_t i = 0;
     uint16_t ei;
     uint16_t eidx;
+    uint8_t anim_changed;
 
     /* A level-complete clear owns the screen; the advance request is handled
      * by main on a frame boundary, so do not run another logic tick. */
@@ -1545,7 +1546,8 @@ void game_tick(void)
     if (fire_delay != 0) fire_delay--;
     anim_frame = (anim_frame + 1) & 1;
     /* Bullets, capsule and teleports swap frames every other logic tick. */
-    if (anim_frame == 0) anim_slow ^= 1;
+    anim_changed = (anim_frame == 0);
+    if (anim_changed) anim_slow ^= 1;
     explosion_sfx_started = 0;
 
     if (robbo_dead) {
@@ -1612,7 +1614,9 @@ void game_tick(void)
             uint8_t lstate = (be >> 5) & 3;
 
             if (lstate == BULLET_LASER_WAIT) {
-                render_cell(bx, by);
+                /* A stationary beam segment only changes look when the bullet
+                 * animation frame toggles; re-mark it then, not every tick. */
+                if (anim_changed) render_cell(bx, by);
                 i++;
                 continue;
             }
@@ -1659,6 +1663,7 @@ void game_tick(void)
 
             if (target == CT_EMPTY) {
                 map_extra[bidx] = (uint8_t)((be & 0x1F) | (BULLET_LASER_WAIT << 5) | 0x80);
+                if (anim_changed) render_cell(bx, by);
                 if (add_bullet(nidx, bdir, 1, owner)) {
                     map_extra[nidx] |= 0x80;
                 } else {

@@ -151,7 +151,7 @@ void main(void)
             } else if (pad & J_UP) {
                 level = (level > 1) ? (level - 1) : LEVEL_COUNT;
             } else if (pad & J_DOWN) {
-                level = 23;  /* bomb/question test level */
+                level = 18;  /* turret perf test level (was 23 bomb/question) */
             } else {
                 level++;
                 if (level > LEVEL_COUNT) level = 1;
