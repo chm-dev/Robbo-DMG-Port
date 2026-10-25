@@ -15,11 +15,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-const rom = path.join(root, 'roms', 'robbo.gb');
+const rom = path.join(root, 'roms', 'robbo-debug.gb');
 const romBytes = fs.readFileSync(rom);
 
 function symbols() {
-  const text = fs.readFileSync(path.join(root, 'roms', 'robbo.noi'), 'utf8');
+  const text = fs.readFileSync(path.join(root, 'roms', 'robbo-debug.noi'), 'utf8');
   const map = {};
   for (const line of text.split(/\r?\n/)) {
     const m = line.match(/^DEF _([A-Za-z0-9_]+) (0x[0-9A-Fa-f]+)/);

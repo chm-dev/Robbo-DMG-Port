@@ -39,6 +39,8 @@
 #define ENDING_HEAD_X1_1 13
 
 extern const uint8_t ending_tiles[ENDING_TILE_COUNT * 16];
+extern const uint8_t ending_scene_cgb[8 * 16];
+extern const uint8_t ending_ground_cgb[4 * 16];
 extern const uint8_t ending_sprite_tiles[ENDING_SPRITE_TILES * 16];
 extern const uint8_t ending_font[128];
 extern const uint8_t ending_font_inverse[128];

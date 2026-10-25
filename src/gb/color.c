@@ -36,6 +36,8 @@ static const uint16_t pal_logo[4] = { 0x7FFF, 0x03FF, 0x029F, 0x0000 };
 static const uint16_t pal_ending[4] = { 0x0000, 0x35AD, 0x6B5A, 0x7FFF };
 /* Sprite entries (0 is transparent): 1 = dark, 2 = light, 3 = white. */
 static const uint16_t pal_sprite[4] = { 0x0000, 0x35AD, 0x7FFF, 0x7FFF };
+/* Title rules: the GBC title uses a dark-red rule band (RPAL = 0x040A). */
+static const uint16_t pal_rule[4] = { 0x7FFF, 0x040A, 0x294A, 0x0000 };
 
 void color_init(void) BANKED
 {
@@ -46,6 +48,7 @@ void color_init(void) BANKED
     set_bkg_palette(COLOR_PAL_UI, 1, (const palette_color_t *)pal_ui);
     set_bkg_palette(COLOR_PAL_LOGO, 1, (const palette_color_t *)pal_logo);
     set_bkg_palette(COLOR_PAL_ENDING, 1, (const palette_color_t *)pal_ending);
+    set_bkg_palette(COLOR_PAL_RULE, 1, (const palette_color_t *)pal_rule);
     set_sprite_palette(0, 1, (const palette_color_t *)pal_sprite);
 }
 
@@ -169,4 +172,25 @@ void color_hud_attr(void) BANKED
     VBK_REG = VBK_ATTRIBUTES;
     set_win_tiles(0, 0, 20, 2, buf);
     VBK_REG = VBK_TILES;
+}
+
+/* Ending scene palettes, taken from the GBC ending data (see
+ * robbo-gbc/src/gen/gfx_tiles.h: END_COLOR_*).
+ *
+ *   BG 0 (scene)   = COLB, PF0, PF1, PF2
+ *   BG 1 (ground)  = COLB, PF0, PF1, PF3
+ *   sprite 0       = the normal scene palette (Robbo uses the raw indices)
+ *
+ * The ground and ship-flash tiles are uploaded from the raw-index copy
+ * (ending_ground_cgb / ending_scene_cgb) when running in colour, so the DMG
+ * shade bake does not collapse the PF1/PF3 split. */
+static const uint16_t pal_end_scene[4] = { 0x0000, 0x1C0E, 0x028E, 0x6739 };
+static const uint16_t pal_end_ground[4] = { 0x0000, 0x1C0E, 0x028E, 0x6504 };
+
+void color_ending_scene(void) BANKED
+{
+    if (!color_on) return;
+    set_bkg_palette(0, 1, (const palette_color_t *)pal_end_scene);
+    set_bkg_palette(1, 1, (const palette_color_t *)pal_end_ground);
+    set_sprite_palette(0, 1, (const palette_color_t *)pal_end_scene);
 }

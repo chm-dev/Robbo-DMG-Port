@@ -11,9 +11,9 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const out = path.join(root, 'gb', 'tests', 'screenshots');
-const gb = loadRom(path.join(root, 'roms', 'robbo.gb'));
+const gb = loadRom(path.join(root, 'roms', 'robbo-debug.gb'));
 
-// WRAM symbols from roms/robbo.noi.
+// WRAM symbols from roms/robbo-debug.noi (this test warps with Select).
 const SYM = {
   level_planet: 0xc703,
   robbo_x: 0xc705,

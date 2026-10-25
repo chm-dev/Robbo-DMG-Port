@@ -180,6 +180,15 @@ def main() -> None:
     for i in range(END_SHIPR, END_SHIPR + 4):
         tiles.append(shade_tile(src[i], BG_PAL1))
 
+    # Raw-index copies for CGB: the DMG bake folds PF3 into shade index 2 so the
+    # ending keeps a light-grey ground under BGP = 0x1B, but the Color mode
+    # needs the original indices to feed the real PAL1 palette.
+    def raw_tile(i: int) -> bytes:
+        return tile_bytes([list(src[i][y * 8:(y + 1) * 8]) for y in range(8)])
+
+    scene_cgb = b"".join(raw_tile(i) for i in range(END_SHIPL, END_SHIPR + 4))
+    ground_cgb = b"".join(raw_tile(i) for i in range(END_GROUND, END_GROUND + 4))
+
     chars = sorted({ch for page in MESSAGE for row in page for ch in row if ch != "~"})
     font_normal = len(tiles)
     table_normal = [0xFF] * 128
@@ -241,6 +250,8 @@ def main() -> None:
             h.write(f"#define ENDING_HEAD_X1_{page} {x1}\n")
         h.write("\n")
         h.write("extern const uint8_t ending_tiles[ENDING_TILE_COUNT * 16];\n")
+        h.write("extern const uint8_t ending_scene_cgb[8 * 16];\n")
+        h.write("extern const uint8_t ending_ground_cgb[4 * 16];\n")
         h.write("extern const uint8_t ending_sprite_tiles[ENDING_SPRITE_TILES * 16];\n")
         h.write("extern const uint8_t ending_font[128];\n")
         h.write("extern const uint8_t ending_font_inverse[128];\n")
@@ -257,6 +268,16 @@ def main() -> None:
         c.write(f"const uint8_t ending_tiles[{len(tiles) * 16}] = {{\n")
         for i, tile in enumerate(tiles):
             c.write(f"  /* {i:3d} */ " + ",".join(f"0x{b:02X}" for b in tile) + ",\n")
+        c.write("};\n\n")
+
+        c.write("/* Raw-index copies for CGB mode (see the generator comment). */\n")
+        c.write(f"const uint8_t ending_scene_cgb[{len(scene_cgb)}] = {{\n")
+        for i in range(0, len(scene_cgb), 16):
+            c.write("  " + ",".join(f"0x{b:02X}" for b in scene_cgb[i:i + 16]) + ",\n")
+        c.write("};\n\n")
+        c.write(f"const uint8_t ending_ground_cgb[{len(ground_cgb)}] = {{\n")
+        for i in range(0, len(ground_cgb), 16):
+            c.write("  " + ",".join(f"0x{b:02X}" for b in ground_cgb[i:i + 16]) + ",\n")
         c.write("};\n\n")
 
         c.write("/* Raw 2bpp source tiles for the sprite layer (OBP0 = 0x18). */\n")

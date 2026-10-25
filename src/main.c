@@ -10,10 +10,12 @@
  *   Start  open the pause menu
  *   Pause menu: Up/Down select, Left/Right set the warp level,
  *               A activates, Start/B close and resume
- *   Select next level (debug)
+ *
+ * Debug build only (-DDEBUG_STATE, roms/robbo-debug.gb):
+ *   Select next level
  *   Select + Right / Left  +10 / -10 levels
  *   Select + Up            previous level
- *   Select + Down          warp to level 23 (bomb/question test level)
+ *   Select + Down          warp to level 18 (turret/perf test level)
  *   Select + A             warp to level 30 (box/bolt test level)
  *   Select + B             back to level 1
  */
@@ -38,6 +40,15 @@
 #define PAUSE_PENDING_NONE    0
 #define PAUSE_PENDING_RESUME  1
 #define PAUSE_PENDING_RESTART 2
+
+/* The Select level-warp block is a development aid and is absent from the
+ * release ROM.  The gameplay loop must also ignore Select there instead of
+ * freezing the logic/input tick while it is held. */
+#ifdef DEBUG_STATE
+#define DEBUG_WARP_HELD(pad) ((pad) & J_SELECT)
+#else
+#define DEBUG_WARP_HELD(pad) 0
+#endif
 
 static uint8_t level = 1;
 static uint8_t saved_level = 0;
@@ -145,8 +156,10 @@ void main(void)
         pad = joypad();
         debug_pad = pad;
 
-        /* Test hook: START+SELECT previews the end-game sequence.  Checked
-         * before the pause/warp handlers so neither single button fires. */
+#ifdef DEBUG_STATE
+        /* Debug builds only: START+SELECT previews the end-game sequence.
+         * Checked before the pause/warp handlers so neither single button
+         * fires.  The release ROM has no test hook here. */
         if ((pad & (J_START | J_SELECT)) == (J_START | J_SELECT) &&
             (prev & (J_START | J_SELECT)) != (J_START | J_SELECT)) {
             pan_cancel(0);
@@ -155,7 +168,11 @@ void main(void)
             prev = joypad();
             continue;
         }
+#endif
 
+#ifdef DEBUG_STATE
+        /* Debug builds: Select warps through the level list.  The release ROM
+         * omits this block entirely. */
         if ((pad & J_SELECT) && !(prev & J_SELECT)) {
             if (pad & J_A) {
                 level = 30;
@@ -185,6 +202,7 @@ void main(void)
             prev = pad;
             continue;
         }
+#endif
 
         if (game_level_advance_requested) {
             game_level_advance_requested = 0;
@@ -330,7 +348,7 @@ void main(void)
             game_frame();
         }
 
-        if (!paused && !(pad & J_SELECT)) {
+        if (!paused && !DEBUG_WARP_HELD(pad)) {
             if (++tick_timer >= LOGIC_TICK_FRAMES) {
                 tick_timer = 0;
                 tick_phase = 1;  /* arm the split logic tick */

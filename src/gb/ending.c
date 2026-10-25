@@ -98,25 +98,32 @@ static void ew(uint8_t frames)
 /* Scene                                                               */
 /* ------------------------------------------------------------------ */
 
-static void draw_mt(uint8_t col, uint8_t row, uint8_t off)
+static void draw_mt(uint8_t col, uint8_t row, uint8_t off, uint8_t pal)
 {
     uint8_t tiles[4];
+    uint8_t attrs[4];
 
     tiles[0] = off;
     tiles[1] = (uint8_t)(off + 1);
     tiles[2] = (uint8_t)(off + 2);
     tiles[3] = (uint8_t)(off + 3);
     set_bkg_tiles(col, row, 2, 2, tiles);
+    if (color_on) {
+        attrs[0] = attrs[1] = attrs[2] = attrs[3] = pal;
+        set_bkg_attributes(col, row, 2, 2, attrs);
+    }
 }
 
 static void bg_cell(uint8_t col, uint8_t row)
 {
     uint8_t tile = ENDING_BLANK_TILE;
+    uint8_t pal = COLOR_PAL_NORMAL;
     uint8_t i;
 
     if (row >= ENDING_GROUND_ROW) {
         tile = (uint8_t)(ENDING_GROUND + (col & 1) +
                          ((row - ENDING_GROUND_ROW) ? 2 : 0));
+        pal = COLOR_PAL_WALL;
     } else {
         for (i = 0; i < 17; i++) {
             if (ending_stars[i][0] == col && ending_stars[i][1] == row) {
@@ -126,6 +133,7 @@ static void bg_cell(uint8_t col, uint8_t row)
         }
     }
     set_bkg_tile_xy(col, row, tile);
+    if (color_on) set_bkg_attributes(col, row, 1, 1, &pal);
 }
 
 static void draw_scene(void)
@@ -137,11 +145,12 @@ static void draw_scene(void)
             set_bkg_tile_xy(x, y, ENDING_BLANK_TILE);
         }
     }
+    color_fill_attrs(0, 0, 20, 18, COLOR_PAL_NORMAL);
     for (x = 0; x < 17; x++) {
         bg_cell(ending_stars[x][0], ending_stars[x][1]);
     }
     for (x = 0; x < 20; x = (uint8_t)(x + 2)) {
-        draw_mt(x, ENDING_GROUND_ROW, ENDING_GROUND);
+        draw_mt(x, ENDING_GROUND_ROW, ENDING_GROUND, COLOR_PAL_WALL);
     }
 }
 
@@ -192,10 +201,11 @@ static void scene_pose(uint8_t x, uint8_t frame, int8_t atari_ship_y)
 
     if (ship_row != HIDDEN) {
         /* The Atari ship alternates its inverse colour with RTC bit 4. */
+        uint8_t ship_pal = (pal_frame & 16) ? COLOR_PAL_WALL : COLOR_PAL_NORMAL;
         shipl = (pal_frame & 16) ? ENDING_SHIPL_FLASH : ENDING_SHIPL;
         shipr = (pal_frame & 16) ? ENDING_SHIPR_FLASH : ENDING_SHIPR;
-        draw_mt(ENDING_SHIP_COL, ship_row, shipl);
-        draw_mt((uint8_t)(ENDING_SHIP_COL + 2), ship_row, shipr);
+        draw_mt(ENDING_SHIP_COL, ship_row, shipl, ship_pal);
+        draw_mt((uint8_t)(ENDING_SHIP_COL + 2), ship_row, shipr, ship_pal);
     }
 }
 
@@ -273,6 +283,8 @@ static void ending_text(void)
 
     DISPLAY_OFF;
     HIDE_SPRITES;
+    /* Text pages keep the fixed grey ramp; the scene attributes are per-cell. */
+    color_fill_attrs(0, 0, 20, 18, COLOR_PAL_ENDING);
 
     /* The debug trigger and the closing scene can leave START held. */
     while (joypad() & J_START) ew(1);
@@ -334,12 +346,19 @@ void ending_show(void) BANKED
     OBP0_REG = 0x18;
 
     set_bkg_data(0, ENDING_TILE_COUNT, ending_tiles);
+    if (color_on) {
+        /* Ground and ship-flash tiles carry PF3 in shade 2 for DMG; CGB wants
+         * the original palette indices. */
+        set_bkg_data(ENDING_SHIPL, 8, ending_scene_cgb);
+        set_bkg_data(ENDING_GROUND, 4, ending_ground_cgb);
+    }
     set_sprite_data(ENDING_SPRITE_BASE, ENDING_SPRITE_TILES,
                     ending_sprite_tiles);
     /* CGB: one grey ramp palette covers the scene and both text pages; the
      * per-scanline DMG fade stays a single palette (accepted simplification). */
-    color_fill_attrs(0, 0, 32, 32, COLOR_PAL_ENDING);
+    color_fill_attrs(0, 0, 32, 32, COLOR_PAL_NORMAL);
     color_fill_win_attrs(0, 0, 20, 18, COLOR_PAL_ENDING);
+    color_ending_scene();
     draw_scene();
     SPRITES_8x8;
     ENABLE_OAM_DMA;         /* the first (and only) sprite user in the port */

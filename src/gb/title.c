@@ -233,6 +233,9 @@ uint8_t title_show(uint8_t saved_level) BANKED
     color_fill_attrs(0, 0, 32, 32, COLOR_PAL_UI);
     color_fill_attrs(TITLE_LOGO_X, 0, TITLE_LOGO_TW, TITLE_LOGO_TH,
                      COLOR_PAL_LOGO);
+    /* CGB: the two instruction-window rules are dark red, as on the GBC. */
+    color_fill_attrs(0, TITLE_RULE_TOP, TITLE_COLS, 1, COLOR_PAL_RULE);
+    color_fill_attrs(0, TITLE_RULE_BOT, TITLE_COLS, 1, COLOR_PAL_RULE);
 
     title_draw_logo(TITLE_LOGO_0);
 

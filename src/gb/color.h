@@ -15,6 +15,7 @@
 #define COLOR_PAL_LOGO    4   /* title logo bevel */
 #define COLOR_PAL_ENDING  5   /* ending scene and text */
 #define COLOR_PAL_OBJ     6   /* inverse objects: crates, doors, teleports */
+#define COLOR_PAL_RULE    7   /* title-screen horizontal rules (dark red) */
 
 /* 1 when running on CGB hardware.  Read this in the render paths. */
 extern uint8_t color_on;
@@ -34,6 +35,9 @@ void color_fill_attrs(uint8_t x, uint8_t y, uint8_t w, uint8_t h,
                       uint8_t pal) BANKED;
 void color_fill_win_attrs(uint8_t x, uint8_t y, uint8_t w, uint8_t h,
                           uint8_t pal) BANKED;
+/* Ending scene: the GBC palettes (BGR555) for the starfield/ground/ship and
+ * the Robbo sprites.  Text pages keep the fixed COLOR_PAL_ENDING ramp. */
+void color_ending_scene(void) BANKED;
 void color_row_attr(uint8_t map_row, const uint8_t *pals) BANKED;
 void color_cell_attr(uint8_t tx, uint8_t ty, uint8_t pal) BANKED;
 void color_hud_attr(void) BANKED;
