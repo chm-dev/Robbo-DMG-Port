@@ -26,6 +26,9 @@ uint8_t color_on;
 /* Current level palettes in art-index order, kept so the last-bolt flash can
  * swap the background entry and restore it without re-reading the table. */
 static uint16_t pal_cur[12];
+/* Inverse-object palette (crates/doors/teleports): the GBC draws these with
+ * the inverse palette's body (= COL3) and its dark detail is COLPF0. */
+static uint16_t pal_obj[4];
 
 /* Fixed palettes: UI (HUD/title/pause), title logo, ending scene. */
 static const uint16_t pal_ui[4]   = { 0x7FFF, 0x56B5, 0x294A, 0x0000 };
@@ -62,8 +65,16 @@ void color_level_pal(uint8_t level) BANKED
         /* Cave fill is solid COLPF0 = art index 3 of the normal palette. */
         pal_cur[8 + i] = src[3];
     }
+    /* Inverse objects (crates, doors): body (role 3) = COLPF0, highlight
+     * (role 2) = COL3, keyhole (role 0) = COLPF1. */
+    pal_obj[0] = src[7];
+    pal_obj[1] = src[5];
+    pal_obj[2] = src[6];
+    pal_obj[3] = src[4];
+
     /* Palettes 0..2 are contiguous: normal, walls, cave fill. */
     set_bkg_palette(0, 3, (const palette_color_t *)pal_cur);
+    set_bkg_palette(COLOR_PAL_OBJ, 1, (const palette_color_t *)pal_obj);
 }
 
 /* Last-bolt flash: the DMG build swaps the background shade (BGP 0xE0).

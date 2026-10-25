@@ -14,14 +14,18 @@
 #define COLOR_PAL_UI      3   /* HUD, title text, pause menu */
 #define COLOR_PAL_LOGO    4   /* title logo bevel */
 #define COLOR_PAL_ENDING  5   /* ending scene and text */
+#define COLOR_PAL_OBJ     6   /* inverse objects: crates, doors, teleports */
 
 /* 1 when running on CGB hardware.  Read this in the render paths. */
 extern uint8_t color_on;
 
 /* Metatile -> palette slot (attribute byte value). */
 #define COLOR_MT_PAL(mt) \
-    (((mt) == MT_WALL) ? COLOR_PAL_WALL : \
-     ((mt) == MT_WALL_CAVE) ? COLOR_PAL_CAVE : COLOR_PAL_NORMAL)
+    (((mt) == MT_WALL || (mt) == MT_TELEPORT_0 || \
+      (mt) == MT_TELEPORT_1) ? COLOR_PAL_WALL : \
+     ((mt) == MT_WALL_CAVE) ? COLOR_PAL_CAVE : \
+     ((mt) == MT_STONE || (mt) == MT_DOOR) ? COLOR_PAL_OBJ : \
+     COLOR_PAL_NORMAL)
 
 void color_init(void) BANKED;
 void color_level_pal(uint8_t level) BANKED;

@@ -45,9 +45,14 @@ ROW = re.compile(
 
 
 def art_palettes(v: list[str]) -> tuple[list[str], list[str]]:
-    """Map Atari-order values to this port's art-index order."""
+    """Map Atari-order values to this port's art-index order.
+
+    Walls: the GBC/Atari wall glyph draws its body with pixel value 3 (COL3)
+    and its detail with value 2 (COLPF1); this port's wall metatile uses
+    role 2 for the body and role 3 for the detail, so the two are crossed.
+    """
     normal = [v[3], v[0], v[2], v[1]]          # COLPF2, COLB, COLPF1, COLPF0
-    wall = [v[3], v[0], v[2], v[7]]            # COLPF2, COLB, COLPF1, COL3
+    wall = [v[1], v[0], v[7], v[2]]            # COLPF0, COLB, COL3, COLPF1
     return normal, wall
 
 
@@ -66,7 +71,7 @@ def main() -> None:
         " * Altirra's Default PAL palette - see robbo-gbc/AGENTS.md).",
         " *",
         " * [0..3] normal : COLPF2, COLB, COLPF1, COLPF0",
-        " * [4..7] walls  : COLPF2, COLB, COLPF1, COL3",
+        " * [4..7] walls  : COLPF0, COLB, COL3, COLPF1",
         " */",
         "#pragma bank 10",
         "",
