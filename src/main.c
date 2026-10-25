@@ -24,6 +24,7 @@
 #include "gb/ending.h"
 #include "gb/intro.h"
 #include "gb/render.h"
+#include "gb/save.h"
 #include "gb/screens.h"
 #include "gb/sound.h"
 #include "gb/title.h"
@@ -38,6 +39,7 @@
 #define PAUSE_PENDING_RESTART 2
 
 static uint8_t level = 1;
+static uint8_t saved_level = 0;
 static uint8_t paused = 0;
 static uint8_t pause_pending = PAUSE_PENDING_NONE;
 static uint8_t move_delay = 0;
@@ -67,12 +69,16 @@ static void wait_vbl(void)
     while (!VBL_DONE) {}
 }
 
-/* Restore the gameplay tiles the title overwrote, then rebuild level 1. */
-static void load_first_level(void)
+/* Restore the gameplay tiles the title overwrote, then rebuild the selected
+ * planet.  Level 1 is only a fallback for a missing/corrupt selection. */
+static void load_first_level(uint8_t start_level)
 {
+    if (start_level < 1) start_level = 1;
+    if (start_level > LEVEL_COUNT) start_level = LEVEL_COUNT;
+
     pause_menu_abort();
     render_restore_tiles();
-    level = 1;
+    level = start_level;
     game_load_level(level);
     paused = 0;
     pause_pending = PAUSE_PENDING_NONE;
@@ -83,15 +89,19 @@ static void load_first_level(void)
 }
 
 /* The ending leaves the display off and the HUD hidden.  The pause menu's
- * EXIT entry uses the same return-to-title path. */
+ * EXIT entry uses the same return-to-title path.  The title may delete the
+ * save, so re-read it before starting. */
 static void return_to_title(void)
 {
+    uint8_t start_level;
+
     pause_menu_abort();
     DISPLAY_OFF;
     HIDE_WIN;
     sfx_stop();
-    title_show();
-    load_first_level();
+    start_level = title_show(saved_level);
+    saved_level = save_load();
+    load_first_level(start_level);
 }
 
 void main(void)
@@ -104,11 +114,12 @@ void main(void)
     sound_init();
     render_init();
     render_camera_reset();
-    title_show();
 
     /* The title screen overwrites the gameplay tile range with its logo and
-     * font; load_first_level() restores it before drawing level 1. */
-    load_first_level();
+     * font; load_first_level() restores it before drawing the selected
+     * planet.  A fresh cart has no save and therefore starts at level 1. */
+    saved_level = save_load();
+    return_to_title();
 
     sound_time = sys_time;
 
@@ -182,6 +193,13 @@ void main(void)
                 return_to_title();
             } else {
                 level = level_planet + 1;
+                /* Progress is the only thing that creates/advances a save.
+                 * save_store() keeps the highest level, so replaying from a
+                 * lower planet can never downgrade the recorded progress. */
+                {
+                    uint8_t stored = save_store(level);
+                    if (stored > saved_level) saved_level = stored;
+                }
                 /* NXCV already cleared the playfield; load and paint the next
                  * level in without a black frame. */
                 game_load_level_after_clear(level);
@@ -230,11 +248,13 @@ void main(void)
          * tick / movement block at the bottom is skipped. */
         if (!paused) {
             if ((pad & J_START) && !(prev & J_START)) {
+                uint8_t warp_max = (saved_level > level) ? saved_level : level;
+
                 paused = 1;
                 pause_pending = PAUSE_PENDING_NONE;
                 cam_smooth = 0;
                 pan_cancel(1);
-                pause_menu_open(level);
+                pause_menu_open(level, warp_max);
             }
         } else {
             uint8_t warp_level;

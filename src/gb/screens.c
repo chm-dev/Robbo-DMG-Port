@@ -50,6 +50,7 @@ static uint8_t menu_shown_row;
 static uint8_t menu_restore_next;
 static uint8_t menu_sel;
 static uint8_t menu_level;
+static uint8_t menu_max_level;
 static uint8_t menu_repeat;
 static uint16_t menu_dirty;
 
@@ -146,10 +147,12 @@ static void menu_restore_row(uint8_t row)
     set_bkg_tiles(pause_menu_bg_x, tile_y, MENU_W, 1, buf);
 }
 
-void pause_menu_open(uint8_t level) BANKED
+void pause_menu_open(uint8_t level, uint8_t max_level) BANKED
 {
+    if (max_level < 1) max_level = 1;
+    if (max_level > LEVEL_COUNT) max_level = LEVEL_COUNT;
     if (level < 1) level = 1;
-    if (level > LEVEL_COUNT) level = LEVEL_COUNT;
+    if (level > max_level) level = max_level;
 
     pause_menu_bg_x = (uint8_t)((cam_scx + MENU_SCREEN_X) >> 3);
     pause_menu_bg_y = (uint8_t)((cam_scy + MENU_SCREEN_Y) >> 3);
@@ -158,6 +161,7 @@ void pause_menu_open(uint8_t level) BANKED
     menu_restore_next = 0;
     menu_sel = MENU_ITEM_WARP;
     menu_level = level;
+    menu_max_level = max_level;
     menu_repeat = 0;
     menu_dirty = 0;
     pause_menu_state = PAUSE_STATE_OPENING;
@@ -277,7 +281,7 @@ uint8_t pause_menu_update(uint8_t pad, uint8_t prev, uint8_t *warp_level) BANKED
         uint8_t old_level = menu_level;
 
         if (dir == 1) {
-            if (menu_level < LEVEL_COUNT) menu_level++;
+            if (menu_level < menu_max_level) menu_level++;
         } else {
             if (menu_level > 1) menu_level--;
         }

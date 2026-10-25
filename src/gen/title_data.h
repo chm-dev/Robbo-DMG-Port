@@ -11,13 +11,15 @@
 #define TITLE_LOGO_1 42
 #define TITLE_LOGO_2 84
 #define TITLE_FONT_WHITE 126
-#define TITLE_FONT_GRAY 162
-#define TITLE_FONT_INVERSE 205
-#define TITLE_COPYRIGHT_TILE 213
-#define TITLE_RULE_TILE 214
-#define TITLE_CARET_TILE 215
-#define TITLE_BLACK_TILE 216
-#define TITLE_TILE_COUNT 217
+#define TITLE_FONT_GRAY 164
+#define TITLE_FONT_INVERSE 208
+#define TITLE_COPYRIGHT_TILE 216
+#define TITLE_RULE_TILE 217
+#define TITLE_CARET_TILE 218
+#define TITLE_BLACK_TILE 219
+#define TITLE_HUD_DIGIT_BASE 220
+#define TITLE_HUD_DIGIT_COUNT 20
+#define TITLE_TILE_COUNT 240
 #define TITLE_INSTR_WIDTH 20
 #define TITLE_INSTR_NLINES 41
 
@@ -25,6 +27,7 @@ extern const uint8_t title_tiles[TITLE_TILE_COUNT * 16];
 extern const uint8_t title_font_white[128];
 extern const uint8_t title_font_gray[128];
 extern const uint8_t title_font_inverse[128];
+extern const uint8_t title_hud_digits[10][2];
 extern const char title_instr[TITLE_INSTR_NLINES][TITLE_INSTR_WIDTH + 1];
 
 #endif

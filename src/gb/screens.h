@@ -24,7 +24,10 @@ extern uint8_t pause_menu_state;
 extern uint8_t pause_menu_bg_x;
 extern uint8_t pause_menu_bg_y;
 
-void pause_menu_open(uint8_t level) BANKED;
+/* level is the current planet; max_level is the highest planet the player may
+ * warp to (the saved highest level, or the current level when there is no
+ * save). */
+void pause_menu_open(uint8_t level, uint8_t max_level) BANKED;
 /* Start the restore pass.  pause_menu_step() returns 1 when it completes.
  * Used after Start/B (resume) or A RESTART. */
 void pause_menu_begin_close(void) BANKED;

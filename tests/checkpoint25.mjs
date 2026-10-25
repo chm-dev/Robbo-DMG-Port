@@ -34,6 +34,17 @@ function symbols() {
 
 const S = symbols();
 const CT_EXPLOSION = 28;
+
+/* Valid external-RAM record with saved highest level = level. */
+function makeSave(level) {
+  const ram = new Uint8Array(0x20000);
+  ram[0] = 0x52; ram[1] = 0x42; ram[2] = 0x42; ram[3] = 0x4f;
+  ram[4] = 1;
+  ram[5] = level;
+  ram[6] = level ^ 1 ^ 0x3c;
+  ram[7] = 0xa5;
+  return ram;
+}
 /* Keep in sync with gb/src/gb/screens.c. */
 const MENU_W = 15;
 const MENU_H = 9;
@@ -48,7 +59,9 @@ function check(label, ok, detail = '') {
   if (!ok) failures++;
 }
 
-const gb = loadRom(rom);
+/* The pause warp range is 1..saved level now, so start with a level-2 save
+ * and use the title menu to begin on level 1. */
+const gb = loadRom(rom, makeSave(2), { skipTitle: true });
 const core = gb[Object.keys(gb)[0]].gameboy;
 const byte = (name) => readMem(gb, S[name], 1)[0];
 const lcdc = () => readMem(gb, 0xFF40, 1)[0];
@@ -103,6 +116,19 @@ function waitFor(fn, max) {
   return fn();
 }
 
+function waitForTitle() {
+  core.JoyPad = 0xff;
+  for (let i = 0; i < 200; i++) {
+    if ((lcdc() & 0x80) === 0) break;
+    gb.doFrame();
+  }
+  for (let i = 0; i < 300; i++) {
+    const l = lcdc();
+    if ((l & 0x80) && (l & 0x01) && !(l & 0x20)) break;
+    gb.doFrame();
+  }
+}
+
 function levelSettled(level) {
   return byte('level_planet') === level &&
     byte('intro_active') === 0 &&
@@ -149,6 +175,16 @@ function menuPress(key) {
 /* ------------------------------------------------------------------ */
 /* Boot and layout                                                     */
 /* ------------------------------------------------------------------ */
+
+/* With save=2 the title opens its start-level menu.  Lower it to 1 and
+ * begin there so the original warp/restart/exit checks still apply. */
+waitForTitle();
+runFrames(40);
+holdKey(gb, 'START', 6);
+runFrames(15);
+holdKey(gb, 'LEFT', 6);
+runFrames(10);
+holdKey(gb, 'A', 6);
 
 check('level 1 settles before the pause test', waitLevel(1), `level=${byte('level_planet')}`);
 const camX = byte('cam_scx');
@@ -306,7 +342,11 @@ check('A EXIT TO MENU returns to the title', title,
 check('title hides the pause menu', byte('pause_menu_state') === PAUSE_STATE_CLOSED,
   `state=${byte('pause_menu_state')}`);
 
-tapKey(gb, 'START', 10);
+holdKey(gb, 'START', 6);
+runFrames(15);
+holdKey(gb, 'LEFT', 6);
+runFrames(10);
+holdKey(gb, 'A', 6);
 check('title starts level 1 again',
   waitFor(() => (lcdc() & 0x20) !== 0, 500) && waitLevelAfterLoad(1),
   `level=${byte('level_planet')}`);

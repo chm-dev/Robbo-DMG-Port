@@ -69,8 +69,9 @@ if (-not $sources) {
 # GBDK defaults plus the project's chosen cartridge configuration.
 $commonFlags = @(
     '-Wm-ynROBBO'
-    '-Wl-yt0x19'   # MBC5
-    '-Wl-yo16'     # 16 x 16 KiB banks (levels 1..7, full sheet bank 8)
+    '-Wl-yt0x1B'   # MBC5 + cartridge RAM (MidnightTrace FRAM; battery bit is metadata only)
+    '-Wl-yo16'     # 16 x 16 KiB ROM banks
+    '-Wl-ya16'     # 16 x 8 KiB RAM banks = 128 KiB FRAM, header 0x149 = 0x04
     '-Wl-j'        # emit .noi debug info
     '-Wl-w'        # show linker warnings
     '-Wf--opt-code-speed'

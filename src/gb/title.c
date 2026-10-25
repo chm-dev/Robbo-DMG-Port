@@ -6,6 +6,12 @@
  *   rows 8..10  controls
  *   row 11/17   rules around a 5-line typewriter window
  *
+ * When a save exists, A/START stops the typewriter and opens a start-level
+ * menu in the same window.  Left/Right select the planet, Up/Down choose
+ * DELETE SAVE GAME, and A starts (or asks to confirm deletion).  The number
+ * uses the game's authentic 8x16 HUD digits.  Without a save, A/START starts
+ * level 1 directly.
+ *
  * The GBC palette bands become separate 1bpp I.FNT tile sets; the logo's
  * temporal hue cycle becomes three pre-rendered bevel-shade variants.  See
  * gb/tools/gen_title.py.  Kept in bank 11 to leave bank 0 for gameplay.
@@ -16,7 +22,10 @@
 #include <stdint.h>
 
 #include "title.h"
+#include "../gen/levels.h"
 #include "../gen/title_data.h"
+#include "render.h"
+#include "save.h"
 #include "sound.h"
 
 #define TITLE_COLS      20
@@ -33,6 +42,16 @@
 #define HOLD_END       180
 #define LOGO_PHASE_FRAMES 16
 #define LOGO_PHASES       3
+
+#define MENU_MODE_SCROLL  0
+#define MENU_MODE_START   1
+#define MENU_MODE_DELETE  2
+
+#define MENU_ROW_HEADING  0
+#define MENU_ROW_DIGIT_TOP 1
+#define MENU_ROW_DIGIT_BOTTOM 2
+#define MENU_ROW_DELETE   4
+#define MENU_REPEAT_FRAMES 6
 
 static void title_wait_vbl(void)
 {
@@ -111,11 +130,93 @@ static void title_draw_logo(uint8_t base)
     }
 }
 
-void title_show(void) BANKED
+/* One row of the start-level menu.  Rows are published individually so a
+ * redraw never exceeds the VBlank budget. */
+static void title_start_menu_row(uint8_t row, uint8_t level, uint8_t sel)
+{
+    uint8_t buf[TITLE_COLS];
+    const char *text = 0;
+    const uint8_t *font = title_font_gray;
+    uint8_t x = 0;
+    uint8_t i;
+
+    for (i = 0; i < TITLE_COLS; i++) buf[i] = TITLE_BLACK_TILE;
+
+    if (row == MENU_ROW_HEADING) {
+        text = "STARTING LEVEL";
+        font = title_font_white;
+        x = (uint8_t)((TITLE_COLS - 14) >> 1);
+    } else if (row == MENU_ROW_DIGIT_TOP) {
+        buf[9] = title_hud_digits[(level / 10) % 10][0];
+        buf[10] = title_hud_digits[level % 10][0];
+        if (sel == 0) buf[7] = title_font_gray[(uint8_t)'>'];
+    } else if (row == MENU_ROW_DIGIT_BOTTOM) {
+        buf[9] = title_hud_digits[(level / 10) % 10][1];
+        buf[10] = title_hud_digits[level % 10][1];
+    } else if (row == MENU_ROW_DELETE) {
+        text = "DELETE SAVE GAME";
+        font = sel ? title_font_white : title_font_gray;
+        x = 2;
+        if (sel == 1) buf[1] = title_font_white[(uint8_t)'>'];
+    }
+
+    if (text) {
+        for (i = 0; text[i] && (uint8_t)(x + i) < TITLE_COLS; i++) {
+            uint8_t tile = font[(uint8_t)text[i]];
+            if (tile != 0xFF) buf[x + i] = tile;
+        }
+    }
+
+    set_bkg_tiles(0, (uint8_t)(TITLE_WINDOW_Y + row), TITLE_COLS, 1, buf);
+}
+
+static void title_confirm_row(uint8_t row)
+{
+    uint8_t buf[TITLE_COLS];
+    const char *text = 0;
+    const uint8_t *font = title_font_gray;
+    uint8_t x = 0;
+    uint8_t i;
+
+    for (i = 0; i < TITLE_COLS; i++) buf[i] = TITLE_BLACK_TILE;
+
+    if (row == 0) {
+        text = "DELETE SAVE GAME?";
+        font = title_font_white;
+        x = (uint8_t)((TITLE_COLS - 17) >> 1);
+    } else if (row == 2) {
+        text = "A YES  B NO";
+        font = title_font_gray;
+        x = (uint8_t)((TITLE_COLS - 11) >> 1);
+    }
+
+    if (text) {
+        for (i = 0; text[i] && (uint8_t)(x + i) < TITLE_COLS; i++) {
+            uint8_t tile = font[(uint8_t)text[i]];
+            if (tile != 0xFF) buf[x + i] = tile;
+        }
+    }
+
+    set_bkg_tiles(0, (uint8_t)(TITLE_WINDOW_Y + row), TITLE_COLS, 1, buf);
+}
+
+uint8_t title_show(uint8_t saved_level) BANKED
 {
     uint8_t visible[TITLE_WINDOW_H];
     uint8_t next_line, col, cur_len, state, delay, hold, shift_row;
     uint8_t blink, logo_phase, i;
+    uint8_t pad, prev = 0;
+    uint8_t menu_mode, menu_sel, menu_level, menu_dirty, menu_repeat;
+    uint8_t scroll_redraw;
+    uint8_t start_level;
+
+    if (saved_level < 1 || saved_level > LEVEL_COUNT) saved_level = 0;
+
+    /* The VBlank camera handler keeps applying cam_scx/cam_scy after the
+     * display is turned off, so reset the gameplay camera before entering
+     * the title.  Without this, EXIT TO MENU after playing at a scrolled
+     * camera position shifts the whole title screen left/up. */
+    render_camera_reset();
 
     DISPLAY_OFF;
     HIDE_WIN;
@@ -160,6 +261,13 @@ void title_show(void) BANKED
     shift_row = 0;
     blink = 0;
     logo_phase = 0;
+    menu_mode = MENU_MODE_SCROLL;
+    menu_sel = 0;
+    menu_level = saved_level ? saved_level : 1;
+    menu_dirty = 0;
+    menu_repeat = 0;
+    scroll_redraw = 0;
+    start_level = 1;
 
     sfx_stop();
     SHOW_BKG;
@@ -168,6 +276,7 @@ void title_show(void) BANKED
     while (1) {
         title_wait_vbl();
         sfx_update();
+        pad = joypad();
 
         blink++;
         if ((blink & (LOGO_PHASE_FRAMES - 1)) == 0) {
@@ -175,68 +284,201 @@ void title_show(void) BANKED
             title_draw_logo((uint8_t)(TITLE_LOGO_0 + logo_phase * TITLE_LOGO_TILES));
         }
 
-        if (state == 0) {
-            /* Type the bottom window line, with the blinking caret. */
-            if (col < cur_len) {
-                uint8_t caret = ((blink >> 3) & 1) ? TITLE_CARET_TILE : TITLE_BLACK_TILE;
-                set_bkg_tile_xy(col, TITLE_BOTTOM, caret);
-            }
-            if (col >= cur_len) {
-                if (col < TITLE_COLS) set_bkg_tile_xy(col, TITLE_BOTTOM, TITLE_BLACK_TILE);
-                state = 1;
-                hold = (next_line == TITLE_INSTR_NLINES) ? HOLD_END :
-                       (cur_len ? HOLD_LINE : HOLD_BLANK);
-            } else if (delay) {
-                delay--;
-            } else {
-                char c = title_instr[visible[TITLE_WINDOW_H - 1]][col];
-                uint8_t tile = (visible[TITLE_WINDOW_H - 1] == 0 && c != ' ')
-                    ? title_font_inverse[(uint8_t)c]
-                    : title_font_gray[(uint8_t)c];
-                if (tile == 0xFF) tile = TITLE_BLACK_TILE;
-                set_bkg_tile_xy(col, TITLE_BOTTOM, tile);
-                if (c != ' ') sfx_click();
-                col++;
-                delay = CHAR_DELAY;
-            }
-        } else if (state == 1) {
-            if (hold) {
-                hold--;
-            } else {
-                for (i = 0; i < TITLE_WINDOW_H - 1; i++) {
-                    visible[i] = visible[i + 1];
-                }
-                shift_row = 0;
-                state = 2;
-                /* Line feed: the current line moves up and the new bottom
-                 * line is created.  Sound the beep at that moment. */
-                sfx_beep();
-            }
-        } else {
-            /* Spread the four shifted rows over four frames so every VRAM
-             * write fits comfortably in VBlank. */
-            if (shift_row < TITLE_WINDOW_H - 1) {
-                title_draw_line((uint8_t)(TITLE_WINDOW_Y + shift_row), visible[shift_row]);
-                shift_row++;
-            } else {
-                title_draw_line(TITLE_BOTTOM, 0xFF);
-                if (next_line < TITLE_INSTR_NLINES) {
+        if (menu_mode == MENU_MODE_SCROLL) {
+            if (scroll_redraw) {
+                /* After a delete, blank the old menu rows one per frame and
+                 * restart the typewriter from the first instruction line. */
+                title_draw_line((uint8_t)(TITLE_WINDOW_Y +
+                    (TITLE_WINDOW_H - scroll_redraw)), 0xFF);
+                scroll_redraw--;
+                if (scroll_redraw == 0) {
+                    next_line = 0;
+                    for (i = 0; i < TITLE_WINDOW_H; i++) visible[i] = 0xFF;
                     visible[TITLE_WINDOW_H - 1] = next_line++;
+                    col = 0;
+                    cur_len = title_line_len(visible[TITLE_WINDOW_H - 1]);
+                    state = 0;
+                    delay = 0;
+                    hold = 0;
+                    shift_row = 0;
+                }
+            } else if (state == 0) {
+                /* Type the bottom window line, with the blinking caret. */
+                if (col < cur_len) {
+                    uint8_t caret = ((blink >> 3) & 1) ? TITLE_CARET_TILE : TITLE_BLACK_TILE;
+                    set_bkg_tile_xy(col, TITLE_BOTTOM, caret);
+                }
+                if (col >= cur_len) {
+                    if (col < TITLE_COLS) set_bkg_tile_xy(col, TITLE_BOTTOM, TITLE_BLACK_TILE);
+                    state = 1;
+                    hold = (next_line == TITLE_INSTR_NLINES) ? HOLD_END :
+                           (cur_len ? HOLD_LINE : HOLD_BLANK);
+                } else if (delay) {
+                    delay--;
                 } else {
-                    visible[TITLE_WINDOW_H - 1] = 0xFF;
-                    if (++next_line >= TITLE_INSTR_NLINES + TITLE_WINDOW_H) {
-                        next_line = 0;
+                    char c = title_instr[visible[TITLE_WINDOW_H - 1]][col];
+                    uint8_t tile = (visible[TITLE_WINDOW_H - 1] == 0 && c != ' ')
+                        ? title_font_inverse[(uint8_t)c]
+                        : title_font_gray[(uint8_t)c];
+                    if (tile == 0xFF) tile = TITLE_BLACK_TILE;
+                    set_bkg_tile_xy(col, TITLE_BOTTOM, tile);
+                    if (c != ' ') sfx_click();
+                    col++;
+                    delay = CHAR_DELAY;
+                }
+            } else if (state == 1) {
+                if (hold) {
+                    hold--;
+                } else {
+                    for (i = 0; i < TITLE_WINDOW_H - 1; i++) {
+                        visible[i] = visible[i + 1];
+                    }
+                    shift_row = 0;
+                    state = 2;
+                    /* Line feed: the current line moves up and the new bottom
+                     * line is created.  Sound the beep at that moment. */
+                    sfx_beep();
+                }
+            } else {
+                /* Spread the four shifted rows over four frames so every VRAM
+                 * write fits comfortably in VBlank. */
+                if (shift_row < TITLE_WINDOW_H - 1) {
+                    title_draw_line((uint8_t)(TITLE_WINDOW_Y + shift_row), visible[shift_row]);
+                    shift_row++;
+                } else {
+                    title_draw_line(TITLE_BOTTOM, 0xFF);
+                    if (next_line < TITLE_INSTR_NLINES) {
+                        visible[TITLE_WINDOW_H - 1] = next_line++;
+                    } else {
+                        visible[TITLE_WINDOW_H - 1] = 0xFF;
+                        if (++next_line >= TITLE_INSTR_NLINES + TITLE_WINDOW_H) {
+                            next_line = 0;
+                        }
+                    }
+                    col = 0;
+                    cur_len = title_line_len(visible[TITLE_WINDOW_H - 1]);
+                    state = 0;
+                    delay = 0;
+                }
+            }
+
+            /* Atari-style: no PRESS START prompt; A or START begins (or, with
+             * a save, opens the start-level menu). */
+            if ((pad & (J_START | J_A)) && !(prev & (J_START | J_A))) {
+                if (saved_level) {
+                    menu_mode = MENU_MODE_START;
+                    menu_sel = 0;
+                    menu_level = saved_level;
+                    menu_repeat = 0;
+                    menu_dirty = (uint8_t)((1u << TITLE_WINDOW_H) - 1u);
+                } else {
+                    start_level = 1;
+                    break;
+                }
+            }
+        } else if (menu_mode == MENU_MODE_START) {
+            if (menu_dirty) {
+                for (i = 0; i < TITLE_WINDOW_H; i++) {
+                    uint8_t bit = (uint8_t)(1u << i);
+                    if (menu_dirty & bit) {
+                        title_start_menu_row(i, menu_level, menu_sel);
+                        menu_dirty &= (uint8_t)~bit;
+                        break;
                     }
                 }
-                col = 0;
-                cur_len = title_line_len(visible[TITLE_WINDOW_H - 1]);
-                state = 0;
-                delay = 0;
+            } else {
+                uint8_t edge = (uint8_t)(pad & (uint8_t)~prev);
+                uint8_t old_level = menu_level;
+                uint8_t dir = 0;
+
+                if (edge & (J_UP | J_DOWN)) {
+                    menu_sel ^= 1;
+                    menu_dirty |= (uint8_t)((1u << MENU_ROW_DIGIT_TOP) |
+                                            (1u << MENU_ROW_DELETE));
+                    menu_repeat = 0;
+                }
+
+                if (menu_sel == 0) {
+                    if (edge & J_LEFT) {
+                        dir = 2;
+                        menu_repeat = MENU_REPEAT_FRAMES;
+                    } else if (edge & J_RIGHT) {
+                        dir = 1;
+                        menu_repeat = MENU_REPEAT_FRAMES;
+                    } else if (pad & (J_LEFT | J_RIGHT)) {
+                        if (menu_repeat == 0) {
+                            dir = (pad & J_RIGHT) ? 1 : 2;
+                            menu_repeat = MENU_REPEAT_FRAMES;
+                        } else {
+                            menu_repeat--;
+                        }
+                    } else {
+                        menu_repeat = 0;
+                    }
+                } else {
+                    menu_repeat = 0;
+                }
+
+                if (dir == 1) {
+                    if (menu_level < saved_level) menu_level++;
+                } else if (dir == 2) {
+                    if (menu_level > 1) menu_level--;
+                }
+                if (menu_level != old_level) {
+                    menu_dirty |= (uint8_t)((1u << MENU_ROW_DIGIT_TOP) |
+                                            (1u << MENU_ROW_DIGIT_BOTTOM));
+                }
+
+                if (edge & J_A) {
+                    if (menu_sel == 1) {
+                        menu_mode = MENU_MODE_DELETE;
+                        menu_repeat = 0;
+                        menu_dirty = (uint8_t)((1u << TITLE_WINDOW_H) - 1u);
+                    } else {
+                        start_level = menu_level;
+                        break;
+                    }
+                } else if (edge & J_START) {
+                    start_level = menu_level;
+                    break;
+                }
+            }
+        } else {
+            if (menu_dirty) {
+                for (i = 0; i < TITLE_WINDOW_H; i++) {
+                    uint8_t bit = (uint8_t)(1u << i);
+                    if (menu_dirty & bit) {
+                        title_confirm_row(i);
+                        menu_dirty &= (uint8_t)~bit;
+                        break;
+                    }
+                }
+            } else {
+                uint8_t edge = (uint8_t)(pad & (uint8_t)~prev);
+
+                if (edge & J_A) {
+                    /* Confirmed: erase, then return to the normal scrolling
+                     * title.  With no save, A/START now starts level 1. */
+                    save_erase();
+                    saved_level = 0;
+                    start_level = 1;
+                    menu_mode = MENU_MODE_SCROLL;
+                    menu_sel = 0;
+                    menu_level = 1;
+                    menu_repeat = 0;
+                    menu_dirty = 0;
+                    scroll_redraw = TITLE_WINDOW_H;
+                } else if (edge & (J_B | J_START)) {
+                    /* Cancel: back to the level/delete menu. */
+                    menu_mode = MENU_MODE_START;
+                    menu_sel = 0;
+                    menu_repeat = 0;
+                    menu_dirty = (uint8_t)((1u << TITLE_WINDOW_H) - 1u);
+                }
             }
         }
 
-        /* Atari-style: no PRESS START prompt; A or START begins. */
-        if (joypad() & (J_START | J_A)) break;
+        prev = pad;
     }
 
     /* Release wait is bounded: a stuck harness/emulator input must not leave
@@ -249,4 +491,5 @@ void title_show(void) BANKED
     }
     sfx_stop();
     DISPLAY_OFF;
+    return start_level;
 }

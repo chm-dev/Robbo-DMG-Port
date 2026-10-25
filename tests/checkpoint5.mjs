@@ -72,6 +72,12 @@ check('no key was consumed', byte('keys') === 0, `keys=${byte('keys')}`);
 // Replace the door with a key and collect it.
 setCell(3, 2, CT_KEY, 0);
 const gotKey = holdUntil(() => byte('keys') === 1, 80);
+/* The frame that collects the key may end between move_robbo_to()'s map
+ * write and its robbo_x assignment.  Release the d-pad and let the current
+ * move finish before asserting the position. */
+core.JoyPad = 0xff;
+gb.doFrame();
+gb.doFrame();
 check('key collected', gotKey && byte('keys') === 1, `keys=${byte('keys')}`);
 check('Robbo entered key cell', byte('robbo_x') === 3, `x=${byte('robbo_x')}`);
 check('key removed', cell(3, 2) === 26, `type=${cell(3, 2)}`);
