@@ -18,7 +18,7 @@ void render_intro_clear_dirty(void);
  *   2..5 = explosion frames 0..3 (Atari $02/$04/$06/$08), then Robbo.
  * Robbo stays in map_type[] the whole time; only the metatile is substituted. */
 extern uint8_t render_robbo_spawn;
-void render_hud(void);
+void render_hud(void) BANKED;
 void render_flash_set(uint8_t on);
 void render_camera(void) BANKED;
 void render_camera_snap(void) BANKED;

@@ -69,6 +69,7 @@ if (-not $sources) {
 # GBDK defaults plus the project's chosen cartridge configuration.
 $commonFlags = @(
     '-Wm-ynROBBO'
+    '-Wm-yc'       # GameBoy Color compatible: colour on CGB, DMG build unchanged
     '-Wl-yt0x1B'   # MBC5 + cartridge RAM (MidnightTrace FRAM; battery bit is metadata only)
     '-Wl-yo16'     # 16 x 16 KiB ROM banks
     '-Wl-ya16'     # 16 x 8 KiB RAM banks = 128 KiB FRAM, header 0x149 = 0x04

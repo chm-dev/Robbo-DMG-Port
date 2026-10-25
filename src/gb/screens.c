@@ -18,6 +18,7 @@
 #include "../core/game.h"
 #include "../gen/levels.h"
 #include "../gen/tiles.h"
+#include "color.h"
 #include "render.h"
 #include "screens.h"
 
@@ -116,6 +117,15 @@ static void menu_draw_row(uint8_t row)
 
     set_bkg_tiles(pause_menu_bg_x, (uint8_t)(pause_menu_bg_y + row),
                   MENU_W, 1, buf);
+
+    if (color_on) {
+        uint8_t i;
+        for (i = 0; i < MENU_W; i++) buf[i] = COLOR_PAL_UI;
+        VBK_REG = VBK_ATTRIBUTES;
+        set_bkg_tiles(pause_menu_bg_x, (uint8_t)(pause_menu_bg_y + row),
+                      MENU_W, 1, buf);
+        VBK_REG = VBK_TILES;
+    }
 }
 
 /* Rebuild one overlay row from the level data.  A BG tile maps to a metatile
@@ -123,6 +133,7 @@ static void menu_draw_row(uint8_t row)
 static void menu_restore_row(uint8_t row)
 {
     uint8_t buf[MENU_W];
+    uint8_t attr[MENU_W];
     uint8_t col;
     uint8_t tile_y = (uint8_t)(pause_menu_bg_y + row);
 
@@ -142,9 +153,15 @@ static void menu_restore_row(uint8_t row)
 
         buf[col] = metatile_tiles[(uint16_t)mt * 4 +
                                   ((tile_y & 1) << 1) + (tile_x & 1)];
+        attr[col] = COLOR_MT_PAL(mt);
     }
 
     set_bkg_tiles(pause_menu_bg_x, tile_y, MENU_W, 1, buf);
+    if (color_on) {
+        VBK_REG = VBK_ATTRIBUTES;
+        set_bkg_tiles(pause_menu_bg_x, tile_y, MENU_W, 1, attr);
+        VBK_REG = VBK_TILES;
+    }
 }
 
 void pause_menu_open(uint8_t level, uint8_t max_level) BANKED

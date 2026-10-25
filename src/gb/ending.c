@@ -23,6 +23,7 @@
 #include <stdint.h>
 
 #include "ending.h"
+#include "color.h"
 #include "render.h"
 #include "sound.h"
 #include "../gen/ending_data.h"
@@ -335,6 +336,10 @@ void ending_show(void) BANKED
     set_bkg_data(0, ENDING_TILE_COUNT, ending_tiles);
     set_sprite_data(ENDING_SPRITE_BASE, ENDING_SPRITE_TILES,
                     ending_sprite_tiles);
+    /* CGB: one grey ramp palette covers the scene and both text pages; the
+     * per-scanline DMG fade stays a single palette (accepted simplification). */
+    color_fill_attrs(0, 0, 32, 32, COLOR_PAL_ENDING);
+    color_fill_win_attrs(0, 0, 20, 18, COLOR_PAL_ENDING);
     draw_scene();
     SPRITES_8x8;
     ENABLE_OAM_DMA;         /* the first (and only) sprite user in the port */

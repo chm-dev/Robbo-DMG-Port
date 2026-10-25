@@ -2,6 +2,7 @@
 #include <stdint.h>
 
 #include "render.h"
+#include "color.h"
 #include "variants.h"
 #include "../core/game.h"
 #include "../gen/tiles.h"
@@ -102,6 +103,7 @@ static void draw_metatile(uint8_t mt, uint8_t tx, uint8_t ty)
 static void draw_level_row(uint8_t level_y, uint8_t map_row)
 {
     uint8_t x;
+    static uint8_t row_pal[MAP_W * 2];
 
     for (x = 0; x < MAP_W; x++) {
         uint8_t mt;
@@ -112,8 +114,10 @@ static void draw_level_row(uint8_t level_y, uint8_t map_row)
             mt = MT_EMPTY;
         }
         draw_metatile(mt, x * 2, map_row * 2);
+        row_pal[x * 2] = row_pal[x * 2 + 1] = COLOR_MT_PAL(mt);
     }
     map_row_level[map_row] = level_y;
+    if (color_on) color_row_attr(map_row, row_pal);
 }
 
 void render_apply_camera(void)
@@ -220,44 +224,7 @@ void render_intro_clear_dirty(void)
     dirty_any = 0;
 }
 
-void render_hud(void)
-{
-    uint8_t win[40];
-    uint8_t g, i, x;
-    uint8_t values[4];
-    uint8_t icons[4] = {
-        MT_HUD_SCREW, MT_HUD_AMMO, MT_HUD_KEY, MT_HUD_PLANET
-    };
-
-    for (i = 0; i < 40; i++) win[i] = hud_bg_tile;
-
-    if (screws_left > 99) values[0] = 99; else values[0] = screws_left;
-    if (ammo > 99) values[1] = 99; else values[1] = ammo;
-    if (keys > 99) values[2] = 99; else values[2] = keys;
-    values[3] = level_planet;
-
-    for (g = 0; g < 4; g++) {
-        const uint8_t *icon = &metatile_tiles[icons[g] * 4];
-        uint8_t tens = (values[g] / 10) % 10;
-        uint8_t ones = values[g] % 10;
-
-        /* First item is flush left and last item is flush right; the two
-         * spare columns are distributed between the inner gaps. */
-        static const uint8_t hud_x[4] = { 0, 5, 11, 16 };
-        x = hud_x[g];
-        win[x] = icon[0];
-        win[x + 1] = icon[1];
-        win[20 + x] = icon[2];
-        win[20 + x + 1] = icon[3];
-
-        win[x + 2] = digit_tiles[tens][0];
-        win[20 + x + 2] = digit_tiles[tens][1];
-        win[x + 3] = digit_tiles[ones][0];
-        win[20 + x + 3] = digit_tiles[ones][1];
-    }
-
-    set_win_tiles(0, 0, 20, 2, win);
-}
+/* render_hud() lives in hud.c (bank 10). */
 
 /* One palette per level inside a four-level wall block.  Shade 0 may become
  * white or light gray (never dark gray/black), so Robbo always stays bright:
@@ -269,10 +236,15 @@ void render_set_level_palette(uint8_t level)
 {
     level_palette = (uint8_t)((level - 1) & 3);
     BGP_REG = level_bgp[level_palette];
+    color_level_pal(level);
 }
 
 uint8_t render_level_background(void)
 {
+    /* CGB uses the authentic per-level palette, where object colours already
+     * contrast with the floor: the DMG shade-shift tile variants are not
+     * needed.  Value 1 matches no variant condition in game.c. */
+    if (color_on) return 1;
     return (uint8_t)((level_bgp[level_palette] >> 2) & 3);
 }
 
@@ -287,6 +259,7 @@ void render_flash_set(uint8_t on)
         bgp = (uint8_t)((bgp & (uint8_t)~0x0Cu) | (uint8_t)(flash << 2));
     }
     BGP_REG = bgp;
+    color_flash(on);
 }
 
 void render_sync_rows(void)
@@ -306,12 +279,17 @@ void render_sync_rows(void)
 static void draw_cell_now(uint8_t x, uint8_t y)
 {
     uint8_t map_row = y & (MAP_METAROWS - 1);
+    uint8_t mt;
     uint16_t idx;
 
     if (map_row_level[map_row] != y) return;
     idx = (uint16_t)y * MAP_W + x;
-    draw_metatile(render_metatile_for_cell(map_type[idx], map_extra[idx]),
-                  x * 2, map_row * 2);
+    mt = render_metatile_for_cell(map_type[idx], map_extra[idx]);
+    draw_metatile(mt, x * 2, map_row * 2);
+    if (color_on) {
+        color_cell_attr((uint8_t)(x * 2), (uint8_t)(map_row * 2),
+                        COLOR_MT_PAL(mt));
+    }
 }
 
 void render_cell(uint8_t x, uint8_t y)

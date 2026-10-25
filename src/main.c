@@ -21,6 +21,7 @@
 #include <stdint.h>
 
 #include "core/game.h"
+#include "gb/color.h"
 #include "gb/ending.h"
 #include "gb/intro.h"
 #include "gb/render.h"
@@ -113,6 +114,7 @@ void main(void)
     DISPLAY_OFF;
     sound_init();
     render_init();
+    color_init();
     render_camera_reset();
 
     /* The title screen overwrites the gameplay tile range with its logo and

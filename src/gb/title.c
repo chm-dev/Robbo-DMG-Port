@@ -24,6 +24,7 @@
 #include "title.h"
 #include "../gen/levels.h"
 #include "../gen/title_data.h"
+#include "color.h"
 #include "render.h"
 #include "save.h"
 #include "sound.h"
@@ -228,6 +229,10 @@ uint8_t title_show(uint8_t saved_level) BANKED
 
     /* Black playfield, like the Atari/GBC title. */
     title_fill(0, 0, 32, 32, TITLE_BLACK_TILE);
+    /* CGB: UI palette everywhere, warm palette on the logo block. */
+    color_fill_attrs(0, 0, 32, 32, COLOR_PAL_UI);
+    color_fill_attrs(TITLE_LOGO_X, 0, TITLE_LOGO_TW, TITLE_LOGO_TH,
+                     COLOR_PAL_LOGO);
 
     title_draw_logo(TITLE_LOGO_0);
 

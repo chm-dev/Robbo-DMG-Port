@@ -26,6 +26,7 @@
 #include <stdint.h>
 
 #include "intro.h"
+#include "color.h"
 #include "render.h"
 #include "sound.h"
 #include "variants.h"
@@ -62,6 +63,7 @@ static void intro_bind_rows(void)
 static void intro_blank(void)
 {
     fill_bkg_rect(0, 0, 32, 32, metatile_tiles[MT_EMPTY << 2]);
+    color_fill_attrs(0, 0, 32, 32, COLOR_PAL_NORMAL);
 }
 
 /* Paint one source-map column across the ring.  The 2x32-tile column is built
@@ -70,6 +72,7 @@ static void intro_blank(void)
  * writes into mode 3, where SameBoy/real hardware discard them (Gearboy is
  * lenient, which made the bug look emulator-specific). */
 static uint8_t intro_col_buf[64];
+static uint8_t intro_attr_buf[64];
 static uint8_t intro_write_x;
 
 static void intro_prepare_column(uint8_t col)
@@ -98,6 +101,10 @@ static void intro_prepare_column(uint8_t col)
         intro_col_buf[(map_row << 2) + 1] = t[1];
         intro_col_buf[(map_row << 2) + 2] = t[2];
         intro_col_buf[(map_row << 2) + 3] = t[3];
+        intro_attr_buf[(map_row << 2) + 0] = COLOR_MT_PAL(mt);
+        intro_attr_buf[(map_row << 2) + 1] = COLOR_MT_PAL(mt);
+        intro_attr_buf[(map_row << 2) + 2] = COLOR_MT_PAL(mt);
+        intro_attr_buf[(map_row << 2) + 3] = COLOR_MT_PAL(mt);
     }
 
     intro_write_x = (uint8_t)(col << 1);
@@ -107,6 +114,11 @@ static void intro_prepare_column(uint8_t col)
 static void intro_write_column(void)
 {
     set_bkg_tiles(intro_write_x, 0, 2, 32, intro_col_buf);
+    if (color_on) {
+        VBK_REG = VBK_ATTRIBUTES;
+        set_bkg_tiles(intro_write_x, 0, 2, 32, intro_attr_buf);
+        VBK_REG = VBK_TILES;
+    }
 }
 
 /* Intro pan step: the normal VBlank ease has a very long 1/16-px tail (about
@@ -150,7 +162,13 @@ static void intro_clear_column(uint8_t col)
     uint8_t i;
 
     for (i = 0; i < 64; i++) intro_col_buf[i] = empty;
+    for (i = 0; i < 64; i++) intro_attr_buf[i] = COLOR_PAL_NORMAL;
     set_bkg_tiles((uint8_t)(col << 1), 0, 2, 32, intro_col_buf);
+    if (color_on) {
+        VBK_REG = VBK_ATTRIBUTES;
+        set_bkg_tiles((uint8_t)(col << 1), 0, 2, 32, intro_attr_buf);
+        VBK_REG = VBK_TILES;
+    }
 }
 
 void intro_clear_begin(void) BANKED
