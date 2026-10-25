@@ -1,7 +1,9 @@
 Atari 8bit [Robbo](https://en.wikipedia.org/wiki/Robbo_(video_game)) Gameboy port.
 
 Port source - https://github.com/Zibx/robbo
+
 Missing pieces ported from original atari source code from: https://github.com/trekawek/lkavalon-atari
+
 Title screen, ending screen, two sfx and gbc pallettes ported from gbc port: https://github.com/trekawek/robbo-gbc
 
 Supports both DMG and GBC
