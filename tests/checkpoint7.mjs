@@ -30,6 +30,7 @@ const S = symbols();
 const CT_EMPTY = 0;
 const CT_TURRET = 18;
 const CT_BULLET = 27;
+const CT_EXPLOSION = 28;
 
 let failures = 0;
 function check(label, ok, detail = '') {
@@ -50,6 +51,12 @@ function setCell(mem, x, y, type, extra = 0) {
   mem[S.map_type + y * 16 + x] = type;
   mem[S.map_extra + y * 16 + x] = extra;
   mem[S.map_obj + y * 16 + x] = 0;
+}
+
+function countType(mem, type) {
+  let n = 0;
+  for (let i = 0; i < 16 * 31; i++) if (mem[S.map_type + i] === type) n++;
+  return n;
 }
 
 function clearTurretsAndBullets(mem) {
@@ -102,9 +109,18 @@ function waitFor(ctx, predicate, maxFrames = 3000) {
   check('turret bullet hit Robbo', waitFor(ctx, () => ctx.byte('robbo_busy'), 3000),
     `busy=${ctx.byte('robbo_busy')}`);
 
-  check('death triggers restart request',
-    waitFor(ctx, () => ctx.byte('game_restart_requested'), 1000),
-    `request=${ctx.byte('game_restart_requested')}`);
+  /* game_restart_requested is an internal one-frame pulse that the main loop
+   * consumes before the frame ends, so a frame-stepping harness cannot observe
+   * it.  Check the observable Atari ZYTY wipe instead: after the death delay
+   * every non-wall cell becomes an explosion before the level reloads. */
+  let peakExplosions = 0;
+  const sawWipe = waitFor(ctx, () => {
+    const n = countType(ctx.mem, CT_EXPLOSION);
+    if (n > peakExplosions) peakExplosions = n;
+    return n > 20;
+  }, 1000);
+  check('death starts the room wipe', sawWipe,
+    `explosions=${peakExplosions}`);
   /* The restart now runs the level-entry intro: repaint, then pan back to the
    * start and materialize Robbo.  Poll instead of assuming a fixed delay. */
   check('level restarted after death',

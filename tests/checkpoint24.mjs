@@ -16,6 +16,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const rom = path.join(root, 'roms', 'robbo.gb');
+const romBytes = fs.readFileSync(rom);
 
 function symbols() {
   const text = fs.readFileSync(path.join(root, 'roms', 'robbo.noi'), 'utf8');
@@ -33,6 +34,20 @@ const CT_TURRET = 18;
 const CT_BULLET = 27;
 const CT_EXPLOSION = 28;
 const CT_BARRIER = 30;
+
+/* .noi addresses for banked symbols encode bank * 0x10000 + CPU address. */
+function fileOffset(addr) {
+  const bank = Math.floor(addr / 0x10000);
+  const cpu = addr & 0xffff;
+  return bank === 0 ? cpu : bank * 0x4000 + (cpu - 0x4000);
+}
+function symbolBytes(name, offset, length) {
+  const start = fileOffset(S[name]) + offset;
+  return Array.from(romBytes.subarray(start, start + length));
+}
+function same(a, b) {
+  return a.length === b.length && a.every((v, i) => v === b[i]);
+}
 
 let failures = 0;
 function check(label, ok, detail = '') {
@@ -211,16 +226,33 @@ const bulletBase = define('BULLET_VARIANT_BASE');
 const bulletCount = define('BULLET_VARIANT_COUNT');
 const blasterBase = define('BLASTER_VARIANT_BASE');
 const blasterCount = define('BLASTER_VARIANT_COUNT');
+const stoneBase = define('STONE_VARIANT_BASE');
+const stoneCount = define('STONE_VARIANT_COUNT');
+const pushableBase = define('PUSHABLE_VARIANT_BASE');
+const pushableCount = define('PUSHABLE_VARIANT_COUNT');
 const readTiles = (base, count) => readMem(gb, 0x8000 + base * 16, count * 16);
 const beforeBullet = readTiles(bulletBase, bulletCount);
 const beforeBlaster = readTiles(blasterBase, blasterCount);
+const beforeStone = readTiles(stoneBase, stoneCount);
+const beforePushable = readTiles(pushableBase, pushableCount);
 warpTo(50);
 const afterBullet = readTiles(bulletBase, bulletCount);
 const afterBlaster = readTiles(blasterBase, blasterCount);
+const afterStone = readTiles(stoneBase, stoneCount);
+const afterPushable = readTiles(pushableBase, pushableCount);
 const changed = (a, b) => a.some((v, i) => v !== b[i]);
 check('bullet palette variant still swaps', changed(beforeBullet, afterBullet));
 check('blaster palette variant swaps with bullets',
   changed(beforeBlaster, afterBlaster));
+
+check('L49 stone box uses base tiles',
+  same(beforeStone, symbolBytes('tileset_data', stoneBase * 16, stoneCount * 16)));
+check('L49 sliding box uses base tiles',
+  same(beforePushable, symbolBytes('tileset_data', pushableBase * 16, pushableCount * 16)));
+check('L50 stone box reflection is light gray',
+  same(afterStone, symbolBytes('stone_variant_tiles', 0, stoneCount * 16)));
+check('L50 sliding box reflection is white',
+  same(afterPushable, symbolBytes('pushable_variant_tiles', 0, pushableCount * 16)));
 
 console.log(failures ? `\n${failures} checkpoint(s) failed` : '\nCheckpoint 24 passed');
 process.exit(failures ? 1 : 0);

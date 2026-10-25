@@ -1,8 +1,8 @@
 /* Palette-dependent object tiles.
  *
- * The bullet and enemy tiles are exclusive to their metatiles, so the
- * variants are loaded over the same VRAM tile range.  Eight tiles per call
- * keeps each upload comfortably inside one VBlank during a level transition.
+ * The bullet, enemy and box tiles are exclusive to their metatiles, so the
+ * variants are loaded over the same VRAM tile range.  Small chunks keep each
+ * upload comfortably inside one VBlank during a level transition.
  */
 #pragma bank 1
 
@@ -42,6 +42,22 @@ static void load_blaster(uint8_t alt)
                  alt ? blaster_variant_tiles
                      : &tileset_data[(uint16_t)BLASTER_VARIANT_BASE * 16]);
     blaster_done = 1;
+}
+
+static void load_boxes(uint8_t alt)
+{
+    if (alt) {
+        set_bkg_data(STONE_VARIANT_BASE, STONE_VARIANT_COUNT,
+                     stone_variant_tiles);
+        set_bkg_data(PUSHABLE_VARIANT_BASE, PUSHABLE_VARIANT_COUNT,
+                     pushable_variant_tiles);
+    } else {
+        set_bkg_data(STONE_VARIANT_BASE, STONE_VARIANT_COUNT,
+                     &tileset_data[(uint16_t)STONE_VARIANT_BASE * 16]);
+        set_bkg_data(PUSHABLE_VARIANT_BASE, PUSHABLE_VARIANT_COUNT,
+                     &tileset_data[(uint16_t)PUSHABLE_VARIANT_BASE * 16]);
+    }
+    current_mask ^= VAR_BOXES_ALT;
 }
 
 static void load_baddie_chunk(uint8_t bright)
@@ -100,6 +116,11 @@ static uint8_t load_next_chunk(void)
 
     if ((desired_mask ^ current_mask) & VAR_BADDIES_BRIGHT) {
         load_baddie_chunk((uint8_t)(desired_mask & VAR_BADDIES_BRIGHT));
+        return 1;
+    }
+
+    if ((desired_mask ^ current_mask) & VAR_BOXES_ALT) {
+        load_boxes((uint8_t)(desired_mask & VAR_BOXES_ALT));
         return 1;
     }
 

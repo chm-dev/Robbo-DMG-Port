@@ -188,6 +188,7 @@ void game_load_level(uint8_t level)
         uint8_t mask = 0;
         /* Projectiles: white on a dark gray floor, darker on a white floor. */
         if (bg == 0 || bg == 2) mask |= VAR_BULLETS_ALT;
+        if (bg == 2) mask |= VAR_BOXES_ALT;
         if (bg == 3) mask |= VAR_BADDIES_BRIGHT;
         /* A fresh/debug load runs with the display off.  Respawn/transition
          * keep it on, so the intro uploads the variants in VBlank slices. */

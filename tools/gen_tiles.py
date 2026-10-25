@@ -523,7 +523,7 @@ def emit(metatiles: dict[str, list[list[int]]], pool: TilePool,
         bank_lines.append("    " + ", ".join(f"0x{b:02X}" for b in data) + f",  /* {i} {pool.names[i]} */")
     bank_lines.append("};")
     bank_lines.append("")
-    for key in ("bullet", "blaster", "baddie", "bear"):
+    for key in ("bullet", "blaster", "baddie", "bear", "stone", "pushable"):
         _, _, data = variants[key]
         bank_lines.append(f"/* Shade-shifted {key} tiles, loaded by variants.c. */")
         bank_lines.append(f"const uint8_t {key}_variant_tiles[{len(data)}] = {{")
@@ -593,7 +593,7 @@ def emit(metatiles: dict[str, list[list[int]]], pool: TilePool,
     ]
     for i, name in enumerate(mt_names):
         hlines.append(f"#define MT_{name} {i}")
-    for key in ("bullet", "blaster", "baddie", "bear"):
+    for key in ("bullet", "blaster", "baddie", "bear", "stone", "pushable"):
         base, count, _ = variants[key]
         hlines.append(f"#define {key.upper()}_VARIANT_BASE {base}")
         hlines.append(f"#define {key.upper()}_VARIANT_COUNT {count}")
@@ -614,6 +614,8 @@ def emit(metatiles: dict[str, list[list[int]]], pool: TilePool,
         "extern const uint8_t blaster_variant_tiles[];",
         "extern const uint8_t baddie_variant_tiles[];",
         "extern const uint8_t bear_variant_tiles[];",
+        "extern const uint8_t stone_variant_tiles[];",
+        "extern const uint8_t pushable_variant_tiles[];",
         "void sheet_load_tiles(uint8_t first, uint8_t count, uint8_t dest) BANKED;",
         "void sheet_load_metatile(uint8_t cell, uint8_t dest) BANKED;",
         "",
@@ -707,17 +709,23 @@ def main() -> None:
     # only the visible object shades change:
     #   bullets 0 -> 2: white on the dark gray floor, darker on the white floor
     #   baddies 3 -> 2, 2 -> 0: one rendered shade brighter on the black floor
+    #   boxes on the dark gray floor: stone reflection 2 -> 0 (light gray),
+    #                                 pushable reflection 0 -> 2 (white)
     variant_meta = {
         "bullet": ["BULLET_0", "BULLET_1", "BULLET_2", "BULLET_3"],
         "blaster": ["BLASTER"],
         "baddie": ["MUSTACHE_0", "MUSTACHE_1", "BUTTERFLY_0", "BUTTERFLY_1"],
         "bear": ["BEAR_0", "BEAR_1", "BEAR_2", "BEAR_3"],
+        "stone": ["STONE"],
+        "pushable": ["PUSHABLE"],
     }
     variant_maps = {
         "bullet": {0: 2, 1: 1, 2: 2, 3: 3},
         "blaster": {0: 2, 1: 1, 2: 2, 3: 3},
         "baddie": {0: 0, 1: 1, 2: 0, 3: 2},
         "bear": {0: 0, 1: 1, 2: 0, 3: 2},
+        "stone": {0: 0, 1: 1, 2: 0, 3: 3},
+        "pushable": {0: 2, 1: 1, 2: 2, 3: 3},
     }
     variants: dict[str, tuple[int, int, bytes]] = {}
     for key, names in variant_meta.items():
@@ -729,7 +737,10 @@ def main() -> None:
         for idx in indices:
             data.extend(shifted_tile_bytes(pool.data[idx], variant_maps[key]))
         variants[key] = (indices[0], len(indices), bytes(data))
-    expected_counts = {"bullet": 8, "blaster": 2, "baddie": 16, "bear": 16}
+    expected_counts = {
+        "bullet": 8, "blaster": 2, "baddie": 16, "bear": 16,
+        "stone": 2, "pushable": 2,
+    }
     for key, count in expected_counts.items():
         if variants[key][1] != count:
             raise RuntimeError(f"unexpected {key} variant count: {variants[key][1]}")

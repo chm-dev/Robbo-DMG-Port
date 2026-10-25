@@ -9,6 +9,7 @@
  * on a white floor. */
 #define VAR_BULLETS_ALT    0x01
 #define VAR_BADDIES_BRIGHT 0x02   /* black floor: enemies one shade brighter */
+#define VAR_BOXES_ALT      0x04   /* dark gray floor: stone/pushable reflections */
 
 void variants_reset(void) BANKED;
 /* mask: VAR_* bits.  apply_now: load immediately (display must be off);

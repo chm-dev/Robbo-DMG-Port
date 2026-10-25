@@ -159,6 +159,9 @@ void intro_clear_begin(void) BANKED
     clear_col = MAP_W - 1;
     clear_left = MAP_W;
     clear_wait = 0;
+    /* Atari PLA1 leaves DLSA untouched: freeze the view at the exit so the
+     * next level starts from this exact camera position. */
+    cam_smooth = 0;
 }
 
 uint8_t intro_clear_tick(void) BANKED
@@ -284,6 +287,9 @@ void intro_tick(void) BANKED
     if (intro_appear >= INTRO_SPAWN_FRAMES) {
         render_robbo_spawn = 0;
         render_cell(robbo_x, robbo_y);
+        /* Draw the final Robbo cell now: the step that ends the intro can run
+         * late enough in the frame that the main loop's flush already ran. */
+        render_flush_cells();
         intro_active = 0;
         robbo_busy = 0;
         cam_smooth = 1;

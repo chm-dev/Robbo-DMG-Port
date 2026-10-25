@@ -78,6 +78,10 @@
 #define BADDIE_VARIANT_COUNT 16
 #define BEAR_VARIANT_BASE 134
 #define BEAR_VARIANT_COUNT 16
+#define STONE_VARIANT_BASE 6
+#define STONE_VARIANT_COUNT 2
+#define PUSHABLE_VARIANT_BASE 8
+#define PUSHABLE_VARIANT_COUNT 2
 
 extern const uint8_t tileset_data[];
 extern const uint8_t tileset_count;
@@ -94,6 +98,8 @@ extern const uint8_t bullet_variant_tiles[];
 extern const uint8_t blaster_variant_tiles[];
 extern const uint8_t baddie_variant_tiles[];
 extern const uint8_t bear_variant_tiles[];
+extern const uint8_t stone_variant_tiles[];
+extern const uint8_t pushable_variant_tiles[];
 void sheet_load_tiles(uint8_t first, uint8_t count, uint8_t dest) BANKED;
 void sheet_load_metatile(uint8_t cell, uint8_t dest) BANKED;
 
