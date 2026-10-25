@@ -12,23 +12,32 @@
 #define COLOR_PAL_WALL    1   /* level inverse palette (COL3 outline) */
 #define COLOR_PAL_CAVE    2   /* solid COLPF0 cave fill */
 #define COLOR_PAL_UI      3   /* HUD, title text, pause menu */
-#define COLOR_PAL_LOGO    4   /* title logo bevel */
+#define COLOR_PAL_LOGO    4   /* title logo bevel; gameplay: teleports */
 #define COLOR_PAL_ENDING  5   /* ending scene and text */
-#define COLOR_PAL_OBJ     6   /* inverse objects: crates, doors, teleports */
+#define COLOR_PAL_OBJ     6   /* inverse objects: crates, doors */
 #define COLOR_PAL_RULE    7   /* title-screen horizontal rules (dark red) */
+/* Teleports need their own palette: the wall slot's grid colour changes for
+ * some wall styles (black brick lines), but the blink must always be
+ * black <-> COLPF1.  Slot 4 is title-only, so gameplay reuses it. */
+#define COLOR_PAL_TP      COLOR_PAL_LOGO
+/* Title-only dim option palette.  Slot 6 is restored to the object palette by
+ * color_level_pal() before gameplay starts. */
+#define COLOR_PAL_TITLE_DIM COLOR_PAL_OBJ
 
 /* 1 when running on CGB hardware.  Read this in the render paths. */
 extern uint8_t color_on;
 
 /* Metatile -> palette slot (attribute byte value). */
 #define COLOR_MT_PAL(mt) \
-    (((mt) == MT_WALL || (mt) == MT_TELEPORT_0 || \
-      (mt) == MT_TELEPORT_1) ? COLOR_PAL_WALL : \
+    (((mt) == MT_WALL) ? COLOR_PAL_WALL : \
+     ((mt) == MT_TELEPORT_0 || (mt) == MT_TELEPORT_1 || \
+      (mt) == MT_TELEPORT_CGB) ? COLOR_PAL_TP : \
      ((mt) == MT_WALL_CAVE) ? COLOR_PAL_CAVE : \
      ((mt) == MT_STONE || (mt) == MT_DOOR) ? COLOR_PAL_OBJ : \
      COLOR_PAL_NORMAL)
 
 void color_init(void) BANKED;
+void color_title_dim_palette(void) BANKED;
 void color_level_pal(uint8_t level) BANKED;
 void color_flash(uint8_t on) BANKED;
 void color_fill_attrs(uint8_t x, uint8_t y, uint8_t w, uint8_t h,

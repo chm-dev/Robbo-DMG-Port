@@ -663,6 +663,17 @@ def main() -> None:
         if name not in metatiles:
             metatiles[name] = cell
 
+    # CGB-only copy of the teleport's first frame: its middle block (art role 2,
+    # which the wall palette draws blue) becomes role 0 (COLPF0, black), so the
+    # inside blinks black <-> yellow while the ring stays blue.  Appended last
+    # so every existing metatile index and the DMG render path are unchanged.
+    tp_cgb = [row[:] for row in metatiles["TELEPORT_0"]]
+    for y in range(4, 11):
+        for x in range(6, 10):
+            if tp_cgb[y][x] == 2:
+                tp_cgb[y][x] = 0
+    metatiles["TELEPORT_CGB"] = tp_cgb
+
     # Keep the complete sheet in ROM for future animation/wall work.  The
     # current build only loads the active metatiles above into VRAM.
     sheet_cells: list[list[list[int]]] = []

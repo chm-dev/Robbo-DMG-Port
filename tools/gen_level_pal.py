@@ -44,7 +44,13 @@ ROW = re.compile(
 )
 
 
-def art_palettes(v: list[str]) -> tuple[list[str], list[str]]:
+# Wall art roles: role 3 is the mortar/grid on every wall style except the
+# first one (levels 1-4), where it is a decorative edge that must keep COLPF1.
+# The grid entry is forced to black on all other levels (5-56).
+WALL_FIRST_STYLE_LEVELS = 4
+
+
+def art_palettes(v: list[str], level: int) -> tuple[list[str], list[str]]:
     """Map Atari-order values to this port's art-index order.
 
     Walls: the GBC/Atari wall glyph draws its body with pixel value 3 (COL3)
@@ -52,7 +58,8 @@ def art_palettes(v: list[str]) -> tuple[list[str], list[str]]:
     role 2 for the body and role 3 for the detail, so the two are crossed.
     """
     normal = [v[3], v[0], v[2], v[1]]          # COLPF2, COLB, COLPF1, COLPF0
-    wall = [v[1], v[0], v[7], v[2]]            # COLPF0, COLB, COL3, COLPF1
+    detail = v[2] if level <= WALL_FIRST_STYLE_LEVELS else "0x0000"
+    wall = [v[1], v[0], v[7], detail]          # COLPF0, COLB, COL3, detail
     return normal, wall
 
 
@@ -81,7 +88,7 @@ def main() -> None:
         "const uint16_t level_pal_data[LEVEL_PAL_COUNT][8] = {",
     ]
     for i, row in enumerate(rows, start=1):
-        normal, wall = art_palettes(row)
+        normal, wall = art_palettes(row, i)
         entry = ", ".join(normal + wall)
         lines.append(f"  {{{entry}}}, /* {i} */")
     lines += ["};", ""]

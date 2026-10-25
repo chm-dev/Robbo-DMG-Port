@@ -5,9 +5,9 @@
 #include <stdint.h>
 #include <gb/gb.h>
 
-#define TILESET_COUNT 245
-#define METATILE_COUNT 56
-#define WALL_TILE_BASE 241
+#define TILESET_COUNT 249
+#define METATILE_COUNT 57
+#define WALL_TILE_BASE 245
 #define WALL_ROTATION_COUNT 14
 #define SHEET_COLS 11
 #define SHEET_ROWS 8
@@ -70,6 +70,7 @@
 #define MT_WALL_CAVE 53
 #define MT_BARRIER_0 54
 #define MT_BARRIER_1 55
+#define MT_TELEPORT_CGB 56
 #define BULLET_VARIANT_BASE 78
 #define BULLET_VARIANT_COUNT 8
 #define BLASTER_VARIANT_BASE 62

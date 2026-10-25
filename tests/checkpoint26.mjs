@@ -62,6 +62,7 @@ for (const font of [whiteFont, grayFont]) {
   }
 }
 const digitTiles = new Set(hudDigits.flat());
+const whiteChevron = whiteFont['>'.charCodeAt(0)];
 
 const PAUSE_STATE_READY = 2;
 
@@ -296,6 +297,16 @@ check('scrolling instructions are gone', titleRow(core, 13).includes('##') &&
   !titleRow(core, 12).includes('ROBBO'), titleRow(core, 12));
 check('saved level 3 is shown with HUD digits', titleLevelDigits(core) === '03',
   titleLevelDigits(core));
+check('starting level heading is marked with a white chevron',
+  titleTile(core, 2, 12) === whiteChevron &&
+  titleTile(core, 3, 12) === whiteFont['S'.charCodeAt(0)] &&
+  titleTile(core, 1, 16) === T.TITLE_BLACK_TILE,
+  `chevron=${titleTile(core, 2, 12)} delete=${titleTile(core, 1, 16)}`);
+check('active level and number are white, inactive DELETE is grey',
+  titleTile(core, 9, 13) === hudDigits[0][0] &&
+  titleTile(core, 10, 13) === hudDigits[3][0] &&
+  titleTile(core, 2, 16) === grayFont['D'.charCodeAt(0)],
+  `digits=${titleTile(core, 9, 13)},${titleTile(core, 10, 13)}`);
 check('DELETE SAVE GAME is offered',
   titleRow(core, 16).trim() === 'DELETE SAVE GAME', titleRow(core, 16));
 const frozen = [12, 13, 14, 15, 16].map(y => titleRow(core, y)).join('|');
@@ -325,6 +336,17 @@ holdKey(gb, 'DOWN', 6);
 runFrames(gb, 10);
 check('DOWN selects DELETE SAVE GAME', titleRow(core, 16).startsWith(' >'),
   titleRow(core, 16));
+check('chevron moves from the heading to DELETE SAVE GAME',
+  titleTile(core, 2, 12) === T.TITLE_BLACK_TILE &&
+  titleTile(core, 1, 16) === whiteChevron,
+  `heading=${titleTile(core, 2, 12)} delete=${titleTile(core, 1, 16)}`);
+check('inactive heading and number are dimmed when DELETE is selected',
+  titleTile(core, 3, 12) === grayFont['S'.charCodeAt(0)] &&
+  titleTile(core, 9, 13) >= T.TITLE_TILE_COUNT &&
+  titleTile(core, 9, 13) <= T.TITLE_TILE_COUNT + 3 &&
+  titleTile(core, 9, 14) >= T.TITLE_TILE_COUNT &&
+  titleTile(core, 2, 16) === whiteFont['D'.charCodeAt(0)],
+  `heading=${titleTile(core, 3, 12)} digits=${titleTile(core, 9, 13)},${titleTile(core, 9, 14)}`);
 holdKey(gb, 'A', 6);
 check('A asks for delete confirmation', waitTitleConfirm(gb, core),
   `row12=${JSON.stringify(titleRow(core, 12))}`);
@@ -335,6 +357,16 @@ holdKey(gb, 'B', 6);
 runFrames(gb, 12);
 check('B cancels the deletion', titleMenuReady(core) &&
   validSaveLevel(core) === 3, `save=${validSaveLevel(core)}`);
+check('cancelling returns the white chevron to the heading',
+  titleTile(core, 2, 12) === whiteChevron &&
+  titleTile(core, 1, 16) === T.TITLE_BLACK_TILE,
+  `heading=${titleTile(core, 2, 12)} delete=${titleTile(core, 1, 16)}`);
+check('cancelling restores the white level and grey DELETE',
+  titleTile(core, 3, 12) === whiteFont['S'.charCodeAt(0)] &&
+  titleTile(core, 9, 13) === hudDigits[0][0] &&
+  titleTile(core, 9, 14) === hudDigits[0][1] &&
+  titleTile(core, 2, 16) === grayFont['D'.charCodeAt(0)],
+  `heading=${titleTile(core, 3, 12)} digits=${titleTile(core, 9, 13)},${titleTile(core, 9, 14)}`);
 
 holdKey(gb, 'DOWN', 6);
 runFrames(gb, 10);

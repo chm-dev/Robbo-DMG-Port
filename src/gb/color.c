@@ -29,9 +29,13 @@ static uint16_t pal_cur[12];
 /* Inverse-object palette (crates/doors/teleports): the GBC draws these with
  * the inverse palette's body (= COL3) and its dark detail is COLPF0. */
 static uint16_t pal_obj[4];
+/* Teleport blink palette (see color_level_pal). */
+static uint16_t pal_tp[4];
 
 /* Fixed palettes: UI (HUD/title/pause), title logo, ending scene. */
 static const uint16_t pal_ui[4]   = { 0x7FFF, 0x56B5, 0x294A, 0x0000 };
+/* Inactive title-menu options: darker than the normal UI grey. */
+static const uint16_t pal_title_dim[4] = { 0x7FFF, 0x35AD, 0x294A, 0x0000 };
 static const uint16_t pal_logo[4] = { 0x7FFF, 0x03FF, 0x029F, 0x0000 };
 static const uint16_t pal_ending[4] = { 0x0000, 0x35AD, 0x6B5A, 0x7FFF };
 /* Sprite entries (0 is transparent): 1 = dark, 2 = light, 3 = white. */
@@ -50,6 +54,19 @@ void color_init(void) BANKED
     set_bkg_palette(COLOR_PAL_ENDING, 1, (const palette_color_t *)pal_ending);
     set_bkg_palette(COLOR_PAL_RULE, 1, (const palette_color_t *)pal_rule);
     set_sprite_palette(0, 1, (const palette_color_t *)pal_sprite);
+}
+
+/* The title uses a darker inactive-option grey than the regular UI palette.
+ * Slot 6 is unused during the title and is restored by color_level_pal().
+ * Slots 4 and 7 hold the logo and rule palettes; gameplay reuses slot 4 for
+ * the teleport palette, so reinstall them whenever the title opens. */
+void color_title_dim_palette(void) BANKED
+{
+    if (!color_on) return;
+    set_bkg_palette(COLOR_PAL_TITLE_DIM, 1,
+                    (const palette_color_t *)pal_title_dim);
+    set_bkg_palette(COLOR_PAL_LOGO, 1, (const palette_color_t *)pal_logo);
+    set_bkg_palette(COLOR_PAL_RULE, 1, (const palette_color_t *)pal_rule);
 }
 
 void color_level_pal(uint8_t level) BANKED
@@ -78,6 +95,14 @@ void color_level_pal(uint8_t level) BANKED
     /* Palettes 0..2 are contiguous: normal, walls, cave fill. */
     set_bkg_palette(0, 3, (const palette_color_t *)pal_cur);
     set_bkg_palette(COLOR_PAL_OBJ, 1, (const palette_color_t *)pal_obj);
+
+    /* Teleports keep a stable palette so the wall grid colour (black on the
+     * brick styles) never changes their blink.  Slot 4 is title-only. */
+    pal_tp[0] = src[3];      /* COLPF0 */
+    pal_tp[1] = src[1];      /* COLB   */
+    pal_tp[2] = src[6];      /* COL3   */
+    pal_tp[3] = src[2];      /* COLPF1 */
+    set_bkg_palette(COLOR_PAL_TP, 1, (const palette_color_t *)pal_tp);
 }
 
 /* Last-bolt flash: the DMG build swaps the background shade (BGP 0xE0).

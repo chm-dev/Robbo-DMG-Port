@@ -18,6 +18,7 @@
  *   Select + Down          warp to level 18 (turret/perf test level)
  *   Select + A             warp to level 30 (box/bolt test level)
  *   Select + B             back to level 1
+ *   Start + Select         preview the ending sequence
  */
 #include <gb/gb.h>
 #include <stdint.h>

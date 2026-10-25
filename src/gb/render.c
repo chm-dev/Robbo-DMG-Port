@@ -55,7 +55,13 @@ uint8_t render_metatile_for_cell(uint8_t type, uint8_t extra)
         case CT_SCREW:      return MT_SCREW;
         case CT_AMMO:       return MT_AMMO;
         case CT_TURRET:     return turret_mt[extra & 3];
-        case CT_TELEPORT:   return MT_TELEPORT_0 + (anim_slow & 1);
+        case CT_TELEPORT:
+            if (color_on) {
+                /* CGB frame 0 uses the variant whose middle block is black
+                 * instead of blue; the ring stays blue in both frames. */
+                return (anim_slow & 1) ? MT_TELEPORT_1 : MT_TELEPORT_CGB;
+            }
+            return (uint8_t)(MT_TELEPORT_0 + (anim_slow & 1));
         case CT_MUSTACHE:   return MT_MUSTACHE_0 + (anim_frame & 1);
         case CT_BUTTERFLY:  return MT_BUTTERFLY_0 + (anim_frame & 1);
         case CT_BEAR:       return ((extra & 4) ? MT_BEAR_2 : MT_BEAR_0) + (anim_frame & 1);

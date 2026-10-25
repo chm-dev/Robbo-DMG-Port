@@ -54,6 +54,10 @@
 #define MENU_ROW_DELETE   4
 #define MENU_REPEAT_FRAMES 6
 
+/* Four scratch 8x8 tiles above the 240-tile title overlay.  They hold dimmed
+ * copies of the current level's HUD digits while DELETE is selected. */
+#define TITLE_DIM_DIGIT_BASE 240
+
 static void title_wait_vbl(void)
 {
     VBL_DONE = 0;
@@ -131,6 +135,33 @@ static void title_draw_logo(uint8_t base)
     }
 }
 
+/* Copy one white HUD digit half into a dim tile: colour 0 (the white glyph)
+ * becomes colour 1 (the grey font shade); the black border stays colour 3. */
+static void title_dim_digit(uint8_t digit, uint8_t half, uint8_t *dst)
+{
+    const uint8_t *src = &title_tiles[title_hud_digits[digit][half] * 16];
+    uint8_t i;
+
+    for (i = 0; i < 16; i += 2) {
+        uint8_t lo = src[i];
+        uint8_t hi = src[i + 1];
+        uint8_t zero = (uint8_t)~(lo | hi);
+        dst[i] = (uint8_t)(lo | zero);
+        dst[i + 1] = hi;
+    }
+}
+
+/* Build and publish the two dim tiles for one half of the 8x16 level number.
+ * Called only while DELETE is selected, in the same VBlank slice as the row. */
+static void title_dim_digit_row(uint8_t level, uint8_t half)
+{
+    uint8_t buf[32];
+
+    title_dim_digit((level / 10) % 10, half, buf);
+    title_dim_digit(level % 10, half, buf + 16);
+    set_bkg_data((uint8_t)(TITLE_DIM_DIGIT_BASE + (half ? 2 : 0)), 2, buf);
+}
+
 /* One row of the start-level menu.  Rows are published individually so a
  * redraw never exceeds the VBlank budget. */
 static void title_start_menu_row(uint8_t row, uint8_t level, uint8_t sel)
@@ -145,15 +176,27 @@ static void title_start_menu_row(uint8_t row, uint8_t level, uint8_t sel)
 
     if (row == MENU_ROW_HEADING) {
         text = "STARTING LEVEL";
-        font = title_font_white;
+        font = sel ? title_font_gray : title_font_white;
         x = (uint8_t)((TITLE_COLS - 14) >> 1);
+        if (sel == 0) buf[x - 1] = title_font_white[(uint8_t)'>'];
     } else if (row == MENU_ROW_DIGIT_TOP) {
-        buf[9] = title_hud_digits[(level / 10) % 10][0];
-        buf[10] = title_hud_digits[level % 10][0];
-        if (sel == 0) buf[7] = title_font_gray[(uint8_t)'>'];
+        if (sel) {
+            title_dim_digit_row(level, 0);
+            buf[9] = TITLE_DIM_DIGIT_BASE;
+            buf[10] = (uint8_t)(TITLE_DIM_DIGIT_BASE + 1);
+        } else {
+            buf[9] = title_hud_digits[(level / 10) % 10][0];
+            buf[10] = title_hud_digits[level % 10][0];
+        }
     } else if (row == MENU_ROW_DIGIT_BOTTOM) {
-        buf[9] = title_hud_digits[(level / 10) % 10][1];
-        buf[10] = title_hud_digits[level % 10][1];
+        if (sel) {
+            title_dim_digit_row(level, 1);
+            buf[9] = (uint8_t)(TITLE_DIM_DIGIT_BASE + 2);
+            buf[10] = (uint8_t)(TITLE_DIM_DIGIT_BASE + 3);
+        } else {
+            buf[9] = title_hud_digits[(level / 10) % 10][1];
+            buf[10] = title_hud_digits[level % 10][1];
+        }
     } else if (row == MENU_ROW_DELETE) {
         text = "DELETE SAVE GAME";
         font = sel ? title_font_white : title_font_gray;
@@ -169,6 +212,13 @@ static void title_start_menu_row(uint8_t row, uint8_t level, uint8_t sel)
     }
 
     set_bkg_tiles(0, (uint8_t)(TITLE_WINDOW_Y + row), TITLE_COLS, 1, buf);
+
+    /* The active option uses the normal UI palette; inactive options use the
+     * darker title grey on CGB.  Attributes are ignored on DMG. */
+    color_fill_attrs(0, (uint8_t)(TITLE_WINDOW_Y + row), TITLE_COLS, 1,
+                     (row == MENU_ROW_DELETE)
+                         ? (sel ? COLOR_PAL_UI : COLOR_PAL_TITLE_DIM)
+                         : (sel ? COLOR_PAL_TITLE_DIM : COLOR_PAL_UI));
 }
 
 static void title_confirm_row(uint8_t row)
@@ -199,6 +249,8 @@ static void title_confirm_row(uint8_t row)
     }
 
     set_bkg_tiles(0, (uint8_t)(TITLE_WINDOW_Y + row), TITLE_COLS, 1, buf);
+    color_fill_attrs(0, (uint8_t)(TITLE_WINDOW_Y + row), TITLE_COLS, 1,
+                     COLOR_PAL_UI);
 }
 
 uint8_t title_show(uint8_t saved_level) BANKED
@@ -236,6 +288,8 @@ uint8_t title_show(uint8_t saved_level) BANKED
     /* CGB: the two instruction-window rules are dark red, as on the GBC. */
     color_fill_attrs(0, TITLE_RULE_TOP, TITLE_COLS, 1, COLOR_PAL_RULE);
     color_fill_attrs(0, TITLE_RULE_BOT, TITLE_COLS, 1, COLOR_PAL_RULE);
+    /* CGB: inactive menu options get a darker grey than the normal UI text. */
+    color_title_dim_palette();
 
     title_draw_logo(TITLE_LOGO_0);
 
@@ -296,8 +350,10 @@ uint8_t title_show(uint8_t saved_level) BANKED
             if (scroll_redraw) {
                 /* After a delete, blank the old menu rows one per frame and
                  * restart the typewriter from the first instruction line. */
-                title_draw_line((uint8_t)(TITLE_WINDOW_Y +
-                    (TITLE_WINDOW_H - scroll_redraw)), 0xFF);
+                uint8_t y = (uint8_t)(TITLE_WINDOW_Y +
+                    (TITLE_WINDOW_H - scroll_redraw));
+                title_draw_line(y, 0xFF);
+                color_fill_attrs(0, y, TITLE_COLS, 1, COLOR_PAL_UI);
                 scroll_redraw--;
                 if (scroll_redraw == 0) {
                     next_line = 0;
@@ -401,7 +457,9 @@ uint8_t title_show(uint8_t saved_level) BANKED
 
                 if (edge & (J_UP | J_DOWN)) {
                     menu_sel ^= 1;
-                    menu_dirty |= (uint8_t)((1u << MENU_ROW_DIGIT_TOP) |
+                    menu_dirty |= (uint8_t)((1u << MENU_ROW_HEADING) |
+                                            (1u << MENU_ROW_DIGIT_TOP) |
+                                            (1u << MENU_ROW_DIGIT_BOTTOM) |
                                             (1u << MENU_ROW_DELETE));
                     menu_repeat = 0;
                 }
