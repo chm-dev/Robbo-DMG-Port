@@ -20,6 +20,11 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
+/* serverboy auto-selects CGB for a CGB-compatible header (0x80).  The
+ * checkpoint suite asserts DMG BGP and shade-variant behaviour, so force DMG
+ * unless a test explicitly asks for CGB. */
+const serverboySettings = require(
+  '../../mcp-gameboy/node_modules/serverboy/src/gameboy_core/settings.js');
 const Gameboy = require('../../mcp-gameboy/node_modules/serverboy');
 
 export const KEYMAP = {
@@ -28,13 +33,15 @@ export const KEYMAP = {
 };
 
 export function loadRom(romPath, saveData, options = {}) {
+  serverboySettings[2] = !options.cgb;
   const gb = new Gameboy();
   gb.loadRom(fs.readFileSync(romPath), saveData);
 
   /* Every checkpoint assumes gameplay has started.  The ROM now boots to the
    * title screen, so wait for it to hide the window, tap START, then wait for
    * the level load to re-enable the window.  Pass { skipTitle: true } for
-   * title-screen tests and screenshots. */
+   * title-screen tests and screenshots.  Pass { cgb: true } to run the CGB
+   * path instead of the default DMG mode. */
   if (!options.skipTitle) {
     const core = coreOf(gb);
     core.JoyPad = 0xff;

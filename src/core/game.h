@@ -172,6 +172,10 @@ uint8_t game_fire(void);
 void game_face(uint8_t dir);
 void game_check_enemies(void);
 void game_teleport_camera_ready(void);
+/* Resolve the landing cell for a teleport.  Walks the whole linked group in
+ * scan order (bank 14), so a blocked destination skips to the next member and
+ * a fully blocked group teleports in place. */
+uint16_t game_teleport_find_next(uint16_t entry_idx, uint16_t dest_idx) BANKED;
 /* Barrier/ZAPO sweep helper: destroy/consume whatever the moving field is
  * about to cover.  Lives in bank 0 because the destruction helpers are static
  * here; the barrier wave itself is banked (barrier.c). */

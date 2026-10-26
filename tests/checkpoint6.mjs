@@ -27,6 +27,7 @@ function symbols() {
 
 const S = symbols();
 const CT_EMPTY = 0;
+const CT_WALL = 1;
 const CT_BOMB = 15;
 const CT_TELEPORT = 20;
 const CT_EXPLOSION = 28;
@@ -60,6 +61,28 @@ function setCell(mem, x, y, type, extra = 0) {
 function setDest(mem, index, cell) {
   mem[S.teleport_dest + index * 2] = cell & 0xff;
   mem[S.teleport_dest + index * 2 + 1] = cell >> 8;
+}
+
+/* Three teleports in one group on row 2: A(3) -> B(7) -> C(10) -> A.
+ * B's four neighbours are walled off unless the caller reopens one. */
+function setupThreeWayGroup(ctx) {
+  const A = 2 * 16 + 3;
+  const B = 2 * 16 + 7;
+  const C = 2 * 16 + 10;
+  setCell(ctx.mem, 3, 2, CT_TELEPORT, 0);
+  setCell(ctx.mem, 7, 2, CT_TELEPORT, 1);
+  setCell(ctx.mem, 10, 2, CT_TELEPORT, 2);
+  setDest(ctx.mem, 0, B);
+  setDest(ctx.mem, 1, C);
+  setDest(ctx.mem, 2, A);
+  ctx.mem[S.level_teleport_count] = 3;
+  setCell(ctx.mem, 6, 2, CT_WALL, 0);
+  setCell(ctx.mem, 8, 2, CT_WALL, 0);
+  setCell(ctx.mem, 7, 1, CT_WALL, 0);
+  setCell(ctx.mem, 7, 3, CT_WALL, 0);
+  /* C's right neighbour is the first landing in Robbo's heading. */
+  setCell(ctx.mem, 11, 2, CT_EMPTY, 0);
+  return { A, B, C };
 }
 
 function triggerRight({ gb, core, byte }, maxFrames = 80) {
@@ -136,6 +159,54 @@ function waitArrival({ gb, byte }, maxFrames = 400) {
   check('self-link arrival completes', waitArrival(ctx));
   check('self-link finds an adjacent empty cell',
     ctx.byte('robbo_x') === 3 && ctx.byte('robbo_y') === 1,
+    `pos=${ctx.byte('robbo_x')},${ctx.byte('robbo_y')}`);
+}
+
+// --- Self-link with no free neighbour (Atari L7): teleport in place. ---
+{
+  const ctx = fresh();
+  const A = 2 * 16 + 3;
+  setCell(ctx.mem, 3, 2, CT_TELEPORT, 0);
+  setDest(ctx.mem, 0, A);
+  ctx.mem[S.level_teleport_count] = 1;
+  /* The only non-wall neighbour is the cell Robbo came from. */
+  setCell(ctx.mem, 4, 2, CT_WALL, 0);
+  setCell(ctx.mem, 3, 1, CT_WALL, 0);
+  setCell(ctx.mem, 3, 3, CT_WALL, 0);
+
+  check('isolated self-link teleport starts', triggerRight(ctx),
+    `busy=${ctx.byte('robbo_busy')}`);
+  check('isolated self-link arrival completes', waitArrival(ctx));
+  check('isolated self-link teleports in place',
+    ctx.byte('robbo_x') === 2 && ctx.byte('robbo_y') === 2,
+    `pos=${ctx.byte('robbo_x')},${ctx.byte('robbo_y')}`);
+  check('isolated self-link keeps the teleport cell',
+    ctx.mem[S.map_type + A] === CT_TELEPORT,
+    `type=${ctx.mem[S.map_type + A]}`);
+}
+
+// --- Blocked destination: skip to the next teleport of the group. ---
+{
+  const ctx = fresh();
+  setupThreeWayGroup(ctx);
+  check('blocked-destination teleport starts', triggerRight(ctx),
+    `busy=${ctx.byte('robbo_busy')}`);
+  check('blocked-destination arrival completes', waitArrival(ctx));
+  check('blocked destination skips to the next group member',
+    ctx.byte('robbo_x') === 11 && ctx.byte('robbo_y') === 2,
+    `pos=${ctx.byte('robbo_x')},${ctx.byte('robbo_y')}`);
+}
+
+// --- Once the primary destination is free it takes priority again. ---
+{
+  const ctx = fresh();
+  setupThreeWayGroup(ctx);
+  setCell(ctx.mem, 8, 2, CT_EMPTY, 0);
+  check('freed-destination teleport starts', triggerRight(ctx),
+    `busy=${ctx.byte('robbo_busy')}`);
+  check('freed-destination arrival completes', waitArrival(ctx));
+  check('primary destination is used once it is free',
+    ctx.byte('robbo_x') === 8 && ctx.byte('robbo_y') === 2,
     `pos=${ctx.byte('robbo_x')},${ctx.byte('robbo_y')}`);
 }
 
