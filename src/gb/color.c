@@ -195,8 +195,8 @@ void color_ending_scene(void) BANKED
 /* Current level palettes in art-index order, kept so the last-bolt flash can
  * swap the background entry and restore it without re-reading the table. */
 static uint16_t pal_cur[12];
-/* Inverse-object palette (crates/doors/teleports): the GBC draws these with
- * the inverse palette's body (= COL3) and its dark detail is COLPF0. */
+/* Inverse-object palette (crates/doors): the GBC draws these with the
+ * inverse palette's body (= COL3) and its dark detail is COLPF0. */
 static uint16_t pal_obj[4];
 /* Teleport blink palette (see color_level_pal). */
 static uint16_t pal_tp[4];

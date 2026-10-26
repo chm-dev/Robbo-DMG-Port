@@ -132,8 +132,9 @@ uint8_t render_cell_palette(uint8_t type, uint8_t extra, uint8_t mt)
         case MT_TELEPORT_0:
         case MT_TELEPORT_1:
         case MT_TELEPORT_CGB:
-            /* No fifth slot: the teleport palette differs from the wall only
-             * in its outer dark edge, so the blink survives. */
+            /* No fifth slot: the ring is the wall body and the middle
+             * alternates the wall highlight/detail, which the NES table
+             * keeps contrastive. */
             return COLOR_NES_WALL;
         case MT_STONE:
         case MT_DOOR:

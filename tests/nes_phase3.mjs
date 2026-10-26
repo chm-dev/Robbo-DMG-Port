@@ -306,6 +306,16 @@ async function main() {
     const sym = symbolsFromNoi(NOI);
     const palettes = levelPalettes();
 
+    // The teleport middle alternates the wall highlight (row[5]) and wall
+    // detail (row[7]); the ring is the wall body (row[6]).  A shared entry
+    // there means only the source's two sparkle pixels change, not the mirror.
+    const blinkDup = palettes.map((p, i) => p[5] === p[7] ? i + 1 : 0).filter(Boolean);
+    check('all 56 levels have a distinct teleport highlight/detail pair',
+        blinkDup.length === 0, `levels=${blinkDup.join(',')}`);
+    const bodyDup = palettes.map((p, i) => p[6] === p[7] ? i + 1 : 0).filter(Boolean);
+    check('all 56 levels keep the wall body/detail distinct',
+        bodyDup.length === 0, `levels=${bodyDup.join(',')}`);
+
     await init();
     await callTool('mesen_load_rom', { filepath: ROM });
     await sleep(700);

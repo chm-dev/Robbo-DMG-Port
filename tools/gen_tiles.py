@@ -722,9 +722,10 @@ def main() -> None:
             metatiles[name] = cell
 
     # CGB-only copy of the teleport's first frame: its middle block (art role 2,
-    # which the wall palette draws blue) becomes role 0 (COLPF0, black), so the
-    # inside blinks black <-> yellow while the ring stays blue.  Appended last
-    # so every existing metatile index and the DMG render path are unchanged.
+    # the constant ring colour) is recoloured to role 0 (COLPF0).  The second
+    # frame's middle uses role 3 (wall detail), so the inside blinks
+    # COLPF0 <-> wall detail while the ring stays COL3.  Appended last so every
+    # existing metatile index and the DMG render path are unchanged.
     tp_cgb = [row[:] for row in metatiles["TELEPORT_0"]]
     for y in range(4, 11):
         for x in range(6, 10):

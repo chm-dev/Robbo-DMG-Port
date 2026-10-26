@@ -200,12 +200,15 @@ def _wall_usage() -> tuple[tuple[int, int, int, int], ...]:
 
 
 # Roles: 0 bg, 1 normal bright, 2 normal mid, 3 normal dark (cave/outline),
-# 4 wall highlight, 5 wall body, 6 wall detail.
+# 4 wall highlight, 5 wall body (teleport ring), 6 wall detail.
 # The third field is the minimum luma separation; "blink" is the teleport pair.
+# The teleport's middle alternates between role 0 (highlight) and role 3
+# (detail); role 2 is the constant ring, so the blink is 4 vs 6, not 4 vs 5.
 _BASE_CONSTRAINTS = (
     (0, 1, 25), (0, 2, 25), (0, 3, 35),
     (3, 1, 25), (3, 2, 25),
-    (0, 5, 25), (3, 5, 25), (4, 5, "blink"),
+    (0, 5, 25), (3, 5, 25),
+    (4, 5, 25), (5, 6, 25), (4, 6, "blink"),
 )
 
 
