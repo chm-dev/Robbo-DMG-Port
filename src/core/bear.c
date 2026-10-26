@@ -9,7 +9,8 @@
 #pragma bank 10
 
 #include <stdint.h>
-#include <gb/gb.h>
+#include <gbdk/platform.h>
+#include "platform_compat.h"
 
 #include "game.h"
 #include "../gb/render.h"

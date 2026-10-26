@@ -18,7 +18,8 @@
  */
 #pragma bank 11
 
-#include <gb/gb.h>
+#include <gbdk/platform.h>
+#include "platform_compat.h"
 #include <stdint.h>
 
 #include "title.h"
@@ -60,9 +61,7 @@
 
 static void title_wait_vbl(void)
 {
-    VBL_DONE = 0;
-    while (!VBL_DONE) {
-    }
+    PLATFORM_WAIT_VBL();
 }
 
 static void title_fill(uint8_t x, uint8_t y, uint8_t w, uint8_t h, uint8_t tile)

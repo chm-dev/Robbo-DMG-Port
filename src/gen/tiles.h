@@ -3,7 +3,7 @@
 #define TILES_H
 
 #include <stdint.h>
-#include <gb/gb.h>
+#include <gbdk/platform.h>
 
 #define TILESET_COUNT 249
 #define METATILE_COUNT 57

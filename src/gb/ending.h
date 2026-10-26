@@ -1,7 +1,8 @@
 #ifndef ENDING_H
 #define ENDING_H
 
-#include <gb/gb.h>
+#include <gbdk/platform.h>
+#include "platform_compat.h"
 
 /* Full Atari/GBC ending: starship scene, two message pages and the closing
  * wipe.  Runs with the display under its own control and returns with the

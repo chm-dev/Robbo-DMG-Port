@@ -1,4 +1,5 @@
-#include <gb/gb.h>
+#include <gbdk/platform.h>
+#include "platform_compat.h"
 #include <stdint.h>
 
 #include "game.h"
@@ -8,6 +9,12 @@
 #include "../gb/render.h"
 #include "../gb/sound.h"
 #include "../gb/variants.h"
+
+#ifdef NINTENDO_NES
+/* The NES build's fixed bank is 16 KiB; the gameplay core (about 14 KiB on
+ * the 6502) lives in a switchable bank.  Game Boy keeps it in bank 0. */
+#pragma bank 14
+#endif
 
 uint16_t bear_step(uint16_t idx, uint8_t state) BANKED;
 uint16_t blaster_step(uint16_t bidx, uint8_t extra) BANKED;
@@ -24,7 +31,8 @@ void barrier_tick(uint16_t row_lo, uint16_t row_hi, uint8_t animate) BANKED;
  * The 5-step attack uses attack_env 3, so its rising envelope reaches only
  * the 5/15 peak instead of blipping to full volume before the decay. */
 static const SfxDef sfx_destroy   = { 17, 0, 16, 406, 3, 0, 0, 0, 0, 0, 0, 0, 1, 5, 5, 3, 2 };
-const SfxDef sfx_explosion = { 16, 0, 16, 16, 4, 0, 0, 0, 0, 0, 0, 0, 1, 4 };
+/* sfx_explosion lives in sound.c (bank 9) so banked callers and the ending
+ * can read it while the sound bank is active. */
 
 uint8_t map_type[MAP_CELLS];
 uint8_t map_extra[MAP_CELLS];
@@ -123,15 +131,15 @@ uint8_t game_level_advance_requested = 0;
 
 #define QUESTION_UNROLLED 0xFF
 
-void spawn_explosion_timer(uint16_t idx, uint8_t timer);
-void kill_robbo(void);
+void spawn_explosion_timer(uint16_t idx, uint8_t timer) GAME_BANKED;
+void kill_robbo(void) GAME_BANKED;
 static void game_teleport(uint16_t entry_idx);
 static void teleport_arrive(uint16_t idx);
 static void destroy_teleport(uint16_t idx);
 
 /* Death respawn: the map is reloaded while the display stays on, then the
  * intro repaints the wiped room and pans back to Robbo's start. */
-void game_respawn_level(uint8_t level)
+void game_respawn_level(uint8_t level) GAME_BANKED
 {
     respawn_load = 1;
     game_load_level(level);
@@ -139,13 +147,13 @@ void game_respawn_level(uint8_t level)
 
 /* Level-complete path: the NXCV clear has already emptied the screen, so the
  * next level can be loaded without turning the display off. */
-void game_load_level_after_clear(uint8_t level)
+void game_load_level_after_clear(uint8_t level) GAME_BANKED
 {
     transition_load = 1;
     game_load_level(level);
 }
 
-void game_load_level(uint8_t level)
+void game_load_level(uint8_t level) GAME_BANKED
 {
     uint16_t i;
     uint8_t x, y;
@@ -289,7 +297,7 @@ void game_load_level(uint8_t level)
     }
 }
 
-uint8_t is_demolishable(uint8_t type)
+uint8_t is_demolishable(uint8_t type) GAME_BANKED
 {
     /* Matches the JS objects that define demolishable: true.  Keys, screws,
      * doors and stones are explodable but not demolishable, so a sliding box
@@ -350,7 +358,7 @@ static uint8_t next_rand8(void)
  * short xorshift sequence. */
 static uint8_t random_question_payload(void)
 {
-    rng_state ^= (uint16_t)DIV_REG;
+    rng_state ^= (uint16_t)PLATFORM_ENTROPY();
     rng_state ^= (uint16_t)((uint16_t)debug_ticks * 0x9E37u);
     if (rng_state == 0) rng_state = 0xACE1u;
     return (uint8_t)(next_rand8() % 11);
@@ -466,7 +474,7 @@ static void game_teleport(uint16_t entry_idx)
     sfx_play_note(SFX_TELEPORT);
 }
 
-void game_teleport_camera_ready(void)
+void game_teleport_camera_ready(void) GAME_BANKED
 {
     if (teleport_phase != 1) return;
     if (cam_x != cam_target_x || cam_y != cam_target_y) return;
@@ -517,7 +525,7 @@ static void destroy_teleport(uint16_t idx)
     spawn_explosion_timer(idx, 3);
 }
 
-uint8_t game_try_move(uint8_t dir)
+uint8_t game_try_move(uint8_t dir) GAME_BANKED
 {
     uint8_t nx = robbo_x;
     uint8_t ny = robbo_y;
@@ -687,7 +695,7 @@ uint8_t game_try_move(uint8_t dir)
     return 0;
 }
 
-void spawn_explosion_timer(uint16_t idx, uint8_t timer)
+void spawn_explosion_timer(uint16_t idx, uint8_t timer) GAME_BANKED
 {
     map_type[idx] = CT_EXPLOSION;
     map_extra[idx] = timer;
@@ -764,7 +772,7 @@ static void spawn_question_payload(uint16_t idx, uint8_t payload)
     render_cell(x, y);
 }
 
-void demolish_cell(uint16_t idx)
+void demolish_cell(uint16_t idx) GAME_BANKED
 {
     uint8_t type = map_type[idx];
 
@@ -789,7 +797,7 @@ void demolish_cell(uint16_t idx)
     sfx_play_def(&sfx_destroy);
 }
 
-void blast_cell(uint16_t idx, uint8_t timer)
+void blast_cell(uint16_t idx, uint8_t timer) GAME_BANKED
 {
     uint8_t type = map_type[idx];
 
@@ -925,7 +933,7 @@ static void destroy_all_items(void)
     play_explosion_sfx();
 }
 
-void kill_robbo(void)
+void kill_robbo(void) GAME_BANKED
 {
     uint16_t idx;
 
@@ -1316,12 +1324,12 @@ static void animate_static_objects(void)
      * +64 variant); barrier_tick handles the dirty marks in bank 14. */
 }
 
-void game_check_enemies(void)
+void game_check_enemies(void) GAME_BANKED
 {
     enemy_check_kills();
 }
 
-void game_face(uint8_t dir)
+void game_face(uint8_t dir) GAME_BANKED
 {
     if (dir > 3 || robbo_busy || robbo_no_move) return;
     robbo_dir = dir;
@@ -1330,7 +1338,7 @@ void game_face(uint8_t dir)
 }
 
 /* game_info.md: only one player projectile may exist at a time. */
-uint8_t game_fire(void)
+uint8_t game_fire(void) GAME_BANKED
 {
     uint8_t nx = robbo_x;
     uint8_t ny = robbo_y;
@@ -1378,7 +1386,7 @@ uint8_t game_fire(void)
     return 0;
 }
 
-void game_frame(void)
+void game_frame(void) GAME_BANKED
 {
     if (robbo_step_timer) {
         robbo_step_timer--;
@@ -1731,7 +1739,7 @@ static void game_tick_phase4(void)
     magnet_tick();
 }
 
-void game_tick_step(void)
+void game_tick_step(void) GAME_BANKED
 {
     switch (tick_phase) {
         case 1: game_tick_phase1(); tick_phase = 2; break;

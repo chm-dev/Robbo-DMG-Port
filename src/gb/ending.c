@@ -19,7 +19,8 @@
  */
 #pragma bank 12
 
-#include <gb/gb.h>
+#include <gbdk/platform.h>
+#include "platform_compat.h"
 #include <stdint.h>
 
 #include "ending.h"
@@ -52,9 +53,7 @@ uint8_t ending_page;
 
 static void wait_one_vbl(void)
 {
-    VBL_DONE = 0;
-    while (!VBL_DONE) {
-    }
+    PLATFORM_WAIT_VBL();
 }
 
 static void clock_reset(void)

@@ -12,10 +12,16 @@
  * a destination visits every member of that group.  Keeping this walk out of
  * bank 0 leaves its tight budget for the main game loop.
  */
-#pragma bank 14
-
-#include <gb/gb.h>
+#include <gbdk/platform.h>
+#include "platform_compat.h"
 #include <stdint.h>
+
+#ifdef NINTENDO_NES
+/* Moved to bank 15 so game.c (bank 14) has the whole 16 KiB switchable bank. */
+#pragma bank 15
+#else
+#pragma bank 14
+#endif
 
 #include "game.h"
 

@@ -12,12 +12,14 @@
  *   6     checksum
  *   7     0xA5 marker
  *
- * Two records are kept, at 0x0100 and 0x0110.  A new level always rewrites
- * the stale copy, so the newer progress record stays intact if the write
- * fails halfway.  Nothing is written to 0xA000: on some FRAM boards the cell
- * at the base of the RAM window never stores, and a record placed there reads
- * back as an erased 0xFF forever.  A legacy record at 0xA000 is still
- * accepted so saves from older builds load, but it is never written again.
+ * Two records are kept: at 0x0100 and 0x0110 on the Game Boy, and at 0x0000
+ * and 0x0008 inside the reserved 16-byte NES save page ($7FF0).  A new level
+ * always rewrites the stale copy, so the newer progress record stays intact
+ * if the write fails halfway.  On the Game Boy nothing is written to 0xA000:
+ * on some FRAM boards the cell at the base of the RAM window never stores,
+ * and a record placed there reads back as an erased 0xFF forever.  A legacy
+ * record at 0xA000 is still accepted so saves from older builds load, but it
+ * is never written again.
  *
  * Inside a record the magic first byte is cleared before the data is
  * rewritten and restored last, and the result is read back.  A write that
@@ -25,13 +27,14 @@
  */
 #pragma bank 11
 
-#include <gb/gb.h>
+#include <gbdk/platform.h>
+#include "platform_compat.h"
 #include <stdint.h>
 
 #include "save.h"
 #include "../gen/levels.h"
 
-#define SAVE_RAM        ((volatile uint8_t *)0xA000)
+#define SAVE_RAM        PLATFORM_SAVE_RAM
 #define SAVE_MAGIC_0    0x52u   /* 'R' */
 #define SAVE_MAGIC_1    0x42u   /* 'B' */
 #define SAVE_MAGIC_2    0x42u   /* 'B' */
@@ -46,10 +49,18 @@
 #define SAVE_OFS_CHECK  6
 #define SAVE_OFS_MARKER 7
 
-/* Records written before v2 lived at the window base; read only. */
+/* Records written before v2 lived at the window base; read only on GB.  NES
+ * only reserves the top 16 bytes of PRG-RAM, so both live slots must fit
+ * there (legacy is the same address as slot A and is simply read twice). */
+#ifdef NINTENDO_NES
+#define SAVE_SLOT_LEGACY 0x0000u
+#define SAVE_SLOT_A      0x0000u
+#define SAVE_SLOT_B      0x0008u
+#else
 #define SAVE_SLOT_LEGACY 0x0000u
 #define SAVE_SLOT_A      0x0100u
 #define SAVE_SLOT_B      0x0110u
+#endif
 
 #define SAVE_WRITE_TRIES 3u
 

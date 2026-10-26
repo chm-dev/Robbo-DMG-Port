@@ -1,7 +1,8 @@
 #ifndef SOUND_H
 #define SOUND_H
 
-#include <gb/gb.h>
+#include <gbdk/platform.h>
+#include "platform_compat.h"
 #include <stdint.h>
 
 /*

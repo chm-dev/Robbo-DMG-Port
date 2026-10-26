@@ -1,7 +1,8 @@
 #ifndef TITLE_H
 #define TITLE_H
 
-#include <gb/gb.h>
+#include <gbdk/platform.h>
+#include "platform_compat.h"
 
 /* Draw the title screen and wait for A or START.  A valid saved level
  * (1..LEVEL_COUNT) opens the start-level menu; 0 starts level 1 directly.

@@ -2,7 +2,8 @@
 #define INTRO_H
 
 #include <stdint.h>
-#include <gb/gb.h>
+#include <gbdk/platform.h>
+#include "platform_compat.h"
 
 /* Level entry / respawn sequence, ported from the Atari ENTCV + WFAC flow:
  *

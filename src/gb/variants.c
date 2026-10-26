@@ -4,9 +4,12 @@
  * variants are loaded over the same VRAM tile range.  Small chunks keep each
  * upload comfortably inside one VBlank during a level transition.
  */
-#pragma bank 1
+/* Shares bank 8 with tiles_bank.c: the active tileset and its variants are
+ * read from the same bank, and the full 11x8 sheet still fits alongside. */
+#pragma bank 8
 
-#include <gb/gb.h>
+#include <gbdk/platform.h>
+#include "platform_compat.h"
 #include <stdint.h>
 
 #include "variants.h"

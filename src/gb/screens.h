@@ -1,7 +1,8 @@
 #ifndef SCREENS_H
 #define SCREENS_H
 
-#include <gb/gb.h>
+#include <gbdk/platform.h>
+#include "platform_compat.h"
 #include <stdint.h>
 
 /* Pause-menu phase, exposed for the input handler and regression tests. */

@@ -154,28 +154,37 @@ extern uint8_t cam_target_x;
 extern uint8_t cam_target_y;
 extern uint8_t cam_pan_timer;
 
-void game_load_level(uint8_t level);
+/* On NES the gameplay core is too large for the 16 KiB fixed bank, so the
+ * whole of game.c moves to a switchable bank and its public entry points use
+ * banked calls.  The Game Boy build keeps the original fixed-bank layout. */
+#ifdef NINTENDO_NES
+#define GAME_BANKED BANKED
+#else
+#define GAME_BANKED
+#endif
+
+void game_load_level(uint8_t level) GAME_BANKED;
 /* Reload the current planet after a death.  Unlike game_load_level() this
  * keeps the display on and leaves the wiped screen in place so the intro can
  * repaint it and pan from the death view back to Robbo's start. */
-void game_respawn_level(uint8_t level);
+void game_respawn_level(uint8_t level) GAME_BANKED;
 /* Load the next level after the NXCV column-clear.  The screen is already
  * empty, so no display-off/bulk draw is needed. */
-void game_load_level_after_clear(uint8_t level);
+void game_load_level_after_clear(uint8_t level) GAME_BANKED;
 /* Set while the level-complete clear is running.  Main drives it with
  * intro_clear_tick() and then requests the level advance. */
 extern uint8_t game_transition_active;
-void game_tick_step(void);
+void game_tick_step(void) GAME_BANKED;
 /* Rebuild the per-type actor lists by scanning the map once.  Banked to keep
  * bank 0's budget; called once per logic tick. */
 void collect_actors(void) BANKED;
 /* One per rendered frame: advances frame-rate animation timers. */
-void game_frame(void);
-uint8_t game_try_move(uint8_t dir);
-uint8_t game_fire(void);
-void game_face(uint8_t dir);
-void game_check_enemies(void);
-void game_teleport_camera_ready(void);
+void game_frame(void) GAME_BANKED;
+uint8_t game_try_move(uint8_t dir) GAME_BANKED;
+uint8_t game_fire(void) GAME_BANKED;
+void game_face(uint8_t dir) GAME_BANKED;
+void game_check_enemies(void) GAME_BANKED;
+void game_teleport_camera_ready(void) GAME_BANKED;
 /* Resolve the landing cell for a teleport.  Walks the whole linked group in
  * scan order (bank 14), so a blocked destination skips to the next member and
  * a fully blocked group teleports in place. */
@@ -184,13 +193,13 @@ uint16_t game_teleport_find_next(uint16_t entry_idx, uint16_t dest_idx) BANKED;
  * about to cover.  Lives in bank 0 because the destruction helpers are static
  * here; the barrier wave itself is banked (barrier.c). */
 void game_barrier_hit(uint16_t idx) BANKED;
-/* Shared destruction helpers (bank 0); banked object code calls these. */
-uint8_t is_demolishable(uint8_t type);
-void demolish_cell(uint16_t idx);
-void blast_cell(uint16_t idx, uint8_t timer);
-void kill_robbo(void);
+/* Shared destruction helpers; banked object code calls these. */
+uint8_t is_demolishable(uint8_t type) GAME_BANKED;
+void demolish_cell(uint16_t idx) GAME_BANKED;
+void blast_cell(uint16_t idx, uint8_t timer) GAME_BANKED;
+void kill_robbo(void) GAME_BANKED;
 /* Start/refresh an explosion animation in one cell.  Shared with the banked
  * projectile code, which leaves its fading trail behind. */
-void spawn_explosion_timer(uint16_t idx, uint8_t timer);
+void spawn_explosion_timer(uint16_t idx, uint8_t timer) GAME_BANKED;
 
 #endif /* GAME_H */

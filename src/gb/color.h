@@ -2,7 +2,8 @@
 #ifndef GB_COLOR_H
 #define GB_COLOR_H
 
-#include <gb/gb.h>
+#include <gbdk/platform.h>
+#include "platform_compat.h"
 #include <stdint.h>
 
 #include "../gen/tiles.h"

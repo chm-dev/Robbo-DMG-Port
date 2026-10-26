@@ -2,7 +2,8 @@
 #define RENDER_H
 
 #include <stdint.h>
-#include <gb/gb.h>
+#include <gbdk/platform.h>
+#include "platform_compat.h"
 
 void render_init(void);
 void render_restore_tiles(void);

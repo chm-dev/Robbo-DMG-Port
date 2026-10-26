@@ -12,8 +12,9 @@
  */
 #pragma bank 10
 
-#include <gb/gb.h>
-#include <gb/cgb.h>
+#include <gbdk/platform.h>
+#include "platform_compat.h"
+#include <gbdk/platform.h>
 #include <stdint.h>
 
 #include "color.h"

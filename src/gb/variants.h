@@ -2,7 +2,8 @@
 #define VARIANTS_H
 
 #include <stdint.h>
-#include <gb/gb.h>
+#include <gbdk/platform.h>
+#include "platform_compat.h"
 
 /* Palette-dependent object tile variants. */
 /* Projectile variants: the default light-gray floor uses the black tiles, the

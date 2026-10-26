@@ -1,7 +1,8 @@
 #ifndef SAVE_H
 #define SAVE_H
 
-#include <gb/gb.h>
+#include <gbdk/platform.h>
+#include "platform_compat.h"
 #include <stdint.h>
 
 /* Simple battery-less save: the highest planet reached is stored in the

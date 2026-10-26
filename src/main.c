@@ -20,7 +20,8 @@
  *   Select + B             back to level 1
  *   Start + Select         preview the ending sequence
  */
-#include <gb/gb.h>
+#include <gbdk/platform.h>
+#include "platform_compat.h"
 #include <stdint.h>
 
 #include "core/game.h"
@@ -78,8 +79,7 @@ static void pan_step(uint8_t dir)
 
 static void wait_vbl(void)
 {
-    VBL_DONE = 0;
-    while (!VBL_DONE) {}
+    PLATFORM_WAIT_VBL();
 }
 
 /* Restore the gameplay tiles the title overwrote, then rebuild the selected
@@ -122,6 +122,9 @@ void main(void)
     uint8_t pad, prev = 0;
     uint8_t dir = 0xFF;
     uint16_t sound_time;
+
+    /* NES: clear the PRG-RAM BSS (the GB runtime does this itself). */
+    PLATFORM_RAM_INIT();
 
     DISPLAY_OFF;
     sound_init();

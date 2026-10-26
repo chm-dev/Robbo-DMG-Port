@@ -2,7 +2,7 @@
 #pragma bank 8
 
 #include <stdint.h>
-#include <gb/gb.h>
+#include <gbdk/platform.h>
 #include "tiles.h"
 
 const uint8_t sheet_tiles_data[4048] = {

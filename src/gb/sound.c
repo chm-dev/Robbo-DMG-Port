@@ -31,13 +31,19 @@
  */
 #pragma bank 9
 
-#include <gb/gb.h>
+#include <gbdk/platform.h>
+#include "platform_compat.h"
 #include <stdint.h>
 
 #include "sound.h"
 #include "sfx_data.h"
 #include "sfx_gbc_data.h"
 #include "noise_table.h"
+
+/* Legacy explosion effect retained from the previous sound set.  It lives in
+ * the sound bank so every banked caller (gameplay, ending) can read it while
+ * sfx_play_def()/sfx_prewarm_def() have the sound bank selected. */
+const SfxDef sfx_explosion = { 16, 0, 16, 16, 4, 0, 0, 0, 0, 0, 0, 0, 1, 4 };
 
 /* POKEY master clocks (PAL). */
 #define POKEY_CLOCK_64K   63921UL

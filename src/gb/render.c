@@ -1,4 +1,5 @@
-#include <gb/gb.h>
+#include <gbdk/platform.h>
+#include "platform_compat.h"
 #include <stdint.h>
 
 #include "render.h"
@@ -192,7 +193,7 @@ void render_init(void)
     LCDC_REG = LCDCF_WIN9C00 | LCDCF_BG8000 | LCDCF_BGON;
 
     {
-        SWITCH_ROM_MBC5(1);
+        SWITCH_ROM_MBC5(8);
         set_bkg_data(0, TILESET_COUNT, tileset_data);
         SWITCH_ROM_MBC5(0);
     }
@@ -214,14 +215,17 @@ void render_init(void)
 
     add_VBL(vbl_isr);
     set_interrupts(VBL_IFLAG);
+
+    /* NES: install the temporary grayscale palette (no-op on GB). */
+    platform_palette_init();
 }
 
 void render_restore_tiles(void)
 {
     /* The title screen loads its own font/logo over the gameplay tiles.
      * Re-copy the full active set before rebuilding a level.  Must stay in
-     * bank 0: a banked function cannot switch to bank 1 and keep executing. */
-    SWITCH_ROM_MBC5(1);
+     * bank 0: a banked function cannot switch to bank 8 and keep executing. */
+    SWITCH_ROM_MBC5(8);
     set_bkg_data(0, TILESET_COUNT, tileset_data);
     SWITCH_ROM_MBC5(0);
     /* The title/ending overwrote the active tiles; the object variants are

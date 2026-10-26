@@ -22,7 +22,8 @@
  */
 #pragma bank 13
 
-#include <gb/gb.h>
+#include <gbdk/platform.h>
+#include "platform_compat.h"
 #include <stdint.h>
 
 #include "intro.h"
