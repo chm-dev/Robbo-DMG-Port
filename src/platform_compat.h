@@ -3,12 +3,12 @@
  *
  * The gameplay code is shared between the Game Boy (DMG/CGB) and NES builds.
  * <gbdk/platform.h> selects the native API for the target; this header
- * contains the few small shims that the shared files need while the NES
- * renderer/audio back-ends are brought up.
+ * contains the few small shims that the shared files need.
  *
- * Everything NES-specific here is deliberately a placeholder for the later
- * porting phases.  The GB definitions must remain byte-for-byte equivalent to
- * the old direct register use.
+ * On NES the window macros now drive the top-HUD scanline split and the HUD
+ * lives in the second nametable.  The APU/display-register stubs remain
+ * placeholders until their porting phases.  The GB definitions must remain
+ * byte-for-byte equivalent to the old direct register use.
  */
 #ifndef PLATFORM_COMPAT_H
 #define PLATFORM_COMPAT_H
@@ -35,13 +35,25 @@
 /* ------------------------------------------------------------------ */
 #else
 
-/* NES has no hardware Window layer.  The HUD becomes the top rows of the
- * background and the playfield is separated by the GBDK LCD scanline split.
- * Until that is wired up (phase 2), the window calls are harmless no-ops. */
-#define SHOW_WIN                        do { } while (0)
-#define HIDE_WIN                        do { } while (0)
+/* NES has no hardware Window layer.  The HUD is stationary in the second
+ * nametable; the playfield ring lives in nametable 0 and wraps vertically at
+ * 240 px, so a 15-metarow ring covers the 13-row view plus one prefetch row.
+ * SHOW_WIN/HIDE_WIN enable or disable the HUD scanline split for the title,
+ * ending and gameplay.  set_win_tiles() keeps the shared pause/ending code
+ * working by drawing into the playfield nametable. */
+extern uint8_t nes_hud_enabled;
+extern uint8_t nes_pan_dir;
+#define SHOW_WIN                        do { nes_hud_enabled = 1; } while (0)
+#define HIDE_WIN                        do { nes_hud_enabled = 0; } while (0)
 #define move_win(x, y)                  ((void)(x), (void)(y))
 #define set_win_tiles(x, y, w, h, buf)  set_bkg_tiles((x), (y), (w), (h), (buf))
+
+/* HUD in nametable 1 (0x2400): 4 tile rows, with the two status rows in the
+ * middle so CRT top overscan cannot clip them.  nes_hud_write() takes a 32x2
+ * tile buffer and places it at rows 1..2; nes_hud_fill() clears rows 0..3. */
+void nes_hud_fill(void);
+void nes_hud_write(const uint8_t *tiles);
+void nes_hud_attrs(uint8_t pal);
 
 /* GB-only display registers.  The NES back-end in phase 2/3 will replace the
  * meaningful ones (scroll/attributes/palettes); these stubs keep the shared

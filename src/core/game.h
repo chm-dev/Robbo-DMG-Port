@@ -10,11 +10,20 @@
 #define MAP_W 16
 #define MAP_H 31
 #define MAP_CELLS (MAP_W * MAP_H)
+/* The NES screen is 256x240: the full 16-cell map width fits, and the top
+ * 4 tile rows (32 px) are reserved for the stationary HUD.  That leaves
+ * 208 px = 13 cell rows for the playfield.  The Game Boy keeps its 10x8
+ * window view. */
+#ifdef NINTENDO_NES
+#define VIEW_COLS 16
+#define VIEW_ROWS 13
+#else
 #define VIEW_COLS 10
 #define VIEW_ROWS 8
+#endif
 /* View cell Robbo occupies when the camera can center him.  Both view
  * dimensions are even, so this picks the top-left of the two middle cells
- * (column 4 of 0..9, row 3 of 0..7). */
+ * (column 4 of 0..9, row 3 of 0..7 on GB; column 7, row 6 on NES). */
 #define VIEW_CENTER_X ((VIEW_COLS - 1) / 2)
 #define VIEW_CENTER_Y ((VIEW_ROWS - 1) / 2)
 #define MAX_TELEPORTS 64

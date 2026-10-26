@@ -261,6 +261,11 @@ static void text_wipe(void)
 
     move_win(7, 144);
     SHOW_WIN;
+#ifdef NINTENDO_NES
+    /* The NES wipe is not ported yet (phase 4); keep the stationary HUD
+     * split out of the ending text screen. */
+    HIDE_WIN;
+#endif
     DISPLAY_ON;
     clock_reset();
     sfx_play_note(SFX_KEY);

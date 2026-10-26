@@ -255,9 +255,11 @@ void main(void)
          * frame.  game_tick() and player input stay disabled until the spawn
          * materialize completes. */
         if (intro_active) {
+            uint8_t row_queued;
+
             intro_tick();
-            render_sync_rows();
-            if (hud_dirty) {
+            row_queued = render_sync_rows();
+            if (hud_dirty && !row_queued) {
                 hud_dirty = 0;
                 render_hud();
             }
@@ -321,14 +323,18 @@ void main(void)
          * next goal (or steps a teleport/pan).  While paused the playfield and
          * BG overlay are frozen: do not run row sync/dirty flushes or the
          * step-pose timer, or they could draw over the menu. */
-        if (!paused) {
-            if (!pan_active) render_camera();
-            game_teleport_camera_ready();
-            render_sync_rows();
-        }
-        if (hud_dirty) {
-            hud_dirty = 0;
-            render_hud();
+        {
+            uint8_t row_queued = 0;
+
+            if (!paused) {
+                if (!pan_active) render_camera();
+                game_teleport_camera_ready();
+                row_queued = render_sync_rows();
+            }
+            if (hud_dirty && !row_queued) {
+                hud_dirty = 0;
+                render_hud();
+            }
         }
         if (paused) {
             if (pause_menu_step()) {

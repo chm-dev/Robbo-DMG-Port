@@ -69,7 +69,8 @@ New-Item -ItemType Directory -Force -Path $romDir | Out-Null
 # Target settings.  The GB flags preserve the project's MBC5 + 128 KiB FRAM
 # cartridge.  GBDK-NES lcc defaults to UNROM-512 (mapper 30), which has no
 # PRG-RAM; Repair-NesHeader below switches the ROM to the mapper-2 UNROM-512
-# + Save RAM board instead.  The linker puts _DATA/_BSS in its 8 KiB
+# + Save RAM board instead, using a NES 2.0 header so FCEUX and MiSTer map
+# the 8 KiB PRG-RAM window.  The linker puts _DATA/_BSS in its
 # battery-backed PRG-RAM window at $6000-$7FFF.  bss_start/bss_size are
 # C-visible aliases for the linker's s__BSS/l__BSS and are used by
 # platform_ram_init() to clear PRG-RAM before main().
@@ -103,13 +104,33 @@ if ($Target -eq 'nes') {
 }
 
 # lcc 4.5.0's NES makebin/makenes pass-through does not accept spaced
-# arguments (e.g. "-Wn-b 1").  Patch the iNES header after linking.
+# arguments (e.g. "-Wn-b 1").  Patch the NES 2.0 header after linking.
 #
 # GBDK's default mapper 30 (UNROM-512) has no PRG-RAM, so the gameplay BSS
 # cannot live at $6000.  Use the mapper-2 UNROM-512 board variant with 8 KiB
-# battery-backed PRG-RAM instead (the USB-NES "UNROM 512 + Save RAM" mapping):
-# byte 6 = mapper 2 + battery + vertical arrangement, byte 7 = mapper high
-# nibble, byte 8 = one 8 KiB PRG-RAM bank.  CHR-RAM is 8 KiB (byte 5 = 0).
+# battery-backed PRG-RAM instead (the USB-NES "UNROM 512 + Save RAM" mapping).
+#
+# The header must be NES 2.0, not iNES 1.0.  FCEUX's mapper 2 only maps
+# $6000-$7FFF when the NES 2.0 PRG-NVRAM size field is non-zero, and the
+# MiSTer NES core derives `prg_is_ram` from the same NES 2.0 field; the old
+# iNES 1.0 byte 8 PRG-RAM size is ignored by both, which left the game's
+# entire $6000 BSS mapped as open bus and hung the boot on a blank screen.
+# NES 2.0 is also what the USB-NES mapper override descriptors use.
+#
+# Header layout:
+#   byte 5  = 0x00  CHR-ROM banks (0; CHR-RAM size is byte 11)
+#   byte 6  = 0x23  mapper 2 low nibble | battery | vertical mirroring
+#   byte 7  = 0x08  NES 2.0 identifier, mapper high nibble 0
+#   byte 8  = 0x00  mapper high nibble / submapper 0
+#   byte 9  = 0x00  PRG/CHR size MSB
+#   byte 10 = 0x70  8 KiB battery-backed PRG-NVRAM (64 << 7)
+#   byte 11 = 0x07  8 KiB CHR-RAM (64 << 7)
+#
+# Horizontal arrangement (two 32x30 nametables side by side) is required by
+# the phase-2 renderer: nametable 0 holds the vertically wrapping playfield
+# ring, and nametable 1 holds the stationary top HUD selected by the
+# scanline split.  In iNES terms this is vertical mirroring (flag 6 bit 0),
+# which is also what the phase-1 ROM already used.
 function Repair-NesHeader {
     param([string]$Path)
 
@@ -120,11 +141,17 @@ function Repair-NesHeader {
         throw "Not an iNES ROM: $Path"
     }
 
-    $bytes[5] = 0x00    # CHR-RAM (no CHR-ROM banks)
-    $bytes[6] = 0x23    # mapper 2 | battery | vertical arrangement
-    $bytes[7] = 0x00    # mapper high nibble
-    $bytes[8] = 0x01    # 8 KiB PRG-RAM
-    $bytes[10] = 0x00
+    $bytes[5] = 0x00    # CHR-ROM size LSB = 0 (CHR-RAM, see byte 11)
+    $bytes[6] = 0x23    # mapper 2 | battery | vertical mirroring (two NTs side by side)
+    $bytes[7] = 0x08    # NES 2.0 identifier; mapper high nibble 0
+    $bytes[8] = 0x00    # mapper high nibble / submapper
+    $bytes[9] = 0x00    # PRG-ROM/CHR-ROM size MSB
+    $bytes[10] = 0x70   # 8 KiB battery-backed PRG-NVRAM (64 << 7)
+    $bytes[11] = 0x07   # 8 KiB CHR-RAM (64 << 7)
+    $bytes[12] = 0x00   # NTSC
+    $bytes[13] = 0x00
+    $bytes[14] = 0x00
+    $bytes[15] = 0x00
     [System.IO.File]::WriteAllBytes($Path, $bytes)
 }
 

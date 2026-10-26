@@ -40,14 +40,27 @@ static uint8_t cam_max_y(void)
 /* Derive the cell origin and the pixel scroll from the Q4 position. */
 static void cam_sync(void)
 {
+#ifdef NINTENDO_NES
+    uint8_t slot;
+
+    cam_x = 0;
+    cam_scx = 0;
+    cam_y = (uint8_t)(cam_qy >> 8);
+    slot = render_ring_slot(cam_y);
+    cam_scy = (uint8_t)((uint16_t)slot * 16u + ((cam_qy >> 4) & 15));
+#else
     cam_scx = (uint8_t)(cam_qx >> 4);
     cam_scy = (uint8_t)(cam_qy >> 4);
     cam_x = (uint8_t)(cam_qx >> 8);
     cam_y = (uint8_t)(cam_qy >> 8);
+#endif
 }
 
 void render_camera_snap(void) BANKED
 {
+#ifdef NINTENDO_NES
+    nes_pan_dir = 0;
+#endif
     cam_smooth = 0;
     cam_goal_x = cam_center_goal(robbo_x, VIEW_CENTER_X, cam_max_x());
     cam_goal_y = cam_center_goal(robbo_y, VIEW_CENTER_Y, cam_max_y());
@@ -58,6 +71,9 @@ void render_camera_snap(void) BANKED
 
 void render_camera_reset(void) BANKED
 {
+#ifdef NINTENDO_NES
+    nes_pan_dir = 0;
+#endif
     cam_smooth = 0;
     cam_goal_x = 0;
     cam_goal_y = 0;
@@ -68,6 +84,9 @@ void render_camera_reset(void) BANKED
 
 void render_camera_set_q(uint16_t qx, uint16_t qy) BANKED
 {
+#ifdef NINTENDO_NES
+    nes_pan_dir = 0;
+#endif
     cam_qx = qx;
     cam_qy = qy;
     cam_sync();
@@ -78,6 +97,9 @@ void render_camera_pan_step(uint8_t dir) BANKED
     uint16_t max_qx = (uint16_t)((uint16_t)cam_max_x() << 8);
     uint16_t max_qy = (uint16_t)((uint16_t)cam_max_y() << 8);
 
+#ifdef NINTENDO_NES
+    nes_pan_dir = dir;
+#endif
     if (dir == 0) {
         cam_qx = (cam_qx + 256u > max_qx) ? max_qx : (uint16_t)(cam_qx + 256u);
     } else if (dir == 1) {
@@ -92,6 +114,9 @@ void render_camera_pan_step(uint8_t dir) BANKED
 
 void render_camera(void) BANKED
 {
+#ifdef NINTENDO_NES
+    nes_pan_dir = 0;
+#endif
     if (cam_override) {
         /* Teleport: pan one cell every other frame toward the arrival area. */
         cam_smooth = 0;
@@ -101,6 +126,10 @@ void render_camera(void) BANKED
         }
         cam_pan_timer = 0;
 
+#ifdef NINTENDO_NES
+        if (cam_target_y < cam_y) nes_pan_dir = 3;
+        else if (cam_target_y > cam_y) nes_pan_dir = 1;
+#endif
         if (cam_x < cam_target_x) cam_x++;
         else if (cam_x > cam_target_x) cam_x--;
 

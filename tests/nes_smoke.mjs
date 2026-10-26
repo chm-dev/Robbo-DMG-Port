@@ -5,7 +5,8 @@
  *   MesenCE-MCP\MesenCE-MCP-Windows.exe --mcp --mcp-port=9100 --enableStdout roms\robbo.nes
  *
  * The test checks the build/layout contract that Phase 1 introduced:
- *   - mapper 2 + battery + vertical mirroring header,
+ *   - NES 2.0 header, mapper 2 + battery + vertical mirroring,
+ *     8 KiB PRG-NVRAM at $6000-$7FFF and 8 KiB CHR-RAM,
  *   - the PRG-RAM window at $6000 is writable,
  *   - BSS is cleared at boot,
  *   - START loads level 1 through the game bank.
@@ -107,6 +108,7 @@ async function clearSave() {
 async function main() {
     if (!fs.existsSync(ROM)) throw new Error(`Missing ${ROM}`);
     if (!fs.existsSync(NOI)) throw new Error(`Missing ${NOI}`);
+    const romBytes = fs.readFileSync(ROM);
     const sym = symbolsFromNoi(NOI);
 
     await init();
@@ -118,11 +120,19 @@ async function main() {
     await callTool('mesen_reset', { type: 'hard' });
     await sleep(1200);
 
+    // Header contract: NES 2.0 is required so FCEUX and MiSTer map the
+    // $6000-$7FFF PRG-RAM window.  Both ignore the iNES 1.0 byte-8 size.
+    check('header is NES 2.0', romBytes[7] === 0x08, `byte7=0x${romBytes[7].toString(16)}`);
+    check('mapper 2 low nibble', (romBytes[6] >> 4) === 2, `byte6=0x${romBytes[6].toString(16)}`);
+    check('battery + vertical mirroring', (romBytes[6] & 0x03) === 0x03, `byte6=0x${romBytes[6].toString(16)}`);
+    check('8 KiB PRG-NVRAM', (romBytes[10] >> 4) === 7, `byte10=0x${romBytes[10].toString(16)}`);
+    check('8 KiB CHR-RAM', (romBytes[11] & 0x0F) === 7, `byte11=0x${romBytes[11].toString(16)}`);
+
     const header = JSON.parse(await callTool('mesen_get_rom_header'));
+    check('Mesen sees NES 2.0', header.format === 'NES 2.0', `format=${header.format}`);
     check('mapper 2 header', header.mapper === 2, `mapper=${header.mapper}`);
     check('battery save bit', header.battery === true);
-    check('vertical nametable arrangement', header.mirroring === 'Vertical', `mirroring=${header.mirroring}`);
-
+    check('vertical mirroring (side-by-side nametables)', header.mirroring === 'Vertical', `mirroring=${header.mirroring}`);
     check('BSS cleared at boot', (await readBytes(sym._nes_compat_cpu, 1))[0] === 0);
 
     await callTool('mesen_write_memory', {

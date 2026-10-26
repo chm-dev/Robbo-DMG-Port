@@ -8,13 +8,28 @@
 #include "../core/game.h"
 #include "../gen/tiles.h"
 
-#define MAP_METAROWS 16
+#define MAP_METAROWS RENDER_RING_ROWS
+#ifndef NINTENDO_NES
 /* Rows kept current on each side of the 8-row view.  A sub-cell scroll shows
  * at most 9 rows; the margin gives ~32px of lead so a row is already resident
  * before it can scroll into view (the risky direction is upwards). */
 #define CAM_MARGIN 2
+#endif
 
-uint8_t map_row_level[MAP_METAROWS];
+uint8_t map_row_level[RENDER_RING_ROWS];
+
+#ifdef NINTENDO_NES
+/* NES playfield ring: 15 metarows = 240 px, stored in nametable 0 with the
+ * hardware vertical wrap.  The HUD lives in nametable 1 (see
+ * platform_compat.c) and is selected by the scanline split below. */
+#define NES_HUD_LINE 32      /* 4 tile rows: pad, HUD, HUD, pad */
+#define NES_SPLIT_SCANLINE (NES_HUD_LINE - 1)
+/* Packed NES attribute shadow for the ring (8 bytes per 32x32 attribute
+ * row).  We own this because GBDK's 16x16 API cannot express a half-row
+ * update without clobbering the neighbouring metarow. */
+static uint8_t nes_attr_shadow[8 * 8];
+static uint8_t nes_split_bkg;
+#endif
 
 /* Dirty-cell bitmap (one bit per map cell).  Insertion is O(1); the old
  * 64-entry list cost a linear de-dup scan per mark and silently dropped
@@ -105,8 +120,18 @@ static uint8_t empty_tile(void)
  * publishes attributes, so both variants look identical there. */
 uint8_t render_cell_palette(uint8_t type, uint8_t extra, uint8_t mt)
 {
+#ifdef NINTENDO_NES
+    /* Phase 2 still runs the temporary grayscale palette: every playfield
+     * cell uses BG slot 0.  Phase 3 maps NORMAL/WALL/CAVE/UI onto the four
+     * NES slots and replaces this with the real attribute value. */
+    (void)type;
+    (void)extra;
+    (void)mt;
+    return COLOR_PAL_NORMAL;
+#else
     if (IS_WALL(type) && (extra & WALL_EXTRA_NORMAL)) return COLOR_PAL_NORMAL;
     return COLOR_MT_PAL(mt);
+#endif
 }
 
 static void draw_metatile(uint8_t mt, uint8_t tx, uint8_t ty)
@@ -121,6 +146,47 @@ static void draw_metatile(uint8_t mt, uint8_t tx, uint8_t ty)
 static void draw_level_row(uint8_t level_y, uint8_t map_row)
 {
     uint8_t x;
+
+#ifdef NINTENDO_NES
+    static uint8_t row_tiles[64];
+    static uint8_t row_pals[16];
+    uint8_t attr_row = (uint8_t)(map_row >> 1);
+    uint8_t shift = (uint8_t)((map_row & 1) ? 4 : 0);
+    uint8_t *a = &nes_attr_shadow[(uint16_t)attr_row * 8];
+
+    for (x = 0; x < MAP_W; x++) {
+        uint8_t mt;
+        uint8_t type = CT_EMPTY;
+        uint8_t extra = 0;
+        const uint8_t *t;
+
+        if (level_y < level_height) {
+            uint16_t idx = (uint16_t)level_y * MAP_W + x;
+            type = map_type[idx];
+            extra = map_extra[idx];
+        }
+        mt = render_metatile_for_cell(type, extra);
+        t = &metatile_tiles[(uint16_t)mt << 2];
+        row_tiles[(uint8_t)(x << 1)] = t[0];
+        row_tiles[(uint8_t)(x << 1) + 1] = t[1];
+        row_tiles[32 + (uint8_t)(x << 1)] = t[2];
+        row_tiles[32 + (uint8_t)(x << 1) + 1] = t[3];
+        row_pals[x] = render_cell_palette(type, extra, mt);
+    }
+
+    /* One packed attribute byte covers two metatiles in this row.  The other
+     * metarow in the 32x32 block keeps its bits from the shadow. */
+    for (x = 0; x < 8; x++) {
+        uint8_t p0 = row_pals[(uint8_t)(x << 1)];
+        uint8_t p1 = row_pals[(uint8_t)(x << 1) + 1];
+        uint8_t packed = (uint8_t)((p0 | (uint8_t)(p1 << 2)) << shift);
+        a[x] = (uint8_t)((a[x] & (uint8_t)~(0x0Fu << shift)) | packed);
+    }
+
+    set_bkg_tiles(0, (uint8_t)(map_row << 1), 32, 2, row_tiles);
+    set_bkg_attributes(0, (uint8_t)(attr_row << 2), 32, 4, a);
+    map_row_level[map_row] = level_y;
+#else
     static uint8_t row_pal[MAP_W * 2];
 
     for (x = 0; x < MAP_W; x++) {
@@ -128,7 +194,7 @@ static void draw_level_row(uint8_t level_y, uint8_t map_row)
         uint8_t type = CT_EMPTY;
         uint8_t extra = 0;
         if (level_y < level_height) {
-            uint16_t idx = level_y * MAP_W + x;
+            uint16_t idx = (uint16_t)level_y * MAP_W + x;
             type = map_type[idx];
             extra = map_extra[idx];
             mt = render_metatile_for_cell(type, extra);
@@ -141,14 +207,52 @@ static void draw_level_row(uint8_t level_y, uint8_t map_row)
     }
     map_row_level[map_row] = level_y;
     if (color_on) color_row_attr(map_row, row_pal);
+#endif
 }
+
+
+#ifdef NINTENDO_NES
+/* Ring scroll: position of the view's first cell inside the 240 px ring,
+ * plus the sub-cell offset.  Row r always lives in slot r % 15. */
+static void nes_update_ring_scroll(void)
+{
+    uint8_t cell = (uint8_t)(cam_qy >> 8);
+    uint8_t sub = (uint8_t)((cam_qy >> 4) & 15);
+    uint8_t slot = cell;
+    uint8_t ring;
+
+    while (slot >= RENDER_RING_ROWS) slot = (uint8_t)(slot - RENDER_RING_ROWS);
+    ring = (uint8_t)((uint16_t)slot * 16u + sub);
+
+    cam_x = 0;
+    cam_scx = 0;
+    cam_y = cell;
+    cam_scy = ring;
+
+    /* The playfield starts NES_HUD_LINE px below the top of the screen.
+     * GBDK's LCD handler adds the split scanline to bkg_scroll_y and wraps
+     * at 240.  bkg_scroll_y is therefore the GB-style layer offset: setting
+     * it to (ring - NES_HUD_LINE) makes the NMI write the absolute scroll
+     * value `ring`, so scanline 32 shows the ring row `cam_y` exactly. */
+    {
+        uint16_t v = (uint16_t)ring + (240u - NES_HUD_LINE);
+        if (v >= 240u) v = (uint16_t)(v - 240u);
+        nes_split_bkg = (uint8_t)v;
+    }
+}
+#endif
 
 void render_apply_camera(void)
 {
+#ifdef NINTENDO_NES
+    nes_update_ring_scroll();
+#else
     SCX_REG = cam_scx;
     /* SCY wraps modulo 256 (the ring is 16 metatile rows). */
     SCY_REG = cam_scy;
+#endif
 }
+
 
 /* Port of robbo-gbc's camera_ease(): move 1/8 of the remaining distance,
  * with a 3 px/frame cap.  Q4 units give the same sub-pixel settle as GBC. */
@@ -163,6 +267,39 @@ static uint16_t cam_ease_step(uint16_t cur, uint16_t tgt)
     return (cur < tgt) ? (uint16_t)(cur + step) : (uint16_t)(cur - step);
 }
 
+#ifdef NINTENDO_NES
+/* VBL: ease the camera, then publish the stationary HUD at the top of the
+ * frame.  The LCD handler below switches to the playfield at NES_HUD_LINE.
+ * Both handlers only touch GBDK's shadow registers; the NMI applies them. */
+static void vbl_isr(void)
+{
+    if (cam_smooth) {
+        cam_qx = cam_ease_step(cam_qx, (uint16_t)((uint16_t)cam_goal_x << 8));
+        cam_qy = cam_ease_step(cam_qy, (uint16_t)((uint16_t)cam_goal_y << 8));
+    }
+
+    nes_update_ring_scroll();
+
+    bkg_scroll_x = 0;
+    bkg_scroll_y = 0;
+    if (nes_hud_enabled) {
+        shadow_PPUCTRL |= 0x01;     /* base nametable 1 (HUD) */
+    } else {
+        shadow_PPUCTRL &= (uint8_t)~0x01;
+    }
+}
+
+static void nes_lcd_isr(void)
+{
+    if (nes_hud_enabled) {
+        shadow_PPUCTRL &= (uint8_t)~0x01;   /* base nametable 0 (playfield) */
+        bkg_scroll_x = 0;
+        bkg_scroll_y = nes_split_bkg;
+    } else {
+        bkg_scroll_y = 0;
+    }
+}
+#else
 /* Only the VBlank handler advances and applies the camera.  Main publishes
  * cell-aligned goals atomically, so SCX/SCY never change mid-frame. */
 static void vbl_isr(void)
@@ -177,9 +314,34 @@ static void vbl_isr(void)
     }
     render_apply_camera();
 }
+#endif
+
 
 void render_init(void)
 {
+#ifdef NINTENDO_NES
+    uint8_t empty = empty_tile();
+
+    /* The display is already off: GBDK writes tiles and the nametable
+     * directly.  NT0 is the playfield ring; NT1 holds the stationary HUD. */
+    {
+        SWITCH_ROM_MBC5(8);
+        set_bkg_data(0, TILESET_COUNT, tileset_data);
+        SWITCH_ROM_MBC5(0);
+    }
+
+    fill_bkg_rect(0, 0, 32, 30, empty);
+    nes_hud_fill();
+
+    _lcd_scanline = NES_SPLIT_SCANLINE;
+
+    add_VBL(vbl_isr);
+    add_LCD(nes_lcd_isr);
+    set_interrupts(VBL_IFLAG | LCD_IFLAG);
+
+    /* NES: install the temporary grayscale palette (no-op on GB). */
+    platform_palette_init();
+#else
     uint8_t buf[32];
     uint8_t x, y;
     uint8_t empty = empty_tile();
@@ -215,10 +377,9 @@ void render_init(void)
 
     add_VBL(vbl_isr);
     set_interrupts(VBL_IFLAG);
-
-    /* NES: install the temporary grayscale palette (no-op on GB). */
-    platform_palette_init();
+#endif
 }
+
 
 void render_restore_tiles(void)
 {
@@ -241,13 +402,20 @@ void render_set_wall_style(uint8_t cell)
     /* Load one 16x16 wall cell from bank 8 into the reserved four-tile slot.
      * game_load_level() calls this while the display is off.
      * Palette 1 (level 2, 6, ...) swaps the wall's white/light-gray shades;
-     * the other DMG palettes and CGB keep the sheet's original wall art. */
+     * the other DMG palettes and CGB keep the sheet's original wall art.
+     * NES colours are not ported yet (phase 3), so it always uses the base
+     * sheet art. */
+#ifdef NINTENDO_NES
+    sheet_load_metatile(cell, WALL_TILE_BASE);
+#else
     if (!color_on && level_palette == 1) {
         sheet_load_metatile_swap02(cell, WALL_TILE_BASE);
     } else {
         sheet_load_metatile(cell, WALL_TILE_BASE);
     }
+#endif
 }
+
 
 /* Keep the dirty bitmap clear while the intro owns the screen.  The death
  * wipe may leave cells queued; flushing them after the map reload would reveal
@@ -277,9 +445,14 @@ uint8_t render_level_background(void)
 {
     /* CGB uses the authentic per-level palette, where object colours already
      * contrast with the floor: the DMG shade-shift tile variants are not
-     * needed.  Value 4 matches no variant condition in game.c. */
+     * needed.  NES uses the same base art until phase 3 adds its palettes.
+     * Value 4 matches no variant condition in game.c. */
+#ifdef NINTENDO_NES
+    return 4;
+#else
     if (color_on) return 4;
     return (uint8_t)((level_bgp[level_palette] >> 2) & 3);
+#endif
 }
 
 void render_flash_set(uint8_t on)
@@ -296,8 +469,46 @@ void render_flash_set(uint8_t on)
     color_flash(on);
 }
 
-void render_sync_rows(void)
+uint8_t render_sync_rows(void)
 {
+#ifdef NINTENDO_NES
+    uint8_t i;
+    uint8_t slot;
+    uint8_t level_y;
+    uint8_t extra_slot = render_ring_slot((uint8_t)(cam_y + 14));
+    uint8_t extra_row;
+    uint8_t moving_up = (nes_pan_dir == 3) ||
+        (nes_pan_dir == 0 && cam_goal_y < cam_y);
+
+    if (nes_pan_dir == 1) moving_up = 0;
+
+    /* The off-screen ring slot is prefetched with the row we are about to
+     * scroll into view: above when the camera is moving up, below otherwise.
+     * It is never visible, so it can be repainted without a hold. */
+    extra_row = moving_up
+        ? (uint8_t)((cam_y > 0) ? (cam_y - 1) : 0xFF)
+        : (uint8_t)(cam_y + 14);
+    if (extra_row >= level_height) extra_row = 0xFF;
+
+    if (map_row_level[extra_slot] != extra_row) {
+        draw_level_row(extra_row, extra_slot);
+        return 1;
+    }
+
+    /* Make sure every row of the visible 13-row view is resident.  Normally
+     * only the prefetch above is needed; this loop repairs the ring after a
+     * teleport or a direction change. */
+    for (i = 0; i < VIEW_ROWS; i++) {
+        level_y = (uint8_t)(cam_y + i);
+        slot = render_ring_slot(level_y);
+        if (map_row_level[slot] != level_y) {
+            draw_level_row(level_y, slot);
+            return 1;
+        }
+    }
+
+    return 0;
+#else
     uint8_t i;
     uint8_t first = (cam_y > CAM_MARGIN) ? (uint8_t)(cam_y - CAM_MARGIN) : 0;
 
@@ -308,11 +519,14 @@ void render_sync_rows(void)
             draw_level_row(level_y, map_row);
         }
     }
+    return 0;
+#endif
 }
+
 
 static void draw_cell_now(uint8_t x, uint8_t y)
 {
-    uint8_t map_row = y & (MAP_METAROWS - 1);
+    uint8_t map_row = render_ring_slot(y);
     uint8_t mt;
     uint16_t idx;
 
@@ -320,10 +534,27 @@ static void draw_cell_now(uint8_t x, uint8_t y)
     idx = (uint16_t)y * MAP_W + x;
     mt = render_metatile_for_cell(map_type[idx], map_extra[idx]);
     draw_metatile(mt, x * 2, map_row * 2);
+#ifdef NINTENDO_NES
+    {
+        /* Keep the packed NES attribute shadow in sync and publish the whole
+         * 32x32 attribute row (the two metarows of the block share a byte). */
+        uint8_t pal = render_cell_palette(map_type[idx], map_extra[idx], mt);
+        uint8_t attr_row = (uint8_t)(map_row >> 1);
+        uint8_t shift = (uint8_t)((map_row & 1) ? 4 : 0);
+        uint8_t *a = &nes_attr_shadow[(uint16_t)attr_row * 8];
+        uint8_t byte = (uint8_t)(x >> 1);
+        uint8_t bit = (uint8_t)(shift + ((x & 1) ? 2 : 0));
+
+        a[byte] = (uint8_t)((a[byte] & (uint8_t)~(0x03u << bit)) |
+                            (uint8_t)(pal << bit));
+        set_bkg_attributes(0, (uint8_t)(attr_row << 2), 32, 4, a);
+    }
+#else
     if (color_on) {
         color_cell_attr((uint8_t)(x * 2), (uint8_t)(map_row * 2),
                         render_cell_palette(map_type[idx], map_extra[idx], mt));
     }
+#endif
 }
 
 void render_cell(uint8_t x, uint8_t y)

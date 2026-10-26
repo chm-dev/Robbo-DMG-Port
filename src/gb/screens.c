@@ -28,9 +28,15 @@
 #define MENU_H 9
 
 /* Desired top-left in screen pixels.  The BG scroll shifts the panel by up to
- * seven pixels; it remains centered and fully on-screen. */
+ * seven pixels; it remains centered and fully on-screen.  On NES the top
+ * 32 px are the stationary HUD, so the panel starts below it. */
+#ifdef NINTENDO_NES
+#define MENU_SCREEN_X 24
+#define MENU_SCREEN_Y 48
+#else
 #define MENU_SCREEN_X 24
 #define MENU_SCREEN_Y 20
+#endif
 
 #define MENU_TITLE_ROW    1
 #define MENU_WARP_ROW     3
@@ -141,7 +147,7 @@ static void menu_restore_row(uint8_t row)
 
     for (col = 0; col < MENU_W; col++) {
         uint8_t tile_x = (uint8_t)(pause_menu_bg_x + col);
-        uint8_t map_row = (uint8_t)((tile_y >> 1) & 15);
+        uint8_t map_row = render_ring_slot((uint8_t)(tile_y >> 1));
         uint8_t level_y = map_row_level[map_row];
         uint8_t cell_x = (uint8_t)((tile_x >> 1) & 15);
         uint8_t type = CT_EMPTY;
@@ -176,7 +182,12 @@ void pause_menu_open(uint8_t level, uint8_t max_level) BANKED
     if (level > max_level) level = max_level;
 
     pause_menu_bg_x = (uint8_t)((cam_scx + MENU_SCREEN_X) >> 3);
+#ifdef NINTENDO_NES
+    /* cam_scy is the playfield ring position at screen line 32. */
+    pause_menu_bg_y = (uint8_t)((cam_scy + (MENU_SCREEN_Y - 32)) >> 3);
+#else
     pause_menu_bg_y = (uint8_t)((cam_scy + MENU_SCREEN_Y) >> 3);
+#endif
 
     menu_shown_row = 0;
     menu_restore_next = 0;

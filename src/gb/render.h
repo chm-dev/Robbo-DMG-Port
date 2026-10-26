@@ -5,6 +5,22 @@
 #include <gbdk/platform.h>
 #include "platform_compat.h"
 
+/* Rows kept current in the background ring.  GB: 16 metarows (255 px of
+ * hardware scroll).  NES: 15 metarows (240 px), one more than the 13-row
+ * view plus its two partial neighbours, which leaves one off-screen row for
+ * prefetching the incoming map row. */
+#ifdef NINTENDO_NES
+#define RENDER_RING_ROWS 15
+static inline uint8_t render_ring_slot(uint8_t y)
+{
+    while (y >= RENDER_RING_ROWS) y = (uint8_t)(y - RENDER_RING_ROWS);
+    return y;
+}
+#else
+#define RENDER_RING_ROWS 16
+#define render_ring_slot(y) ((uint8_t)((y) & (RENDER_RING_ROWS - 1)))
+#endif
+
 void render_init(void);
 void render_restore_tiles(void);
 void render_set_wall_style(uint8_t cell);
@@ -27,7 +43,10 @@ void render_camera_reset(void) BANKED;
 void render_camera_pan_step(uint8_t dir) BANKED;
 void render_camera_set_q(uint16_t qx, uint16_t qy) BANKED;
 void render_apply_camera(void);
-void render_sync_rows(void);
+/* Keep the row ring current.  Returns 1 if a metarow was queued this call
+ * (NES: one row per frame, so the caller can defer the HUD by one frame and
+ * stay inside the VRAM transfer budget). */
+uint8_t render_sync_rows(void);
 void render_cell(uint8_t x, uint8_t y);
 void render_flush_cells(void);
 uint8_t render_metatile_for_cell(uint8_t type, uint8_t extra);

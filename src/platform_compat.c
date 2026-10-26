@@ -15,6 +15,14 @@
 
 #ifdef NINTENDO_NES
 
+#include "gen/tiles.h"
+
+/* HUD scanline split enable.  The title/ending clear it; gameplay sets it. */
+uint8_t nes_hud_enabled = 1;
+/* Pan/teleport direction hint for the playfield ring prefetch:
+ * 0 = follow the camera goal, 1 = down, 3 = up. */
+uint8_t nes_pan_dir = 0;
+
 volatile uint8_t nes_compat_cpu;
 volatile uint8_t nes_compat_bgp;
 volatile uint8_t nes_compat_obp0;
@@ -45,10 +53,9 @@ void platform_ram_init(void)
 
 void platform_palette_init(void)
 {
-    /* Universal NES backdrop is index 0; the four grayscale entries keep the
-     * shared game visible while the real per-level palettes are still to be
-     * generated (phase 3).  All four BG slots get the same ramp because the
-     * current attribute path still writes CGB bytes. */
+    /* Universal NES backdrop is index 0.  Phase 2 uses one grayscale ramp on
+     * all four BG slots; the packed attribute path currently selects slot 0
+     * for every playfield cell, so per-level NES palettes arrive in phase 3. */
     static const palette_color_t bg[16] = {
         0x0F, 0x00, 0x10, 0x30,
         0x0F, 0x00, 0x10, 0x30,
@@ -64,6 +71,51 @@ void platform_palette_init(void)
 
     set_bkg_palette(0, 4, bg);
     set_sprite_palette(0, 4, spr);
+}
+
+/* ------------------------------------------------------------------ */
+/* HUD in nametable 1                                                  */
+/* ------------------------------------------------------------------ */
+/* set_vram_byte() takes the PPU address as a pointer.  Consecutive writes
+ * are merged into 32-byte stripes by the GBDK VRAM buffer, so a whole row
+ * costs one transfer. */
+static void nes_nt1_write(uint16_t addr, const uint8_t *src, uint8_t count)
+{
+    while (count--) {
+        set_vram_byte((uint8_t *)addr, *src++);
+        addr++;
+    }
+}
+
+void nes_hud_fill(void)
+{
+    uint8_t row;
+    uint8_t i;
+
+    /* Four rows: padding above/below the two status rows. */
+    for (row = 0; row < 4; row++) {
+        for (i = 0; i < 32; i++) {
+            set_vram_byte((uint8_t *)(0x2400u + (uint16_t)(row << 5) + i),
+                          hud_bg_tile);
+        }
+    }
+    nes_hud_attrs(0);
+}
+
+void nes_hud_write(const uint8_t *tiles)
+{
+    nes_nt1_write(0x2420u, tiles, 32);
+    nes_nt1_write(0x2440u, tiles + 32, 32);
+}
+
+void nes_hud_attrs(uint8_t pal)
+{
+    uint8_t packed = (uint8_t)(pal | (pal << 2) | (pal << 4) | (pal << 6));
+    uint8_t i;
+
+    for (i = 0; i < 8; i++) {
+        set_vram_byte((uint8_t *)(0x27C0u + i), packed);
+    }
 }
 
 #endif /* NINTENDO_NES */

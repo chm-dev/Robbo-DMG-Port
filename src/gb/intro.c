@@ -43,28 +43,51 @@
  * 6 frames, so the four explosion frames take 24 frames before Robbo. */
 #define INTRO_SPAWN_STEP_FRAMES 6
 #define INTRO_SPAWN_FRAMES (INTRO_SPAWN_STEP_FRAMES * 4)
-#define INTRO_RING_ROWS 16
+#ifdef NINTENDO_NES
+#define INTRO_CAM_MARGIN 0
+#else
 #define INTRO_CAM_MARGIN 2
+#endif
 
 /* Bind the row ring to the current camera band without drawing.  A new level
  * uses this instead of a bulk level draw: the paint owns every tile. */
 static void intro_bind_rows(void)
 {
-    uint8_t first = (cam_y > INTRO_CAM_MARGIN) ?
-        (uint8_t)(cam_y - INTRO_CAM_MARGIN) : 0;
     uint8_t r;
 
-    for (r = 0; r < INTRO_RING_ROWS; r++) {
-        uint8_t level_y = (uint8_t)(first + r);
-        map_row_level[level_y & (INTRO_RING_ROWS - 1)] = level_y;
+#ifdef NINTENDO_NES
+    /* The NES ring is 15 metarows: the 13-row view plus one prefetch row.
+     * Levels taller than the ring are marked empty; the paint loop below
+     * checks the identity before using a cell. */
+    for (r = 0; r < RENDER_RING_ROWS; r++) {
+        uint8_t level_y = (uint8_t)(cam_y + r);
+        map_row_level[render_ring_slot(level_y)] =
+            (level_y < level_height) ? level_y : 0xFF;
     }
+#else
+    {
+        uint8_t first = (cam_y > INTRO_CAM_MARGIN) ?
+            (uint8_t)(cam_y - INTRO_CAM_MARGIN) : 0;
+
+        for (r = 0; r < RENDER_RING_ROWS; r++) {
+            uint8_t level_y = (uint8_t)(first + r);
+            map_row_level[level_y & (RENDER_RING_ROWS - 1)] = level_y;
+        }
+    }
+#endif
 }
 
-/* Clear the whole 32x32 BG tile map, keeping the ring identities intact. */
+/* Clear the whole BG tile map, keeping the ring identities intact. */
 static void intro_blank(void)
 {
+#ifdef NINTENDO_NES
+    /* Nametable 0 has 30 usable tile rows; rows 30..31 are the attribute
+     * table.  The HUD lives in nametable 1 and is not touched. */
+    fill_bkg_rect(0, 0, 32, 30, metatile_tiles[MT_EMPTY << 2]);
+#else
     fill_bkg_rect(0, 0, 32, 32, metatile_tiles[MT_EMPTY << 2]);
     color_fill_attrs(0, 0, 32, 32, COLOR_PAL_NORMAL);
+#endif
 }
 
 /* Paint one source-map column across the ring.  The 2x32-tile column is built
@@ -78,13 +101,17 @@ static uint8_t intro_write_x;
 
 static void intro_prepare_column(uint8_t col)
 {
+#ifdef NINTENDO_NES
+    uint8_t first = cam_y;
+#else
     uint8_t first = (cam_y > INTRO_CAM_MARGIN) ?
         (uint8_t)(cam_y - INTRO_CAM_MARGIN) : 0;
+#endif
     uint8_t r;
 
-    for (r = 0; r < INTRO_RING_ROWS; r++) {
+    for (r = 0; r < RENDER_RING_ROWS; r++) {
         uint8_t level_y = (uint8_t)(first + r);
-        uint8_t map_row = level_y & (INTRO_RING_ROWS - 1);
+        uint8_t map_row = render_ring_slot(level_y);
         uint8_t mt, pal;
         uint8_t type = CT_EMPTY;
         uint8_t extra = 0;
@@ -115,12 +142,17 @@ static void intro_prepare_column(uint8_t col)
 /* One GBDK map write; the library handles VRAM access timing. */
 static void intro_write_column(void)
 {
+#ifdef NINTENDO_NES
+    /* 2x30 tiles: nametable rows 30/31 are the attribute table. */
+    set_bkg_tiles(intro_write_x, 0, 2, 30, intro_col_buf);
+#else
     set_bkg_tiles(intro_write_x, 0, 2, 32, intro_col_buf);
     if (color_on) {
         VBK_REG = VBK_ATTRIBUTES;
         set_bkg_tiles(intro_write_x, 0, 2, 32, intro_attr_buf);
         VBK_REG = VBK_TILES;
     }
+#endif
 }
 
 /* Intro pan step: the normal VBlank ease has a very long 1/16-px tail (about
@@ -163,6 +195,10 @@ static void intro_clear_column(uint8_t col)
     uint8_t empty = metatile_tiles[MT_EMPTY << 2];
     uint8_t i;
 
+#ifdef NINTENDO_NES
+    for (i = 0; i < 60; i++) intro_col_buf[i] = empty;
+    set_bkg_tiles((uint8_t)(col << 1), 0, 2, 30, intro_col_buf);
+#else
     for (i = 0; i < 64; i++) intro_col_buf[i] = empty;
     for (i = 0; i < 64; i++) intro_attr_buf[i] = COLOR_PAL_NORMAL;
     set_bkg_tiles((uint8_t)(col << 1), 0, 2, 32, intro_col_buf);
@@ -171,6 +207,7 @@ static void intro_clear_column(uint8_t col)
         set_bkg_tiles((uint8_t)(col << 1), 0, 2, 32, intro_attr_buf);
         VBK_REG = VBK_TILES;
     }
+#endif
 }
 
 void intro_clear_begin(void) BANKED
