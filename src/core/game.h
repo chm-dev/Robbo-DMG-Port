@@ -68,6 +68,10 @@ enum {
 
 #define IS_WALL(t) ((t) >= CT_WALL_0 && (t) <= CT_WALL_7)
 #define WALL_SLOT(t) ((t) - CT_WALL_0)
+/* map_extra bit on a visible wall: draw it with the level's *normal* palette
+ * instead of the inverse wall palette (Atari glyph $00).  Same tile, same
+ * collision; only the CGB attribute byte differs.  DMG ignores it. */
+#define WALL_EXTRA_NORMAL 0x80
 
 /* WRAM state.  map_type is authoritative for collision; map_obj holds the
  * object-pool index plus one (0 = no object). */

@@ -30,5 +30,8 @@ void render_sync_rows(void);
 void render_cell(uint8_t x, uint8_t y);
 void render_flush_cells(void);
 uint8_t render_metatile_for_cell(uint8_t type, uint8_t extra);
+/* CGB attribute byte used for a map cell (render.c).  Shared with the banked
+ * intro column painter so entry/respawn keeps the wall colour variant. */
+uint8_t render_cell_palette(uint8_t type, uint8_t extra, uint8_t mt);
 
 #endif /* RENDER_H */

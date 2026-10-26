@@ -84,27 +84,28 @@ static void intro_prepare_column(uint8_t col)
     for (r = 0; r < INTRO_RING_ROWS; r++) {
         uint8_t level_y = (uint8_t)(first + r);
         uint8_t map_row = level_y & (INTRO_RING_ROWS - 1);
-        uint8_t mt;
+        uint8_t mt, pal;
+        uint8_t type = CT_EMPTY;
+        uint8_t extra = 0;
         const uint8_t *t;
 
-        if (map_row_level[map_row] != level_y) {
-            mt = MT_EMPTY;
-        } else if (level_y < level_height) {
+        if (map_row_level[map_row] == level_y && level_y < level_height) {
             uint16_t idx = (uint16_t)level_y * MAP_W + col;
-            mt = render_metatile_for_cell(map_type[idx], map_extra[idx]);
-        } else {
-            mt = MT_EMPTY;
+            type = map_type[idx];
+            extra = map_extra[idx];
         }
+        mt = render_metatile_for_cell(type, extra);
+        pal = render_cell_palette(type, extra, mt);
 
         t = &metatile_tiles[mt << 2];
         intro_col_buf[(map_row << 2) + 0] = t[0];
         intro_col_buf[(map_row << 2) + 1] = t[1];
         intro_col_buf[(map_row << 2) + 2] = t[2];
         intro_col_buf[(map_row << 2) + 3] = t[3];
-        intro_attr_buf[(map_row << 2) + 0] = COLOR_MT_PAL(mt);
-        intro_attr_buf[(map_row << 2) + 1] = COLOR_MT_PAL(mt);
-        intro_attr_buf[(map_row << 2) + 2] = COLOR_MT_PAL(mt);
-        intro_attr_buf[(map_row << 2) + 3] = COLOR_MT_PAL(mt);
+        intro_attr_buf[(map_row << 2) + 0] = pal;
+        intro_attr_buf[(map_row << 2) + 1] = pal;
+        intro_attr_buf[(map_row << 2) + 2] = pal;
+        intro_attr_buf[(map_row << 2) + 3] = pal;
     }
 
     intro_write_x = (uint8_t)(col << 1);

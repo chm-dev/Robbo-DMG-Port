@@ -97,6 +97,17 @@ static uint8_t empty_tile(void)
     return metatile_tiles[MT_EMPTY * 4];
 }
 
+/* Attribute byte for one map cell.  All walls share the single dynamic wall
+ * metatile; the Atari normal-palette variant (glyph $00) is the same tile
+ * drawn with the level's *normal* palette instead of the inverse wall palette,
+ * exactly like the GBC (state 9 -> palette 0).  CGB only - the DMG path never
+ * publishes attributes, so both variants look identical there. */
+uint8_t render_cell_palette(uint8_t type, uint8_t extra, uint8_t mt)
+{
+    if (IS_WALL(type) && (extra & WALL_EXTRA_NORMAL)) return COLOR_PAL_NORMAL;
+    return COLOR_MT_PAL(mt);
+}
+
 static void draw_metatile(uint8_t mt, uint8_t tx, uint8_t ty)
 {
     /* One library copy for the whole 2x2 metatile.  set_bkg_tile_xy() per
@@ -113,14 +124,19 @@ static void draw_level_row(uint8_t level_y, uint8_t map_row)
 
     for (x = 0; x < MAP_W; x++) {
         uint8_t mt;
+        uint8_t type = CT_EMPTY;
+        uint8_t extra = 0;
         if (level_y < level_height) {
             uint16_t idx = level_y * MAP_W + x;
-            mt = render_metatile_for_cell(map_type[idx], map_extra[idx]);
+            type = map_type[idx];
+            extra = map_extra[idx];
+            mt = render_metatile_for_cell(type, extra);
         } else {
             mt = MT_EMPTY;
         }
         draw_metatile(mt, x * 2, map_row * 2);
-        row_pal[x * 2] = row_pal[x * 2 + 1] = COLOR_MT_PAL(mt);
+        row_pal[x * 2] = row_pal[x * 2 + 1] =
+            render_cell_palette(type, extra, mt);
     }
     map_row_level[map_row] = level_y;
     if (color_on) color_row_attr(map_row, row_pal);
@@ -302,7 +318,7 @@ static void draw_cell_now(uint8_t x, uint8_t y)
     draw_metatile(mt, x * 2, map_row * 2);
     if (color_on) {
         color_cell_attr((uint8_t)(x * 2), (uint8_t)(map_row * 2),
-                        COLOR_MT_PAL(mt));
+                        render_cell_palette(map_type[idx], map_extra[idx], mt));
     }
 }
 

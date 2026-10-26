@@ -143,18 +143,20 @@ static void menu_restore_row(uint8_t row)
         uint8_t map_row = (uint8_t)((tile_y >> 1) & 15);
         uint8_t level_y = map_row_level[map_row];
         uint8_t cell_x = (uint8_t)((tile_x >> 1) & 15);
+        uint8_t type = CT_EMPTY;
+        uint8_t extra = 0;
         uint8_t mt;
 
         if (level_y < level_height) {
             uint16_t idx = ((uint16_t)level_y << 4) | cell_x;
-            mt = render_metatile_for_cell(map_type[idx], map_extra[idx]);
-        } else {
-            mt = MT_EMPTY;
+            type = map_type[idx];
+            extra = map_extra[idx];
         }
+        mt = render_metatile_for_cell(type, extra);
 
         buf[col] = metatile_tiles[(uint16_t)mt * 4 +
                                   ((tile_y & 1) << 1) + (tile_x & 1)];
-        attr[col] = COLOR_MT_PAL(mt);
+        attr[col] = render_cell_palette(type, extra, mt);
     }
 
     set_bkg_tiles(pause_menu_bg_x, tile_y, MENU_W, 1, buf);

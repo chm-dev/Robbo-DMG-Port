@@ -16,9 +16,8 @@
 #define COLOR_PAL_ENDING  5   /* ending scene and text */
 #define COLOR_PAL_OBJ     6   /* inverse objects: crates, doors */
 #define COLOR_PAL_RULE    7   /* title-screen horizontal rules (dark red) */
-/* Teleports need their own palette: the wall slot's grid colour changes for
- * some wall styles (black brick lines), but the blink must always be
- * black <-> COLPF1.  Slot 4 is title-only, so gameplay reuses it. */
+/* Gameplay reuses the title's logo slot (4) for teleports.  The normal-palette
+ * wall variant (Atari glyph $00) uses COLOR_PAL_NORMAL, like the GBC. */
 #define COLOR_PAL_TP      COLOR_PAL_LOGO
 /* Title-only dim option palette.  Slot 6 is restored to the object palette by
  * color_level_pal() before gameplay starts. */

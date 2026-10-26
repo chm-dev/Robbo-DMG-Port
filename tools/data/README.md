@@ -18,6 +18,12 @@ DMG mapping applied by `gb/tools/gen_levels.py`:
   the 14-entry `tileset.WALL_ROTATION` order. The tile is loaded from the full
   sheet at level load, so all 14 styles fit in active VRAM. Atari glyph `-`
   (0x13) is the fixed black cave fill (`MT_WALL_CAVE`).
+- Five levels (L6, L25, L26, L28, L37) mix two colour variants of the same wall
+  shape: the usual inverse-palette wall and the normal-palette wall (Atari glyph
+  `$00`, carried here as GNU `O` plus an `[additional]` record whose first value
+  is 9). `gen_levels.py` sets `map_extra` bit 7 for those cells; the renderer
+  keys on it only in CGB mode (BG palette slot 0, the level's normal palette)
+  and the DMG path is unchanged - see `AGENTS.md`.
 - `+` (extra life / score bonus) becomes a hidden easter egg: the loader
   converts the cell to empty and records it in `bonus_bits[]`. Stepping on it
   plays `SFX_EXTRA_LIFE` and the last-bolt flash, but awards no life/score.

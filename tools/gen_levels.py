@@ -87,6 +87,15 @@ BULLET_NAME = {v: k for k, v in BULLET_TYPE.items()}
 # Wall style is selected at level load from the 14-cell rotation table in
 # tiles.h.  Level data only needs to distinguish visible walls (slot 1) from
 # the fixed black cave fill (slot 5).
+#
+# Some Atari levels mix two colour variants of the same wall shape: the usual
+# inverse-palette wall and the normal-palette wall (Atari glyph $00, written as
+# GNU 'O' plus an [additional] record whose first value is 9).  GNU/GBC keep the
+# distinction in the cell state, so it is carried here in map_extra:
+#   bit 7 = visible wall drawn with the level's *normal* palette (CGB only).
+# The Atari loader appends it as the 4th field of a "Walls" cell; the legacy
+# --gnu fixture keeps its 3-field ["Walls", slot, glyph] shape.
+WALL_NORMAL_BIT = 0x80
 
 
 def pack_extra(cell: list, teleports: list[int]) -> int:
@@ -205,7 +214,8 @@ def load_atari_levels(path: Path = ATARI_LEVELS) -> list[dict]:
                 ch = rows[y][x]
                 vals = addmap.get((x, y), [])
                 if ch in tileset.WALL_GLYPHS:
-                    row.append(["Walls", 0, "-" if ch == "-" else "O"])
+                    normal = 1 if (vals and vals[0] == 9) else 0
+                    row.append(["Walls", 0, "-" if ch == "-" else "O", normal])
                 elif ch == "R":
                     row.append(["Robbo", 1, 0, 0])
                 elif ch == "&":
@@ -309,6 +319,10 @@ def main() -> None:
                 else:
                     map_bytes[idx] = TYPE_ID[t]
                 extra_bytes[idx] = pack_extra(cell, teleports)
+                # Legacy (--gnu) wall cells are ["Walls", slot, glyph]; only the
+                # Atari loader appends the normal-palette flag as a 4th field.
+                if t == "Walls" and len(cell) > 3 and cell[3]:
+                    extra_bytes[idx] |= WALL_NORMAL_BIT
 
         if len(teleports) > 64:
             raise SystemExit(f"Level {number}: {len(teleports)} teleport destinations (>64)")
