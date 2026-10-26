@@ -100,17 +100,25 @@ static void ew(uint8_t frames)
 static void draw_mt(uint8_t col, uint8_t row, uint8_t off, uint8_t pal)
 {
     uint8_t tiles[4];
+#ifndef NINTENDO_NES
     uint8_t attrs[4];
+#endif
 
     tiles[0] = off;
     tiles[1] = (uint8_t)(off + 1);
     tiles[2] = (uint8_t)(off + 2);
     tiles[3] = (uint8_t)(off + 3);
     set_bkg_tiles(col, row, 2, 2, tiles);
+#ifndef NINTENDO_NES
     if (color_on) {
         attrs[0] = attrs[1] = attrs[2] = attrs[3] = pal;
         set_bkg_attributes(col, row, 2, 2, attrs);
     }
+#else
+    /* NES attributes are one palette per 16x16 cell; the scene-wide fill in
+     * color_fill_attrs() already covers this area. */
+    (void)pal;
+#endif
 }
 
 static void bg_cell(uint8_t col, uint8_t row)
@@ -132,7 +140,9 @@ static void bg_cell(uint8_t col, uint8_t row)
         }
     }
     set_bkg_tile_xy(col, row, tile);
+#ifndef NINTENDO_NES
     if (color_on) set_bkg_attributes(col, row, 1, 1, &pal);
+#endif
 }
 
 static void draw_scene(void)

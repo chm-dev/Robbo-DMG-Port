@@ -24,16 +24,17 @@
 #include "screens.h"
 #include "sound.h"
 
+#ifdef NINTENDO_NES
+/* NES attributes are per 16x16 cell, so the panel is padded to an even
+ * 16x10 tiles (8x5 cells) and positioned on a cell boundary.  It is centred
+ * horizontally below the 32 px HUD. */
+#define MENU_W 16
+#define MENU_H 10
+#define MENU_SCREEN_X 64
+#define MENU_SCREEN_Y 80
+#else
 #define MENU_W 15
 #define MENU_H 9
-
-/* Desired top-left in screen pixels.  The BG scroll shifts the panel by up to
- * seven pixels; it remains centered and fully on-screen.  On NES the top
- * 32 px are the stationary HUD, so the panel starts below it. */
-#ifdef NINTENDO_NES
-#define MENU_SCREEN_X 24
-#define MENU_SCREEN_Y 48
-#else
 #define MENU_SCREEN_X 24
 #define MENU_SCREEN_Y 20
 #endif
@@ -126,6 +127,16 @@ static void menu_draw_row(uint8_t row)
     set_bkg_tiles(pause_menu_bg_x, (uint8_t)(pause_menu_bg_y + row),
                   MENU_W, 1, buf);
 
+#ifdef NINTENDO_NES
+    /* The panel is cell-aligned; set the shared 16x16 attribute cell once per
+     * even row (both tile rows of a cell use the same palette). */
+    if (!(row & 1)) {
+        uint8_t map_row = render_ring_slot(
+            (uint8_t)((pause_menu_bg_y + row) >> 1));
+        render_set_attr_span(map_row, (uint8_t)(pause_menu_bg_x >> 1),
+                             (uint8_t)(MENU_W >> 1), COLOR_NES_UI);
+    }
+#else
     if (color_on) {
         uint8_t i;
         for (i = 0; i < MENU_W; i++) buf[i] = COLOR_PAL_UI;
@@ -134,6 +145,7 @@ static void menu_draw_row(uint8_t row)
                       MENU_W, 1, buf);
         VBK_REG = VBK_TILES;
     }
+#endif
 }
 
 /* Rebuild one overlay row from the level data.  A BG tile maps to a metatile
@@ -141,7 +153,9 @@ static void menu_draw_row(uint8_t row)
 static void menu_restore_row(uint8_t row)
 {
     uint8_t buf[MENU_W];
+#ifndef NINTENDO_NES
     uint8_t attr[MENU_W];
+#endif
     uint8_t col;
     uint8_t tile_y = (uint8_t)(pause_menu_bg_y + row);
 
@@ -163,15 +177,23 @@ static void menu_restore_row(uint8_t row)
 
         buf[col] = metatile_tiles[(uint16_t)mt * 4 +
                                   ((tile_y & 1) << 1) + (tile_x & 1)];
+#ifndef NINTENDO_NES
         attr[col] = render_cell_palette(type, extra, mt);
+#endif
     }
 
     set_bkg_tiles(pause_menu_bg_x, tile_y, MENU_W, 1, buf);
+#ifdef NINTENDO_NES
+    /* Republish the covered cell row from the map (this also keeps render's
+     * packed attribute shadow in sync). */
+    render_attr_row(render_ring_slot((uint8_t)(tile_y >> 1)));
+#else
     if (color_on) {
         VBK_REG = VBK_ATTRIBUTES;
         set_bkg_tiles(pause_menu_bg_x, tile_y, MENU_W, 1, attr);
         VBK_REG = VBK_TILES;
     }
+#endif
 }
 
 void pause_menu_open(uint8_t level, uint8_t max_level) BANKED
@@ -183,8 +205,14 @@ void pause_menu_open(uint8_t level, uint8_t max_level) BANKED
 
     pause_menu_bg_x = (uint8_t)((cam_scx + MENU_SCREEN_X) >> 3);
 #ifdef NINTENDO_NES
-    /* cam_scy is the playfield ring position at screen line 32. */
-    pause_menu_bg_y = (uint8_t)((cam_scy + (MENU_SCREEN_Y - 32)) >> 3);
+    {
+        /* cam_scy is the playfield ring position at screen line 32.  Wrap it
+         * inside the 240 px ring and round down to an even tile row so the
+         * 16x10 panel covers whole 16x16 attribute cells. */
+        uint16_t y = (uint16_t)cam_scy + (MENU_SCREEN_Y - 32);
+        if (y >= 240) y = (uint16_t)(y - 240);
+        pause_menu_bg_y = (uint8_t)((y >> 3) & ~(uint16_t)1);
+    }
 #else
     pause_menu_bg_y = (uint8_t)((cam_scy + MENU_SCREEN_Y) >> 3);
 #endif

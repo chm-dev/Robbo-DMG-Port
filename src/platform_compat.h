@@ -25,7 +25,6 @@
 #define PLATFORM_WAIT_VBL()     do { VBL_DONE = 0; while (!VBL_DONE) {} } while (0)
 #define PLATFORM_SAVE_RAM       ((volatile uint8_t *)0xA000)
 #define PLATFORM_RAM_INIT()     do { } while (0)
-#define platform_palette_init() do { } while (0)
 
 /* The existing GB code uses the MBC5 fast path explicitly. */
 #define PLATFORM_SWITCH_ROM(b)  SWITCH_ROM_MBC5(b)
@@ -138,9 +137,6 @@ extern volatile uint8_t nes_compat_apu[32];
 #define SWITCH_ROM_MBC1(b)      SWITCH_ROM(b)
 
 void platform_ram_init(void);
-/* Phase-1 preview palette: grayscale BG/sprite ramps until the per-level NES
- * palette generator and packed attribute writer land in phase 3. */
-void platform_palette_init(void);
 
 #endif /* NINTENDO_NES */
 

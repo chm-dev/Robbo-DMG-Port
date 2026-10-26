@@ -331,6 +331,41 @@ def shifted_tile_bytes(data: bytes, mapping: dict[int, int]) -> bytes:
     return to_tile_bytes([[mapping[s] for s in row] for row in shades])
 
 
+def nes_swap_indices(data: bytes) -> bytes:
+    """Swap art indices 0 and 1 for the NES build's shared backdrop.
+
+    NES colour index 0 is the universal backdrop, so the *background* role has
+    to live there; the shared GB/CGB art stores bright as 0.  Per row the low
+    bit plane becomes ``low ^ ~high`` and the high plane is unchanged, which
+    maps 0<->1 and leaves 2/3 alone.  Tile-number tables hold indices, not
+    pixels, and must not be transformed.
+    """
+    out = bytearray(data)
+    for i in range(0, len(out), 2):
+        out[i] ^= (~out[i + 1]) & 0xFF
+    return bytes(out)
+
+
+def emit_pixel_array(lines: list[str], decl: str, data: bytes,
+                     row_comments: list[str] | None = None) -> None:
+    """Emit one pixel array with a NES-swapped branch.
+
+    Only one branch is compiled per target, so neither ROM grows.
+    """
+    for branch, payload in (("nes", nes_swap_indices(data)), ("gb", data)):
+        lines.append("#ifdef NINTENDO_NES" if branch == "nes" else "#else")
+        lines.append(f"{decl} = {{")
+        for i in range(0, len(payload), 16):
+            comment = ""
+            if row_comments is not None:
+                comment = f"  /* {row_comments[i // 16]} */"
+            lines.append("    " + ", ".join(f"0x{b:02X}" for b in payload[i:i + 16]) +
+                         "," + comment)
+        lines.append("};")
+    lines.append("#endif")
+    lines.append("")
+
+
 def font_tile(rows: list[str], fg: int = 0, bg: int = 2) -> list[list[int]]:
     """8x8 I.FNT glyph: '#' becomes fg, '.' becomes bg."""
     tile = [[bg] * 8 for _ in range(8)]
@@ -517,21 +552,19 @@ def emit(metatiles: dict[str, list[list[int]]], pool: TilePool,
         "#include <stdint.h>",
         '#include "tiles.h"',
         "",
-        f"const uint8_t tileset_data[{len(pool.data) * 16}] = {{",
     ]
-    for i, data in enumerate(pool.data):
-        bank_lines.append("    " + ", ".join(f"0x{b:02X}" for b in data) + f",  /* {i} {pool.names[i]} */")
-    bank_lines.append("};")
-    bank_lines.append("")
+    emit_pixel_array(
+        bank_lines,
+        f"const uint8_t tileset_data[{len(pool.data) * 16}]",
+        b"".join(pool.data),
+        [f"{i} {pool.names[i]}" for i in range(len(pool.data))],
+    )
     for key in ("bullet", "bullet_black", "blaster", "blaster_black",
                 "baddie", "bear", "stone", "pushable", "robbo", "robbo_swap02"):
         _, _, data = variants[key]
         bank_lines.append(f"/* Shade-shifted {key} tiles, loaded by variants.c. */")
-        bank_lines.append(f"const uint8_t {key}_variant_tiles[{len(data)}] = {{")
-        for i in range(0, len(data), 16):
-            bank_lines.append("    " + ", ".join(f"0x{b:02X}" for b in data[i:i + 16]) + ",")
-        bank_lines.append("};")
-        bank_lines.append("")
+        emit_pixel_array(bank_lines, f"const uint8_t {key}_variant_tiles[{len(data)}]",
+                         data)
     (GEN / "tiles_bank.c").write_text("\n".join(bank_lines) + "\n", encoding="utf-8")
 
     sheet_lines = [
@@ -542,12 +575,13 @@ def emit(metatiles: dict[str, list[list[int]]], pool: TilePool,
         "#include <gbdk/platform.h>",
         '#include "tiles.h"',
         "",
-        f"const uint8_t sheet_tiles_data[{len(sheet_pool.data) * 16}] = {{",
     ]
-    for i, data in enumerate(sheet_pool.data):
-        sheet_lines.append("    " + ", ".join(f"0x{b:02X}" for b in data) + f",  /* {i} {sheet_pool.names[i]} */")
-    sheet_lines.append("};")
-    sheet_lines.append("")
+    emit_pixel_array(
+        sheet_lines,
+        f"const uint8_t sheet_tiles_data[{len(sheet_pool.data) * 16}]",
+        b"".join(sheet_pool.data),
+        [f"{i} {sheet_pool.names[i]}" for i in range(len(sheet_pool.data))],
+    )
     sheet_lines.append("/* Every 16x16 cell in tiles_dmg.png, row-major. */")
     sheet_lines.append(f"const uint8_t sheet_metatile_tiles[{len(sheet_cells) * 4}] = {{")
     for cell_index, cell in enumerate(sheet_cells):

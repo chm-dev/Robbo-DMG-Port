@@ -8,10 +8,14 @@
 
 #include "../gen/tiles.h"
 
-/* BG palette slots. */
+/* BG palette slots.  The Game Boy Color numbers eight independent slots.  On
+ * NES only four exist and colour index 0 is the shared backdrop, so the NES
+ * build maps them onto 0..3 (see color.c); the constants below stay in the
+ * CGB numbering because the title/ending code passes them through the
+ * translation in color.c. */
 #define COLOR_PAL_NORMAL  0   /* level normal palette */
 #define COLOR_PAL_WALL    1   /* level inverse palette (COL3 outline) */
-#define COLOR_PAL_CAVE    2   /* solid COLPF0 cave fill */
+#define COLOR_PAL_CAVE    2   /* solid COLPF0 cave fill (CGB only) */
 #define COLOR_PAL_UI      3   /* HUD, title text, pause menu */
 #define COLOR_PAL_LOGO    4   /* title logo bevel; gameplay: teleports */
 #define COLOR_PAL_ENDING  5   /* ending scene and text */
@@ -23,6 +27,15 @@
 /* Title-only dim option palette.  Slot 6 is restored to the object palette by
  * color_level_pal() before gameplay starts. */
 #define COLOR_PAL_TITLE_DIM COLOR_PAL_OBJ
+
+#ifdef NINTENDO_NES
+/* Actual NES BG slots.  Cave fill needs no slot (all-index-3 art renders as
+ * COLPF0 through NORMAL); teleports share the wall palette. */
+#define COLOR_NES_NORMAL  0
+#define COLOR_NES_WALL    1
+#define COLOR_NES_OBJ     2
+#define COLOR_NES_UI      3
+#endif
 
 /* 1 when running on CGB hardware.  Read this in the render paths. */
 extern uint8_t color_on;

@@ -51,28 +51,6 @@ void platform_ram_init(void)
     }
 }
 
-void platform_palette_init(void)
-{
-    /* Universal NES backdrop is index 0.  Phase 2 uses one grayscale ramp on
-     * all four BG slots; the packed attribute path currently selects slot 0
-     * for every playfield cell, so per-level NES palettes arrive in phase 3. */
-    static const palette_color_t bg[16] = {
-        0x0F, 0x00, 0x10, 0x30,
-        0x0F, 0x00, 0x10, 0x30,
-        0x0F, 0x00, 0x10, 0x30,
-        0x0F, 0x00, 0x10, 0x30
-    };
-    static const palette_color_t spr[16] = {
-        0x0F, 0x00, 0x10, 0x30,
-        0x0F, 0x00, 0x10, 0x30,
-        0x0F, 0x00, 0x10, 0x30,
-        0x0F, 0x00, 0x10, 0x30
-    };
-
-    set_bkg_palette(0, 4, bg);
-    set_sprite_palette(0, 4, spr);
-}
-
 /* ------------------------------------------------------------------ */
 /* HUD in nametable 1                                                  */
 /* ------------------------------------------------------------------ */

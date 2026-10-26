@@ -224,7 +224,12 @@ function Invoke-Variant {
         Set-Content -Path $stamp -Value $defineKey
     }
 
-    $sources = Get-ChildItem -Path $SourceRoot -Recurse -Filter '*.c' | Sort-Object FullName
+    $sources = Get-ChildItem -Path $SourceRoot -Recurse -Filter '*.c' | Sort-Object FullName |
+        Where-Object {
+            # NES-only generated data (e.g. gen/level_pal_nes.c); compiling it
+            # in the GB build would only add an empty translation unit.
+            $Target -eq 'nes' -or $_.Name -notlike '*_nes.c'
+        }
     if (-not $sources) {
         throw "No C sources found under $SourceRoot"
     }

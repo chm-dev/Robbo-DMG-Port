@@ -52,7 +52,7 @@ void render_hud(void) BANKED
     }
 
     nes_hud_write(win);
-    nes_hud_attrs(0);
+    nes_hud_attrs(COLOR_NES_UI);
 #else
     uint8_t win[40];
     uint8_t g, i, x;

@@ -121,13 +121,26 @@ static uint8_t empty_tile(void)
 uint8_t render_cell_palette(uint8_t type, uint8_t extra, uint8_t mt)
 {
 #ifdef NINTENDO_NES
-    /* Phase 2 still runs the temporary grayscale palette: every playfield
-     * cell uses BG slot 0.  Phase 3 maps NORMAL/WALL/CAVE/UI onto the four
-     * NES slots and replaces this with the real attribute value. */
-    (void)type;
-    (void)extra;
-    (void)mt;
-    return COLOR_PAL_NORMAL;
+    /* NES slots: 0 normal, 1 walls + teleports, 2 inverse objects, 3 UI.
+     * Cave fill is all art index 3 (COLPF0), so it draws through NORMAL. */
+    if (IS_WALL(type)) {
+        if (WALL_SLOT(type) == 5) return COLOR_NES_NORMAL;
+        if (extra & WALL_EXTRA_NORMAL) return COLOR_NES_NORMAL;
+        return COLOR_NES_WALL;
+    }
+    switch (mt) {
+        case MT_TELEPORT_0:
+        case MT_TELEPORT_1:
+        case MT_TELEPORT_CGB:
+            /* No fifth slot: the teleport palette differs from the wall only
+             * in its outer dark edge, so the blink survives. */
+            return COLOR_NES_WALL;
+        case MT_STONE:
+        case MT_DOOR:
+            return COLOR_NES_OBJ;
+        default:
+            return COLOR_NES_NORMAL;
+    }
 #else
     if (IS_WALL(type) && (extra & WALL_EXTRA_NORMAL)) return COLOR_PAL_NORMAL;
     return COLOR_MT_PAL(mt);
@@ -143,6 +156,76 @@ static void draw_metatile(uint8_t mt, uint8_t tx, uint8_t ty)
     set_bkg_tiles(tx, ty, 2, 2, t);
 }
 
+#ifdef NINTENDO_NES
+/* Pack one metatile row's palette values into the hardware attribute shadow
+ * and publish the whole 32x32 row.  One packed byte covers two metatiles; the
+ * other metarow in the block keeps its bits. */
+static void pack_attr_row(uint8_t map_row, const uint8_t *row_pals)
+{
+    uint8_t attr_row = (uint8_t)(map_row >> 1);
+    uint8_t shift = (uint8_t)((map_row & 1) ? 4 : 0);
+    uint8_t *a = &nes_attr_shadow[(uint16_t)attr_row * 8];
+    uint8_t x;
+
+    for (x = 0; x < 8; x++) {
+        uint8_t p0 = row_pals[(uint8_t)(x << 1)];
+        uint8_t p1 = row_pals[(uint8_t)(x << 1) + 1];
+        uint8_t packed = (uint8_t)((p0 | (uint8_t)(p1 << 2)) << shift);
+        a[x] = (uint8_t)((a[x] & (uint8_t)~(0x0Fu << shift)) | packed);
+    }
+    set_bkg_attributes(0, (uint8_t)(attr_row << 2), 32, 4, a);
+}
+
+static void build_attr_row_pals(uint8_t level_y, uint8_t *row_pals)
+{
+    uint8_t x;
+
+    for (x = 0; x < MAP_W; x++) {
+        uint8_t mt;
+        uint8_t type = CT_EMPTY;
+        uint8_t extra = 0;
+        if (level_y < level_height) {
+            uint16_t idx = (uint16_t)level_y * MAP_W + x;
+            type = map_type[idx];
+            extra = map_extra[idx];
+        }
+        mt = render_metatile_for_cell(type, extra);
+        row_pals[x] = render_cell_palette(type, extra, mt);
+    }
+}
+
+/* Republish one ring row's attributes from the current map.  The intro calls
+ * this before painting columns so every slot has the new level's palette
+ * values; the pause menu uses it to restore rows it covered. */
+void render_attr_row(uint8_t map_row)
+{
+    static uint8_t row_pals[MAP_W];
+    build_attr_row_pals(map_row_level[map_row], row_pals);
+    pack_attr_row(map_row, row_pals);
+}
+
+/* Set a run of 16x16 cells in one ring row to one palette (pause menu). */
+void render_set_attr_span(uint8_t map_row, uint8_t cell_x, uint8_t count,
+                          uint8_t pal)
+{
+    uint8_t attr_row = (uint8_t)(map_row >> 1);
+    uint8_t shift = (uint8_t)((map_row & 1) ? 4 : 0);
+    uint8_t *a = &nes_attr_shadow[(uint16_t)attr_row * 8];
+    uint8_t i;
+
+    pal &= 3;
+    for (i = 0; i < count; i++) {
+        uint8_t cell = (uint8_t)(cell_x + i);
+        uint8_t byte = (uint8_t)(cell >> 1);
+        uint8_t bit = (uint8_t)(shift + ((cell & 1) ? 2 : 0));
+        if (byte >= 8) break;
+        a[byte] = (uint8_t)((a[byte] & (uint8_t)~(0x03u << bit)) |
+                            (uint8_t)(pal << bit));
+    }
+    set_bkg_attributes(0, (uint8_t)(attr_row << 2), 32, 4, a);
+}
+#endif
+
 static void draw_level_row(uint8_t level_y, uint8_t map_row)
 {
     uint8_t x;
@@ -150,9 +233,6 @@ static void draw_level_row(uint8_t level_y, uint8_t map_row)
 #ifdef NINTENDO_NES
     static uint8_t row_tiles[64];
     static uint8_t row_pals[16];
-    uint8_t attr_row = (uint8_t)(map_row >> 1);
-    uint8_t shift = (uint8_t)((map_row & 1) ? 4 : 0);
-    uint8_t *a = &nes_attr_shadow[(uint16_t)attr_row * 8];
 
     for (x = 0; x < MAP_W; x++) {
         uint8_t mt;
@@ -174,17 +254,8 @@ static void draw_level_row(uint8_t level_y, uint8_t map_row)
         row_pals[x] = render_cell_palette(type, extra, mt);
     }
 
-    /* One packed attribute byte covers two metatiles in this row.  The other
-     * metarow in the 32x32 block keeps its bits from the shadow. */
-    for (x = 0; x < 8; x++) {
-        uint8_t p0 = row_pals[(uint8_t)(x << 1)];
-        uint8_t p1 = row_pals[(uint8_t)(x << 1) + 1];
-        uint8_t packed = (uint8_t)((p0 | (uint8_t)(p1 << 2)) << shift);
-        a[x] = (uint8_t)((a[x] & (uint8_t)~(0x0Fu << shift)) | packed);
-    }
-
+    pack_attr_row(map_row, row_pals);
     set_bkg_tiles(0, (uint8_t)(map_row << 1), 32, 2, row_tiles);
-    set_bkg_attributes(0, (uint8_t)(attr_row << 2), 32, 4, a);
     map_row_level[map_row] = level_y;
 #else
     static uint8_t row_pal[MAP_W * 2];
@@ -338,9 +409,6 @@ void render_init(void)
     add_VBL(vbl_isr);
     add_LCD(nes_lcd_isr);
     set_interrupts(VBL_IFLAG | LCD_IFLAG);
-
-    /* NES: install the temporary grayscale palette (no-op on GB). */
-    platform_palette_init();
 #else
     uint8_t buf[32];
     uint8_t x, y;
@@ -401,10 +469,9 @@ void render_set_wall_style(uint8_t cell)
 {
     /* Load one 16x16 wall cell from bank 8 into the reserved four-tile slot.
      * game_load_level() calls this while the display is off.
-     * Palette 1 (level 2, 6, ...) swaps the wall's white/light-gray shades;
-     * the other DMG palettes and CGB keep the sheet's original wall art.
-     * NES colours are not ported yet (phase 3), so it always uses the base
-     * sheet art. */
+     * Palette 1 (level 2, 6, ...) swaps the wall's white/light-gray shades
+     * on DMG; CGB and NES use the sheet's original wall art (the NES copy is
+     * already index-swapped by gen_tiles.py). */
 #ifdef NINTENDO_NES
     sheet_load_metatile(cell, WALL_TILE_BASE);
 #else
@@ -445,7 +512,7 @@ uint8_t render_level_background(void)
 {
     /* CGB uses the authentic per-level palette, where object colours already
      * contrast with the floor: the DMG shade-shift tile variants are not
-     * needed.  NES uses the same base art until phase 3 adds its palettes.
+     * needed.  NES also uses the swapped base art with its per-level palettes.
      * Value 4 matches no variant condition in game.c. */
 #ifdef NINTENDO_NES
     return 4;

@@ -1,12 +1,23 @@
-/* CGB colour support.
+/* Colour support.
  *
- * The DMG build keeps its shade-index renderer; on a Game Boy Color the same
- * tiles are drawn through per-cell BG palettes (VRAM bank 1 attributes) and
- * the authentic per-level Atari palettes.  The DMG path is untouched: every
- * entry point checks color_on and returns immediately on DMG hardware.
+ * Two back-ends share this file:
+ *
+ *   Game Boy Color - per-cell BG palettes (VRAM bank 1 attributes) and the
+ *   authentic per-level Atari palettes in BGR555.  The DMG build keeps its
+ *   shade-index renderer; every entry point checks color_on and returns
+ *   immediately on DMG hardware.
+ *
+ *   NES - four BG palette slots with 2C02 colour indices.  The NES build
+ *   swaps tile pixel indices 0/1 at generation time (see gen_tiles.py), so
+ *   pixel index 0 is the background role and the shared backdrop ($3F00) can
+ *   be COLB for every gameplay palette.  Slots:
+ *       0 normal, 1 walls + teleports, 2 inverse objects, 3 UI.
+ *   Cave fill needs no slot: MT_WALL_CAVE is all index 3 (COLPF0) and draws
+ *   through the normal palette.
  *
  * Art-role index order (see gb/tools/gen_level_pal.py):
  *   0 = bright (Robbo, bolts), 1 = background, 2 = mid, 3 = dark outlines.
+ *   After the NES swap: 0 = background, 1 = bright, 2 = mid, 3 = dark.
  *
  * Bank 10 also holds the generated level palette table.
  */
@@ -14,15 +25,172 @@
 
 #include <gbdk/platform.h>
 #include "platform_compat.h"
-#include <gbdk/platform.h>
 #include <stdint.h>
 
 #include "color.h"
+
+#ifdef NINTENDO_NES
+#include "../gen/level_pal_nes.h"
+#else
 #include "../gen/level_pal.h"
+#endif
 
 BANKREF(color_init)
 
 uint8_t color_on;
+
+#ifdef NINTENDO_NES
+
+/* ------------------------------------------------------------------ */
+/* NES                                                                 */
+/* ------------------------------------------------------------------ */
+
+/* Gameplay palettes in NES entry order: [0..3] normal, [4..7] walls,
+ * [8..11] inverse objects.  Entry 0 of every palette is the shared backdrop,
+ * so only slot 0's copy is actually programmed. */
+static uint8_t nes_pal[12];
+static uint8_t nes_backdrop;
+static uint8_t nes_flash_on;
+
+/* Title/ending art is not index-swapped (phase 4), so these ramps keep the
+ * CGB role order: 0 = bright .. 3 = dark.  All four slots get the same ramp
+ * during the phase-3 stopgap, which preserves the phase-2 grayscale look.
+ * Slot 0 entry 0 is the universal backdrop. */
+static const uint8_t pal_title_ramp[16] = {
+    0x30, 0x10, 0x00, 0x0D,
+    0x30, 0x10, 0x00, 0x0D,
+    0x30, 0x10, 0x00, 0x0D,
+    0x30, 0x10, 0x00, 0x0D
+};
+/* Ending pages: 0 = black background, 3 = white ink. */
+static const uint8_t pal_ending_ramp[16] = {
+    0x0D, 0x00, 0x10, 0x30,
+    0x0D, 0x00, 0x10, 0x30,
+    0x0D, 0x00, 0x10, 0x30,
+    0x0D, 0x00, 0x10, 0x30
+};
+/* HUD/pause text.  The bar and glyph backgrounds are solid black (art
+ * index 3); the glyph ink is art index 1 (white) on the swapped gameplay
+ * tiles.  Entry 0 is unused and never programmed for slot 3. */
+static const uint8_t pal_ui_nes[4] = { 0x0D, 0x30, 0x00, 0x0D };
+/* Sprite entries: 0 is transparent, 1 = dark, 2 = light, 3 = white. */
+static const uint8_t pal_sprite_nes[16] = {
+    0x0D, 0x00, 0x10, 0x30,
+    0x0D, 0x00, 0x10, 0x30,
+    0x0D, 0x00, 0x10, 0x30,
+    0x0D, 0x00, 0x10, 0x30
+};
+
+void color_init(void) BANKED
+{
+    /* The NES always has colour; the attribute path is always active. */
+    color_on = 1;
+    /* Boot into the title ramp until a level installs its own palettes. */
+    set_bkg_palette(0, 4, pal_title_ramp);
+    set_sprite_palette(0, 4, pal_sprite_nes);
+}
+
+/* The title needs its ramp back after gameplay palettes were installed.
+ * Phase 4 replaces this with the real logo/rule/dim mapping. */
+void color_title_dim_palette(void) BANKED
+{
+    if (!color_on) return;
+    set_bkg_palette(0, 4, pal_title_ramp);
+    set_sprite_palette(0, 4, pal_sprite_nes);
+}
+
+void color_level_pal(uint8_t level) BANKED
+{
+    const uint8_t *src;
+    uint8_t i;
+
+    if (!color_on) return;
+    if (level < 1) level = 1;
+    if (level > LEVEL_PAL_NES_COUNT) level = LEVEL_PAL_NES_COUNT;
+
+    src = level_pal_nes[level - 1];
+    for (i = 0; i < 4; i++) {
+        nes_pal[i] = src[i];
+        nes_pal[4 + i] = src[4 + i];
+    }
+    /* Inverse objects (crates, doors), derived from the wall entries:
+     * background role = COLB, bright = wall detail, mid = COL3,
+     * dark = COLPF0. */
+    nes_pal[8] = src[4];
+    nes_pal[9] = src[7];
+    nes_pal[10] = src[6];
+    nes_pal[11] = src[5];
+
+    nes_backdrop = src[0];
+    nes_flash_on = 0;
+
+    /* Slots 0..2 are contiguous: normal, walls (+ teleports), objects. */
+    set_bkg_palette(0, 3, nes_pal);
+    set_bkg_palette(COLOR_PAL_UI, 1, pal_ui_nes);
+}
+
+/* Last-bolt flash: on NES the background role is pixel index 0, which is the
+ * shared backdrop, so a single backdrop write flashes every palette. */
+void color_flash(uint8_t on) BANKED
+{
+    if (!color_on) return;
+    if (on) {
+        nes_flash_on = 1;
+        set_bkg_palette_entry(0, 0,
+                              (nes_backdrop == 0x30 || nes_backdrop == 0x20)
+                                  ? 0x0D : 0x30);
+    } else {
+        if (!nes_flash_on) return;
+        nes_flash_on = 0;
+        set_bkg_palette_entry(0, 0, nes_backdrop);
+    }
+}
+
+/* Fill a rectangle of BG attributes.  NES attributes are one palette per
+ * 16x16 pixel cell, so rectangles are rounded outwards to cell boundaries;
+ * title/ending layouts are re-aligned to the grid in phase 4. */
+void color_fill_attrs(uint8_t x, uint8_t y, uint8_t w, uint8_t h,
+                      uint8_t pal) BANKED
+{
+    uint8_t cx, cy, cx0, cy0, cx1, cy1;
+
+    if (!color_on || w == 0 || h == 0) return;
+    cx0 = (uint8_t)(x >> 1);
+    cy0 = (uint8_t)(y >> 1);
+    cx1 = (uint8_t)((x + w - 1) >> 1);
+    cy1 = (uint8_t)((y + h - 1) >> 1);
+    if (cx1 > 15) cx1 = 15;
+    if (cy1 > 14) cy1 = 14;
+    pal &= 3;
+    for (cy = cy0; cy <= cy1; cy++) {
+        for (cx = cx0; cx <= cx1; cx++) {
+            set_bkg_attribute_xy_nes16x16(cx, cy, pal);
+        }
+    }
+}
+
+/* On NES set_win_tiles() maps to the playfield nametable, so the window
+ * attribute helper is the same as the BG one. */
+void color_fill_win_attrs(uint8_t x, uint8_t y, uint8_t w, uint8_t h,
+                          uint8_t pal) BANKED
+{
+    color_fill_attrs(x, y, w, h, pal);
+}
+
+/* Ending scene: single grey ramp until phase 4 restores the GBC scene
+ * palettes (COLB/PF0/PF1/PF2 and the PF3 ground). */
+void color_ending_scene(void) BANKED
+{
+    if (!color_on) return;
+    set_bkg_palette(0, 4, pal_ending_ramp);
+    set_sprite_palette(0, 4, pal_sprite_nes);
+}
+
+#else /* !NINTENDO_NES */
+
+/* ------------------------------------------------------------------ */
+/* Game Boy / Game Boy Color                                           */
+/* ------------------------------------------------------------------ */
 
 /* Current level palettes in art-index order, kept so the last-bolt flash can
  * swap the background entry and restore it without re-reading the table. */
@@ -220,3 +388,5 @@ void color_ending_scene(void) BANKED
     set_bkg_palette(1, 1, (const palette_color_t *)pal_end_ground);
     set_sprite_palette(0, 1, (const palette_color_t *)pal_end_scene);
 }
+
+#endif /* NINTENDO_NES */

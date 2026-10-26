@@ -53,5 +53,14 @@ uint8_t render_metatile_for_cell(uint8_t type, uint8_t extra);
 /* CGB attribute byte used for a map cell (render.c).  Shared with the banked
  * intro column painter so entry/respawn keeps the wall colour variant. */
 uint8_t render_cell_palette(uint8_t type, uint8_t extra, uint8_t mt);
+#ifdef NINTENDO_NES
+/* Republish one ring row's NES attributes from the current map (also keeps
+ * the packed shadow in sync).  Used by the intro's attribute pre-pass and by
+ * the pause menu when restoring covered rows. */
+void render_attr_row(uint8_t map_row);
+/* Set a run of 16x16 cells in one ring row to one palette (pause menu). */
+void render_set_attr_span(uint8_t map_row, uint8_t cell_x, uint8_t count,
+                          uint8_t pal);
+#endif
 
 #endif /* RENDER_H */

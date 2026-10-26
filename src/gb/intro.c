@@ -180,6 +180,12 @@ static uint8_t intro_left;
 static uint8_t intro_wait;
 static uint8_t intro_appear;
 static uint8_t intro_wall_pending;
+#ifdef NINTENDO_NES
+/* NES attributes are one palette per 16x16 cell.  Publish the whole ring
+ * before painting tiles so newly revealed columns already carry the new
+ * level's palette values; two rows per frame keeps the transfer small. */
+static uint8_t intro_attr_next;
+#endif
 
 /* NXCV clear state. */
 static uint8_t clear_active;
@@ -266,6 +272,9 @@ void intro_begin(uint8_t mode) BANKED
      * is filled from whatever identities the previous level left behind and
      * its non-empty cells are painted as empty. */
     intro_bind_rows();
+#ifdef NINTENDO_NES
+    intro_attr_next = 0;
+#endif
     intro_prepare_column(intro_col);
 
     /* A fresh level starts behind a black frame and is painted from empty.
@@ -277,6 +286,16 @@ void intro_begin(uint8_t mode) BANKED
 void intro_tick(void) BANKED
 {
     if (!intro_active) return;
+
+#ifdef NINTENDO_NES
+    if (intro_attr_next < RENDER_RING_ROWS) {
+        uint8_t i;
+        for (i = 0; i < 2 && intro_attr_next < RENDER_RING_ROWS; i++) {
+            render_attr_row(intro_attr_next++);
+        }
+        return;
+    }
+#endif
 
     if (intro_phase == INTRO_PAINT) {
         /* Palette-dependent object tiles change with the four-level palette.
