@@ -72,23 +72,41 @@ function check(label, ok, detail = '') {
   if (!ok) failures++;
 }
 
+/* save.c keeps two copies away from the 0xA000 window base (that cell does
+ * not store on some FRAM boards) and still reads a legacy record at 0x0000. */
+const SAVE_SLOT_LEGACY = 0x000;
+const SAVE_SLOT_A = 0x100;
+const SAVE_SLOT_B = 0x110;
+const SAVE_SLOTS = [SAVE_SLOT_LEGACY, SAVE_SLOT_A, SAVE_SLOT_B];
+
+function writeSaveRecord(ram, ofs, level) {
+  ram[ofs + 0] = 0x52; ram[ofs + 1] = 0x42;
+  ram[ofs + 2] = 0x42; ram[ofs + 3] = 0x4f;
+  ram[ofs + 4] = 1;
+  ram[ofs + 5] = level;
+  ram[ofs + 6] = level ^ 1 ^ 0x3c;
+  ram[ofs + 7] = 0xa5;
+}
+
 function makeSave(level) {
   const ram = new Uint8Array(0x20000);
-  ram[0] = 0x52; ram[1] = 0x42; ram[2] = 0x42; ram[3] = 0x4f;
-  ram[4] = 1;
-  ram[5] = level;
-  ram[6] = level ^ 1 ^ 0x3c;
-  ram[7] = 0xa5;
+  writeSaveRecord(ram, SAVE_SLOT_A, level);
   return ram;
+}
+
+function slotLevel(r, ofs) {
+  if (!r || ofs + 8 > r.length) return 0;
+  if (r[ofs + 0] !== 0x52 || r[ofs + 1] !== 0x42 || r[ofs + 2] !== 0x42 ||
+      r[ofs + 3] !== 0x4f || r[ofs + 4] !== 1 || r[ofs + 7] !== 0xa5) return 0;
+  const level = r[ofs + 5];
+  if (level < 1 || level > 56 || r[ofs + 6] !== (level ^ 1 ^ 0x3c)) return 0;
+  return level;
 }
 
 function validSaveLevel(core) {
   const r = core.MBCRam;
-  if (!r || r.length < 8) return 0;
-  if (r[0] !== 0x52 || r[1] !== 0x42 || r[2] !== 0x42 || r[3] !== 0x4f ||
-      r[4] !== 1 || r[7] !== 0xa5) return 0;
-  if (r[5] < 1 || r[5] > 56 || r[6] !== (r[5] ^ 1 ^ 0x3c)) return 0;
-  return r[5];
+  if (!r) return 0;
+  return SAVE_SLOTS.reduce((best, ofs) => Math.max(best, slotLevel(r, ofs)), 0);
 }
 
 function coreOf(gb) {
@@ -227,6 +245,15 @@ check('advancing 2 -> 3 saves level 3',
   waitNewLevel(fresh, freshCore, 3) && validSaveLevel(freshCore) === 3,
   `level=${readMem(fresh, S.level_planet, 1)[0]} save=${validSaveLevel(freshCore)}`);
 
+const bothSlots = [slotLevel(freshCore.MBCRam, SAVE_SLOT_A),
+  slotLevel(freshCore.MBCRam, SAVE_SLOT_B)].sort((a, b) => a - b);
+check('both save copies are valid and the older one is kept',
+  bothSlots[0] === 2 && bothSlots[1] === 3, `slots=${bothSlots.join(',')}`);
+check('no save record is written at the 0xA000 window base',
+  slotLevel(freshCore.MBCRam, SAVE_SLOT_LEGACY) === 0 &&
+  freshCore.MBCRam[SAVE_SLOT_LEGACY] !== 0x52,
+  `0xA000=0x${freshCore.MBCRam[0].toString(16)}`);
+
 /* Pause warp must be clamped to the saved highest level. */
 const font = readMem(fresh, S.font_tiles, 128);
 const hudBg = readMem(fresh, S.hud_bg_tile, 1)[0];
@@ -289,6 +316,17 @@ const gb = loadRom(rom, persisted, { skipTitle: true });
 const core = coreOf(gb);
 waitForTitle(gb);
 runFrames(gb, 40);
+
+/* A failed publish (dead FRAM cell at the record start) must fall back to the
+ * older copy instead of throwing the progress away. */
+const damaged = Uint8Array.from(persisted);
+damaged[SAVE_SLOT_B] = 0xff;
+const damagedGb = loadRom(rom, damaged, { skipTitle: true });
+const damagedCore = coreOf(damagedGb);
+waitForTitle(damagedGb);
+runFrames(damagedGb, 40);
+check('a lost magic byte falls back to the older save copy',
+  validSaveLevel(damagedCore) === 2, `save=${validSaveLevel(damagedCore)}`);
 
 holdKey(gb, 'START', 6);
 check('START with a save opens the start-level menu', waitTitleMenu(gb, core),

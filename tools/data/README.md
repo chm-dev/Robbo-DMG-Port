@@ -26,7 +26,10 @@ DMG mapping applied by `gb/tools/gen_levels.py`:
   run, so a shot gap travels along the row. The two authentic F.FNT animation
   frames alternate every other tick.
 - Teleports are linked to the next cell in the same group (scan order), with
-  wrap-around; Robbo starts facing down.
+  wrap-around; Robbo starts facing down. At runtime the destination search
+  walks the whole group: a member whose landing is blocked is skipped for the
+  next free member, and a fully blocked group (including a lone self-link such
+  as L7) teleports Robbo in place, matching GNU Robbo's fallback.
 
 Regenerate the ROM level packs with:
 
