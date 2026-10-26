@@ -892,7 +892,9 @@ static void apply_door_step(uint8_t vi, uint8_t index)
     }
     NR30_REG = 0x00;
     for (i = 0; i != 16; ++i) {
-        ((volatile uint8_t *)0xFF30)[i] = sfx_door_waves[p[3]][i];
+        /* Must go through the platform shim: $FF30 is the UxROM bank
+         * register on NES, not wave RAM. */
+        PLATFORM_WAVE_RAM(i) = sfx_door_waves[p[3]][i];
     }
     NR30_REG = 0x80;
     NR32_REG = 0x20;   /* 100%; the original volume is baked into the wave */

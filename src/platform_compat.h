@@ -26,6 +26,9 @@
 #define PLATFORM_SAVE_RAM       ((volatile uint8_t *)0xA000)
 #define PLATFORM_RAM_INIT()     do { } while (0)
 
+/* CH3 wave RAM.  sound.c copies the door's 32-nibble wave image here. */
+#define PLATFORM_WAVE_RAM(i)    (((volatile uint8_t *)0xFF30)[(i)])
+
 /* The existing GB code uses the MBC5 fast path explicitly. */
 #define PLATFORM_SWITCH_ROM(b)  SWITCH_ROM_MBC5(b)
 
@@ -116,6 +119,14 @@ extern volatile uint8_t nes_compat_apu[32];
 #define NR50_REG        nes_compat_apu[18]
 #define NR51_REG        nes_compat_apu[19]
 #define NR52_REG        nes_compat_apu[20]
+
+/* CH3 wave RAM.  $FF30 on the Game Boy is inside the NES cartridge space, and
+ * the UxROM mapper decodes *any* write in $8000-$FFFF as a bank select.  A
+ * direct CH3 wave copy therefore latches bank $30 & 0x1F = 16 (empty $FF),
+ * leaving the CPU executing garbage after the store.  The APU back-end is
+ * phase 5, so keep a RAM shadow instead of touching the bus. */
+extern volatile uint8_t nes_compat_wave_ram[16];
+#define PLATFORM_WAVE_RAM(i)    (nes_compat_wave_ram[(i)])
 
 /* Entropy: the NES has no DIV register.  sys_time is the frame counter the
  * GBDK NES runtime maintains in its VBlank handler. */
