@@ -52,23 +52,41 @@ static uint8_t nes_pal[12];
 static uint8_t nes_backdrop;
 static uint8_t nes_flash_on;
 
-/* Title/ending art is not index-swapped (phase 4), so these ramps keep the
- * CGB role order: 0 = bright .. 3 = dark.  All four slots get the same ramp
- * during the phase-3 stopgap, which preserves the phase-2 grayscale look.
- * Slot 0 entry 0 is the universal backdrop. */
+/* Title art is not index-swapped, so these ramps keep the CGB role order:
+ * 0 = bright .. 3 = dark.  All four slots get the same ramp while the title
+ * owns the screen.  Slot 0 entry 0 is the universal backdrop. */
 static const uint8_t pal_title_ramp[16] = {
     0x30, 0x10, 0x00, 0x0D,
     0x30, 0x10, 0x00, 0x0D,
     0x30, 0x10, 0x00, 0x0D,
     0x30, 0x10, 0x00, 0x0D
 };
-/* Ending pages: 0 = black background, 3 = white ink. */
-static const uint8_t pal_ending_ramp[16] = {
-    0x0D, 0x00, 0x10, 0x30,
-    0x0D, 0x00, 0x10, 0x30,
-    0x0D, 0x00, 0x10, 0x30,
-    0x0D, 0x00, 0x10, 0x30
+/* Ending palettes.  The generated NES tiles carry the Atari character-mode
+ * colour indices, and the Atari ending colours are TITLE.ASM CONGR's COLS+6
+ * block: COLBK $32, COLPF0 $C8, COLPF1 $0C, COLPF2 $74.  Pixel 1 is COLPF0,
+ * 2 is COLPF1 (light grey) and 3 is COLPF2 (blue), so the scene and ground
+ * need a single slot; the DMG/CGB builds bake COLBK away and the GBC palette
+ * table stores the same four colours shifted, which reads as red ground +
+ * green ship.
+ *
+ * COLBK is the shared backdrop, which has to stay black (the text page and
+ * every other screen need it), and the original COLPF0 olive-green is
+ * replaced by a brown so the ground reads as soil (a palette-only change:
+ * every art index 1 pixel follows).
+ *
+ * Slot 0 is the scene/ground, slot 2 the text page (white ink, grey hatch,
+ * black page). */
+#define NES_END_SOIL 0x17       /* COLPF0 role: brown #$17 (203,77,12) */
+static const uint8_t pal_ending_nes[12] = {
+    0x0D, NES_END_SOIL, 0x3D, 0x12,  /* scene/ground: COLB, COLPF0, COLPF1, COLPF2 */
+    0x0D, NES_END_SOIL, 0x3D, 0x12,  /* slot 1 unused: same scene palettes */
+    0x0D, 0x30, 0x00, 0x0D           /* text: backdrop, white, grey, black */
 };
+/* Text-page ease-in.  The DMG fades BGP's four shade indices; the NES pages use
+ * entry 1 for the ink and entry 2 for the hatch, and must keep entry 3 black
+ * (the solid page tile). */
+static const uint8_t pal_ending_ink[6]   = { 0x0D, 0x00, 0x10, 0x30, 0x30, 0x30 };
+static const uint8_t pal_ending_hatch[6] = { 0x0D, 0x0D, 0x0D, 0x0D, 0x00, 0x10 };
 /* HUD/pause text.  The bar and glyph backgrounds are solid black (art
  * index 3); the glyph ink is art index 1 (white) on the swapped gameplay
  * tiles.  Entry 0 is unused and never programmed for slot 3. */
@@ -105,8 +123,9 @@ void color_init(void) BANKED
     set_sprite_palette(0, 4, pal_sprite_nes);
 }
 
-/* The title needs its ramp back after gameplay palettes were installed.
- * Phase 4 replaces this with the real logo/rule/dim mapping. */
+/* Reinstall the boot ramp (black, grey, light grey, white) for callers that
+ * still use the CGB slot numbers; the NES title itself installs its final map
+ * through color_title_nes(). */
 void color_title_dim_palette(void) BANKED
 {
     if (!color_on) return;
@@ -171,8 +190,9 @@ void color_flash(uint8_t on) BANKED
 }
 
 /* Fill a rectangle of BG attributes.  NES attributes are one palette per
- * 16x16 pixel cell, so rectangles are rounded outwards to cell boundaries;
- * title/ending layouts are re-aligned to the grid in phase 4. */
+ * 16x16 pixel cell, so rectangles are rounded outwards to cell boundaries.
+ * The argument is the raw NES slot (0..3) on this target: gameplay slots come
+ * from render_cell_palette() and the title/ending use their own fixed map. */
 void color_fill_attrs(uint8_t x, uint8_t y, uint8_t w, uint8_t h,
                       uint8_t pal) BANKED
 {
@@ -201,13 +221,27 @@ void color_fill_win_attrs(uint8_t x, uint8_t y, uint8_t w, uint8_t h,
     color_fill_attrs(x, y, w, h, pal);
 }
 
-/* Ending scene: single grey ramp until phase 4 restores the GBC scene
- * palettes (COLB/PF0/PF1/PF2 and the PF3 ground). */
+/* Ending scene: the GBC scene/ground/text palettes in NES colour indices.
+ * Sprites keep the grey ramp (the DMG ending draws Robbo with OBP0 = 0x18). */
 void color_ending_scene(void) BANKED
 {
     if (!color_on) return;
-    set_bkg_palette(0, 4, pal_ending_ramp);
+    set_bkg_palette(0, 3, pal_ending_nes);
     set_sprite_palette(0, 4, pal_sprite_nes);
+}
+
+/* Text-page fade step 0..5 (see pal_ending_ink/hatch). */
+void color_ending_text_fade(uint8_t step) BANKED
+{
+    uint8_t pal[4];
+
+    if (!color_on) return;
+    if (step > 5) step = 5;
+    pal[0] = 0x0D;
+    pal[1] = pal_ending_ink[step];
+    pal[2] = pal_ending_hatch[step];
+    pal[3] = 0x0D;
+    set_bkg_palette(2, 1, pal);
 }
 
 #else /* !NINTENDO_NES */
