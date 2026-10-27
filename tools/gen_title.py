@@ -17,6 +17,8 @@ DMG conversion:
 Outputs:
     gb/src/gen/title_data.c
     gb/src/gen/title_data.h
+    gb/src/gen/title_logo_nes.c       (NES-only 28x5 logo tiles)
+    gb/src/gen/title_logo_nes.h
     gb/tests/art/title-dmg.png       (preview)
 
 Run: python gb/tools/gen_title.py
@@ -51,6 +53,33 @@ LOGO_GRID = [
 LOGO_SX, LOGO_SY = 2, 3                    # source pixels -> DMG pixels
 LOGO_TW, LOGO_TH = 14, 3                  # 8x8 tiles
 
+# NES logo geometry: one source block is one 4x4 screen pixel square.  The
+# 8x56 block grid therefore becomes 28x5 8x8 tiles (224x40 px), exactly the
+# Atari BIGR size.  Each 8x8 tile is stored in GBDK's interleaved
+# (lo,hi) 2bpp format, which set_bkg_data() expects on every target.
+NES_LOGO_TW, NES_LOGO_TH = 28, 5
+NES_LOGO_TILE_COUNT = NES_LOGO_TW * NES_LOGO_TH
+
+
+def nes_logo_tiles() -> list[bytes]:
+    out: list[bytes] = []
+    for ty in range(NES_LOGO_TH):
+        for tx in range(NES_LOGO_TW):
+            data = bytearray(16)
+            for py in range(8):
+                gy = ty * 8 + py
+                r, ry = divmod(gy, 5)       # 4px glyph row + 1px gap
+                left = right = 0
+                if ry < 4 and r < 8:
+                    left = int(LOGO_GRID[r][tx * 2])
+                    right = int(LOGO_GRID[r][tx * 2 + 1])
+                data[py * 2] = ((0xF0 if left & 1 else 0) |
+                                (0x0F if right & 1 else 0))
+                data[py * 2 + 1] = ((0xF0 if left & 2 else 0) |
+                                    (0x0F if right & 2 else 0))
+            out.append(bytes(data))
+    return out
+
 # DMG shades: 0 white, 1 light grey, 2 dark grey, 3 black (BGP = 0xE4).
 # Each phase cyclically reassigns the three non-background shades.
 LOGO_PHASE_MAPS = [
@@ -73,6 +102,9 @@ INVERSE_CHARS = "".join(dict.fromkeys("INSTRUCTIONS"))
 # pause menu.  This port pans with B + D-PAD and has no restart menu, so the
 # control hint is renamed and the restart paragraph is omitted.
 WRAP = 20
+# The NES title keeps the same English text but uses the Atari 32-column
+# instruction window (32x8 characters) instead of the GB 20x5 grid.
+WRAP_NES = 32
 PARAGRAPHS = [
     "INSTRUCTIONS",
     "",
@@ -116,22 +148,22 @@ def wrap(text: str, width: int) -> list[str]:
     return lines
 
 
-def build_instructions() -> list[str]:
+def build_instructions(width: int = WRAP) -> list[str]:
     lines: list[str] = []
     for para in PARAGRAPHS:
         if para == "":
             if lines and lines[-1] != "":
                 lines.append("")
             continue
-        lines.extend(wrap(para, WRAP))
+        lines.extend(wrap(para, width))
     while lines and lines[0] == "":
         lines.pop(0)
     while lines and lines[-1] == "":
         lines.pop()
     if lines and lines[0] == "INSTRUCTIONS":
-        lines[0] = " " * ((WRAP - len(lines[0])) // 2) + lines[0]
+        lines[0] = " " * ((width - len(lines[0])) // 2) + lines[0]
     for line in lines:
-        assert len(line) <= WRAP, repr(line)
+        assert len(line) <= width, repr(line)
     return lines
 
 
@@ -163,7 +195,8 @@ def logo_tiles(mapping: dict[int, int]) -> list[bytes]:
 
 
 def main() -> None:
-    instructions = build_instructions()
+    instructions = build_instructions(WRAP)
+    instructions_nes = build_instructions(WRAP_NES)
 
     tiles: list[bytes] = []
     logo_bases: list[int] = []
@@ -230,12 +263,15 @@ def main() -> None:
         h.write(f"#define TITLE_TILE_COUNT {len(tiles)}\n")
         h.write(f"#define TITLE_INSTR_WIDTH {WRAP}\n")
         h.write(f"#define TITLE_INSTR_NLINES {len(instructions)}\n\n")
+        h.write(f"#define TITLE_INSTR32_WIDTH {WRAP_NES}\n")
+        h.write(f"#define TITLE_INSTR32_NLINES {len(instructions_nes)}\n\n")
         h.write("extern const uint8_t title_tiles[TITLE_TILE_COUNT * 16];\n")
         h.write("extern const uint8_t title_font_white[128];\n")
         h.write("extern const uint8_t title_font_gray[128];\n")
         h.write("extern const uint8_t title_font_inverse[128];\n")
         h.write("extern const uint8_t title_hud_digits[10][2];\n")
-        h.write("extern const char title_instr[TITLE_INSTR_NLINES][TITLE_INSTR_WIDTH + 1];\n\n")
+        h.write("extern const char title_instr[TITLE_INSTR_NLINES][TITLE_INSTR_WIDTH + 1];\n")
+        h.write("extern const char title_instr32[TITLE_INSTR32_NLINES][TITLE_INSTR32_WIDTH + 1];\n\n")
         h.write("#endif\n")
 
     with open(GEN / "title_data.c", "w", encoding="utf-8") as c:
@@ -259,6 +295,31 @@ def main() -> None:
         c.write(f"const char title_instr[{len(instructions)}][{WRAP + 1}] = {{\n")
         for line in instructions:
             c.write(f'  "{line}",\n')
+        c.write("};\n")
+        c.write(f"const char title_instr32[{len(instructions_nes)}][{WRAP_NES + 1}] = {{\n")
+        for line in instructions_nes:
+            c.write(f'  "{line}",\n')
+        c.write("};\n")
+
+    # NES-only logo.  Keeping it in its own *_nes.c file means the Game Boy
+    # build does not pay for the 2240-byte tile set in bank 11.
+    nes_tiles = nes_logo_tiles()
+    with open(GEN / "title_logo_nes.h", "w", encoding="utf-8") as h:
+        h.write("/* Generated by gb/tools/gen_title.py - do not edit. */\n")
+        h.write("#ifndef TITLE_LOGO_NES_H\n#define TITLE_LOGO_NES_H\n\n")
+        h.write("#include <stdint.h>\n\n")
+        h.write(f"#define TITLE_NES_LOGO_TW {NES_LOGO_TW}\n")
+        h.write(f"#define TITLE_NES_LOGO_TH {NES_LOGO_TH}\n")
+        h.write(f"#define TITLE_NES_LOGO_TILE_COUNT {NES_LOGO_TILE_COUNT}\n\n")
+        h.write("extern const uint8_t title_nes_logo[TITLE_NES_LOGO_TILE_COUNT * 16];\n\n")
+        h.write("#endif\n")
+    with open(GEN / "title_logo_nes.c", "w", encoding="utf-8") as c:
+        c.write("/* Generated by gb/tools/gen_title.py - do not edit. */\n")
+        c.write("#pragma bank 11\n\n")
+        c.write("#include <stdint.h>\n#include \"title_logo_nes.h\"\n\n")
+        c.write(f"const uint8_t title_nes_logo[{len(nes_tiles) * 16}] = {{\n")
+        for i, tile in enumerate(nes_tiles):
+            c.write(f"  /* {i:3d} */ " + ",".join(f"0x{b:02X}" for b in tile) + ",\n")
         c.write("};\n")
 
     # Preview: the title with a filled instruction page (like the GBC screen).
@@ -308,7 +369,11 @@ def main() -> None:
 
     print(f"Title tiles: {len(tiles)} / 256")
     print(f"Instruction lines: {len(instructions)} (width {WRAP})")
-    print(f"Wrote {GEN / 'title_data.c'}, {GEN / 'title_data.h'} and {ART / 'title-dmg.png'}")
+    print(f"NES instruction lines: {len(instructions_nes)} (width {WRAP_NES})")
+    print(f"NES logo tiles: {len(nes_tiles)} (28x5 blocks)")
+    print(f"Wrote {GEN / 'title_data.c'}, {GEN / 'title_data.h'}, "
+          f"{GEN / 'title_logo_nes.c'}, {GEN / 'title_logo_nes.h'} "
+          f"and {ART / 'title-dmg.png'}")
 
 
 if __name__ == "__main__":

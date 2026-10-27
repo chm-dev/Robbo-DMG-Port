@@ -30,6 +30,8 @@
 #include "save.h"
 #include "sound.h"
 
+#ifndef NINTENDO_NES
+
 #define TITLE_COLS      20
 #define TITLE_LOGO_X     3
 #define TITLE_WINDOW_Y  12
@@ -558,3 +560,5 @@ uint8_t title_show(uint8_t saved_level) BANKED
     DISPLAY_OFF;
     return start_level;
 }
+
+#endif /* !NINTENDO_NES */

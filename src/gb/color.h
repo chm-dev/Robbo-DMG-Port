@@ -51,6 +51,10 @@ extern uint8_t color_on;
 
 void color_init(void) BANKED;
 void color_title_dim_palette(void) BANKED;
+#ifdef NINTENDO_NES
+/* Real NES title palettes (animated logo, bright text, grey window, menu). */
+void color_title_nes(uint8_t logo_phase) BANKED;
+#endif
 void color_level_pal(uint8_t level) BANKED;
 void color_flash(uint8_t on) BANKED;
 void color_fill_attrs(uint8_t x, uint8_t y, uint8_t w, uint8_t h,

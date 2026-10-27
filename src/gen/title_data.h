@@ -23,11 +23,15 @@
 #define TITLE_INSTR_WIDTH 20
 #define TITLE_INSTR_NLINES 41
 
+#define TITLE_INSTR32_WIDTH 32
+#define TITLE_INSTR32_NLINES 27
+
 extern const uint8_t title_tiles[TITLE_TILE_COUNT * 16];
 extern const uint8_t title_font_white[128];
 extern const uint8_t title_font_gray[128];
 extern const uint8_t title_font_inverse[128];
 extern const uint8_t title_hud_digits[10][2];
 extern const char title_instr[TITLE_INSTR_NLINES][TITLE_INSTR_WIDTH + 1];
+extern const char title_instr32[TITLE_INSTR32_NLINES][TITLE_INSTR32_WIDTH + 1];
 
 #endif

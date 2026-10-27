@@ -73,6 +73,21 @@ static const uint8_t pal_ending_ramp[16] = {
  * index 3); the glyph ink is art index 1 (white) on the swapped gameplay
  * tiles.  Entry 0 is unused and never programmed for slot 3. */
 static const uint8_t pal_ui_nes[4] = { 0x0D, 0x30, 0x00, 0x0D };
+/* NES title palettes.  Slot 0 is the animated Atari logo: black plus the
+ * three current logo colours.  Slot 1 is bright text (white ink, blue rules),
+ * slot 2 is the grey instruction window, slot 3 is the bright menu/inverse
+ * palette.  On the NES every slot's entry 0 is the shared backdrop, so all
+ * four copies are black. */
+static const uint8_t title_pal_nes[4][16] = {
+    { 0x0F, 0x12, 0x04, 0x18,  0x0F, 0x30, 0x12, 0x0F,
+      0x0F, 0x00, 0x12, 0x0F,  0x0F, 0x30, 0x12, 0x0F },
+    { 0x0F, 0x04, 0x18, 0x12,  0x0F, 0x30, 0x12, 0x0F,
+      0x0F, 0x00, 0x12, 0x0F,  0x0F, 0x30, 0x12, 0x0F },
+    { 0x0F, 0x18, 0x12, 0x04,  0x0F, 0x30, 0x12, 0x0F,
+      0x0F, 0x00, 0x12, 0x0F,  0x0F, 0x30, 0x12, 0x0F },
+    { 0x0F, 0x12, 0x18, 0x04,  0x0F, 0x30, 0x12, 0x0F,
+      0x0F, 0x00, 0x12, 0x0F,  0x0F, 0x30, 0x12, 0x0F }
+};
 /* Sprite entries: 0 is transparent, 1 = dark, 2 = light, 3 = white. */
 static const uint8_t pal_sprite_nes[16] = {
     0x0D, 0x00, 0x10, 0x30,
@@ -97,6 +112,15 @@ void color_title_dim_palette(void) BANKED
     if (!color_on) return;
     set_bkg_palette(0, 4, pal_title_ramp);
     set_sprite_palette(0, 4, pal_sprite_nes);
+}
+
+/* NES title screen: four real BG slots (animated logo, bright text, grey
+ * instruction window, bright menu).  Called once on title entry and again
+ * whenever the logo's colour phase advances. */
+void color_title_nes(uint8_t logo_phase) BANKED
+{
+    if (!color_on) return;
+    set_bkg_palette(0, 4, title_pal_nes[logo_phase & 3]);
 }
 
 void color_level_pal(uint8_t level) BANKED

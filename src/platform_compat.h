@@ -45,8 +45,12 @@
  * working by drawing into the playfield nametable. */
 extern uint8_t nes_hud_enabled;
 extern uint8_t nes_pan_dir;
-#define SHOW_WIN                        do { nes_hud_enabled = 1; } while (0)
-#define HIDE_WIN                        do { nes_hud_enabled = 0; } while (0)
+/* The HUD split is driven by GBDK's fake LCD handler.  Setting the scanline
+ * to >= 240 stops the handler (and its mid-frame scroll write) entirely, so
+ * the title/ending do not get a one-scanline glitch at the split.  Keep 31 in
+ * sync with render.c's NES_SPLIT_SCANLINE (NES_HUD_LINE - 1). */
+#define SHOW_WIN                        do { nes_hud_enabled = 1; _lcd_scanline = 31; } while (0)
+#define HIDE_WIN                        do { nes_hud_enabled = 0; _lcd_scanline = 240; } while (0)
 #define move_win(x, y)                  ((void)(x), (void)(y))
 #define set_win_tiles(x, y, w, h, buf)  set_bkg_tiles((x), (y), (w), (h), (buf))
 
