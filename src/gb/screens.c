@@ -10,9 +10,17 @@
  * The BG tile coordinates are offset by cam_scx/cam_scy, so the panel is
  * positioned in the visible view even when the smooth camera is between cells.
  */
-#pragma bank 9
-
 #include <gbdk/platform.h>
+
+#ifdef NINTENDO_NES
+/* Bank 9 is nearly full with the APU backend and its data; the pause overlay
+ * is independent, so keep it in the roomy bank 15 on NES.  Game Boy keeps the
+ * original bank-9 placement. */
+#pragma bank 15
+#else
+#pragma bank 9
+#endif
+
 #include "platform_compat.h"
 #include <stdint.h>
 

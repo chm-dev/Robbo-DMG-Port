@@ -19,6 +19,8 @@
  *   Select + A             warp to level 30 (box/bolt test level)
  *   Select + B             back to level 1
  *   Start + Select         preview the ending sequence
+ *   sfx_debug_play         sound-test hook (pattern ids 1..14, 0x10 explosion,
+ *                          0x11 DESTROY on NES, 0x20 click, 0x21 beep, 0x22 stop)
  */
 #include <gbdk/platform.h>
 #include "platform_compat.h"
@@ -50,6 +52,13 @@
 #define DEBUG_WARP_HELD(pad) ((pad) & J_SELECT)
 #else
 #define DEBUG_WARP_HELD(pad) 0
+#endif
+
+#ifdef DEBUG_STATE
+/* Debug-ROM sound-test hook used by the NES APU regression harness.  The test
+ * writes a pattern id here; 0x10 starts the legacy explosion instead.  The
+ * release ROM compiles the hook out. */
+uint8_t sfx_debug_play;
 #endif
 
 static uint8_t level = 1;
@@ -154,6 +163,25 @@ void main(void)
             if (elapsed > 4) elapsed = 4;
             while (elapsed--) sfx_update();
         }
+
+#ifdef DEBUG_STATE
+        /* Sound-test hook (debug ROM only): trigger one effect by writing its
+         * pattern id to sfx_debug_play.  0x10 starts the legacy explosion;
+         * 0x11 the legacy DESTROY (NES only); 0x20/0x21 drive the title's
+         * direct noise click / pulse beep; 0x22 stops every voice. */
+        if (sfx_debug_play) {
+            uint8_t sfx_id = sfx_debug_play;
+            sfx_debug_play = 0;
+            if (sfx_id == 0x10) sfx_restart_def(&sfx_explosion);
+#ifdef NINTENDO_NES
+            else if (sfx_id == 0x11) sfx_play_def(&sfx_destroy);
+#endif
+            else if (sfx_id == 0x20) sfx_click();
+            else if (sfx_id == 0x21) sfx_beep();
+            else if (sfx_id == 0x22) sfx_stop();
+            else sfx_play_note(sfx_id);
+        }
+#endif
 
         /* Read input once per frame.  Keeping the edge state identical for the
          * intro and gameplay means START/SELECT behave the same in both. */

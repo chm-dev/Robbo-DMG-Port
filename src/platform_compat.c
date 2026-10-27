@@ -33,10 +33,6 @@ volatile uint8_t nes_compat_wx;
 volatile uint8_t nes_compat_wy;
 volatile uint8_t nes_compat_dma;
 volatile uint8_t nes_compat_vbk;
-volatile uint8_t nes_compat_apu[32];
-/* Shadow of the Game Boy CH3 wave RAM ($FF30-$FF3F).  Writing the real
- * address on NES would hit the UxROM bank register.  See platform_compat.h. */
-volatile uint8_t nes_compat_wave_ram[16];
 
 /* Linker symbols (see the -Wl-g flags in gb/tools/build.ps1).  The value of
  * bss_size is the byte count, so its address is the number we want. */

@@ -29,10 +29,16 @@ void barrier_tick(uint16_t row_lo, uint16_t row_hi, uint8_t animate) BANKED;
  * master 2 keeps the attack peak at 5/15, and env 5 with step_frames 3
  * stretches the hit to a little over the Atari DESTRUCT note 10 (~560 ms).
  * The 5-step attack uses attack_env 3, so its rising envelope reaches only
- * the 5/15 peak instead of blipping to full volume before the decay. */
+ * the 5/15 peak instead of blipping to full volume before the decay.
+ *
+ * sfx_explosion lives in sound.c (bank 9) so banked callers and the ending
+ * can read it while the sound bank is active.  On NES, sfx_destroy must live
+ * in the sound bank too: game.c is bank 14 there, and sfx_play_def() switches
+ * to bank 9 before dereferencing the definition pointer.
+ */
+#ifndef NINTENDO_NES
 static const SfxDef sfx_destroy   = { 17, 0, 16, 406, 3, 0, 0, 0, 0, 0, 0, 0, 1, 5, 5, 3, 2 };
-/* sfx_explosion lives in sound.c (bank 9) so banked callers and the ending
- * can read it while the sound bank is active. */
+#endif
 
 uint8_t map_type[MAP_CELLS];
 uint8_t map_extra[MAP_CELLS];

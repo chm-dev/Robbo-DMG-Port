@@ -4,16 +4,17 @@
  * Start Mesen with the MCP server before running this:
  *   MesenCE-MCP\MesenCE-MCP-Windows.exe --mcp --mcp-port=9100 --enableStdout roms\robbo-debug.nes
  *
- * Opening a key door used to freeze the NES build: sound.c copies the GBC
+ * Opening a key door used to freeze the NES build: sound.c copied the GBC
  * CH3 wave image straight to $FF30, which is wave RAM on the Game Boy but the
  * UxROM bank register on the NES.  The store selected an empty bank and the
  * CPU ran off into $FF-filled ROM, ending in the crt0 hang loop at $C322.
+ * The NES APU backend now plays the Atari door's 25% pulse on pulse 2 and
+ * never touches $FF30.
  *
  * The test injects a door next to Robbo with a key in hand, opens it, and
  * checks that:
  *   - the door cell becomes empty and one key is consumed,
- *   - the wave copy went to the platform shadow at $FF30 replacement instead
- *     of switching the mapper bank,
+ *   - the door SFX drives the NES 25% pulse channel,
  *   - the game keeps ticking (anim_frame advances, PC never sits in the
  *     $C322 hang loop),
  *   - Robbo can walk into the cell the door occupied.
@@ -29,6 +30,7 @@ const NOI = path.resolve('roms/robbo-debug-nes.noi');
 
 const CT_EMPTY = 0;
 const CT_DOOR = 12;
+const CT_ROBBO = 26;
 const HANG_LOOP = '$C322';
 
 let sessionId = null;
@@ -134,6 +136,24 @@ async function inHangLoop() {
     return (await cpuState()).includes(`PC=${HANG_LOOP}`);
 }
 
+/* Read one field from Mesen's APU state via the Lua bridge. */
+async function apuField(name) {
+    const lua = `local s=emu.getState()\nemu.log(tostring(s['${name}']))`;
+    const text = await callTool('mesen_run_lua_script', { code: lua, waitMs: 250 });
+    const line = text.split(/\r?\n/).find(l => /^-?\d+$/.test(l.trim()));
+    return line === undefined ? null : parseInt(line.trim(), 10);
+}
+
+async function doorPulseActive() {
+    const lua = `local s=emu.getState()
+emu.log(tostring(s['apu.square2.envelope.volume']) .. ' ' .. tostring(s['apu.square2.duty']))`;
+    const text = await callTool('mesen_run_lua_script', { code: lua, waitMs: 100 });
+    const line = text.split(/\r?\n/).map(l => l.trim()).find(l => /^\d+ \d+$/.test(l));
+    if (!line) return false;
+    const [vol, duty] = line.split(/\s+/).map(Number);
+    return vol > 0 && duty === 1;
+}
+
 async function main() {
     if (!fs.existsSync(ROM)) throw new Error(`Missing ${ROM}`);
     if (!fs.existsSync(NOI)) throw new Error(`Missing ${NOI}`);
@@ -187,20 +207,28 @@ async function main() {
     check('door injected', (await readBytes(mapAddr + doorIdx, 1))[0] === CT_DOOR);
 
     let opened = false;
+    let doorSfx = false;
     for (let attempt = 0; attempt < 10 && !opened; attempt++) {
-        await press(door.name);
-        await sleep(300);
+        /* Poll the APU while the direction is held: the door body only lasts
+         * about 0.6 s, and the MCP round-trip is ~100 ms per sample. */
+        await callTool('mesen_input_override', { action: 'set', port: 0, buttons: door.name });
+        for (let i = 0; i < 12 && !doorSfx; i++) {
+            doorSfx = await doorPulseActive();
+            if (!doorSfx) await sleep(40);
+        }
+        await callTool('mesen_input_override', { action: 'set', port: 0, buttons: '' });
+        await sleep(180);
         opened = (await rd('_keys')) < 5;
     }
     check('door opens with a key', opened, `keys=${await rd('_keys')}`);
-    check('door cell is empty', (await readBytes(mapAddr + doorIdx, 1))[0] === CT_EMPTY);
+    const doorCell = (await readBytes(mapAddr + doorIdx, 1))[0];
+    check('door cell is empty (or Robbo already entered it)',
+        doorCell === CT_EMPTY || doorCell === CT_ROBBO, `cell=${doorCell}`);
 
-    /* The CH3 wave copy must land in the platform shadow, not in the mapper.
-     * The shadow is cleared at boot, so a non-zero image proves the store
-     * reached RAM. */
-    const wave = await readBytes(sym._nes_compat_wave_ram, 16);
-    check('CH3 wave image written to the platform shadow', wave.some(v => v !== 0),
-        wave.map(v => v.toString(16).padStart(2, '0')).join(' '));
+    /* The NES door SFX is the Atari 25% pulse body on pulse 2 (plus a triangle
+     * fundamental) and a few noise accents.  No CH3 wave data is copied, so
+     * $FF30 (the UxROM bank register) is never touched. */
+    check('door SFX drives the NES 25% pulse channel', doorSfx);
 
     const frames = new Set();
     let hung = false;

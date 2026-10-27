@@ -19,7 +19,8 @@
  *
  * The player mixes four voices (pulse 1, pulse 2, noise, CH3 wave) so unrelated
  * effects play together.  Sounds that need the same hardware channel still
- * replace each other.
+ * replace each other.  On NES the door's CH3 wave becomes the Atari-style 25%
+ * pulse on pulse 2 plus its noise accents.
  */
 
 /* ------------------------------------------------------------------ */
@@ -75,6 +76,13 @@ typedef struct {
 /* The long noise explosion, kept for bomb blasts, Robbo's death wipe and the
  * ending's text reveal (the sound-port2 set no longer carries POKEY note 0). */
 extern const SfxDef sfx_explosion;
+
+#ifdef NINTENDO_NES
+/* DESTROY also lives in the sound bank on NES.  game.c is bank 14 there, so a
+ * definition passed to the banked player would point into the wrong bank once
+ * sound.c selects bank 9. */
+extern const SfxDef sfx_destroy;
+#endif
 
 /* Bit per active voice (0 = pulse 1, 1 = pulse 2, 2 = noise, 3 = CH3 wave).
  * Exposed so the emulator tests can assert that effects really overlap. */

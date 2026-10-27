@@ -6,9 +6,9 @@
  * contains the few small shims that the shared files need.
  *
  * On NES the window macros now drive the top-HUD scanline split and the HUD
- * lives in the second nametable.  The APU/display-register stubs remain
- * placeholders until their porting phases.  The GB definitions must remain
- * byte-for-byte equivalent to the old direct register use.
+ * lives in the second nametable.  The APU backend lives in sound.c; the
+ * display-register stubs remain for the shared UI code.  The GB definitions
+ * must remain byte-for-byte equivalent to the old direct register use.
  */
 #ifndef PLATFORM_COMPAT_H
 #define PLATFORM_COMPAT_H
@@ -74,7 +74,6 @@ extern volatile uint8_t nes_compat_wx;
 extern volatile uint8_t nes_compat_wy;
 extern volatile uint8_t nes_compat_dma;
 extern volatile uint8_t nes_compat_vbk;
-
 #define BGP_REG         nes_compat_bgp
 #define OBP0_REG        nes_compat_obp0
 #define OBP1_REG        nes_compat_obp1
@@ -99,38 +98,9 @@ extern volatile uint8_t nes_compat_vbk;
 #define _cpu            nes_compat_cpu
 #define CGB_TYPE        1u
 
-/* The APU back-end is phase 5.  These aliases give sound.c a stable set of
- * addresses while it is still written against the GB register names. */
-extern volatile uint8_t nes_compat_apu[32];
-#define NR10_REG        nes_compat_apu[0]
-#define NR11_REG        nes_compat_apu[1]
-#define NR12_REG        nes_compat_apu[2]
-#define NR13_REG        nes_compat_apu[3]
-#define NR14_REG        nes_compat_apu[4]
-#define NR21_REG        nes_compat_apu[5]
-#define NR22_REG        nes_compat_apu[6]
-#define NR23_REG        nes_compat_apu[7]
-#define NR24_REG        nes_compat_apu[8]
-#define NR30_REG        nes_compat_apu[9]
-#define NR31_REG        nes_compat_apu[10]
-#define NR32_REG        nes_compat_apu[11]
-#define NR33_REG        nes_compat_apu[12]
-#define NR34_REG        nes_compat_apu[13]
-#define NR41_REG        nes_compat_apu[14]
-#define NR42_REG        nes_compat_apu[15]
-#define NR43_REG        nes_compat_apu[16]
-#define NR44_REG        nes_compat_apu[17]
-#define NR50_REG        nes_compat_apu[18]
-#define NR51_REG        nes_compat_apu[19]
-#define NR52_REG        nes_compat_apu[20]
-
-/* CH3 wave RAM.  $FF30 on the Game Boy is inside the NES cartridge space, and
- * the UxROM mapper decodes *any* write in $8000-$FFFF as a bank select.  A
- * direct CH3 wave copy therefore latches bank $30 & 0x1F = 16 (empty $FF),
- * leaving the CPU executing garbage after the store.  The APU back-end is
- * phase 5, so keep a RAM shadow instead of touching the bus. */
-extern volatile uint8_t nes_compat_wave_ram[16];
-#define PLATFORM_WAVE_RAM(i)    (nes_compat_wave_ram[(i)])
+/* The NES APU back-end lives in sound.c and talks to $4000-$4017 directly.
+ * The shared player no longer needs GB register aliases here; PLATFORM_WAVE_RAM
+ * exists only on the Game Boy, where $FF30 is real wave RAM. */
 
 /* Entropy: the NES has no DIV register.  sys_time is the frame counter the
  * GBDK NES runtime maintains in its VBlank handler. */
