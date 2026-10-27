@@ -8,13 +8,13 @@
  * CH3 wave image straight to $FF30, which is wave RAM on the Game Boy but the
  * UxROM bank register on the NES.  The store selected an empty bank and the
  * CPU ran off into $FF-filled ROM, ending in the crt0 hang loop at $C322.
- * The NES APU backend now plays the Atari door's 25% pulse on pulse 2 and
- * never touches $FF30.
+ * The NES APU backend now plays a triangle body plus the Atari door's boosted
+ * 25% pulse on pulse 2 and never touches $FF30.
  *
  * The test injects a door next to Robbo with a key in hand, opens it, and
  * checks that:
  *   - the door cell becomes empty and one key is consumed,
- *   - the door SFX drives the NES 25% pulse channel,
+ *   - the door SFX drives the NES 25% pulse layer,
  *   - the game keeps ticking (anim_frame advances, PC never sits in the
  *     $C322 hang loop),
  *   - Robbo can walk into the cell the door occupied.
@@ -136,14 +136,7 @@ async function inHangLoop() {
     return (await cpuState()).includes(`PC=${HANG_LOOP}`);
 }
 
-/* Read one field from Mesen's APU state via the Lua bridge. */
-async function apuField(name) {
-    const lua = `local s=emu.getState()\nemu.log(tostring(s['${name}']))`;
-    const text = await callTool('mesen_run_lua_script', { code: lua, waitMs: 250 });
-    const line = text.split(/\r?\n/).find(l => /^-?\d+$/.test(l.trim()));
-    return line === undefined ? null : parseInt(line.trim(), 10);
-}
-
+/* Read the door's pulse-2 state from Mesen's APU snapshot. */
 async function doorPulseActive() {
     const lua = `local s=emu.getState()
 emu.log(tostring(s['apu.square2.envelope.volume']) .. ' ' .. tostring(s['apu.square2.duty']))`;
@@ -228,7 +221,7 @@ async function main() {
     /* The NES door SFX is the Atari 25% pulse body on pulse 2 (plus a triangle
      * fundamental) and a few noise accents.  No CH3 wave data is copied, so
      * $FF30 (the UxROM bank register) is never touched. */
-    check('door SFX drives the NES 25% pulse channel', doorSfx);
+    check('door SFX drives the NES 25% pulse layer', doorSfx);
 
     const frames = new Set();
     let hung = false;

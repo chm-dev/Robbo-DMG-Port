@@ -17,8 +17,9 @@
  *     beep drives pulse 1 at the expected duty/period;
  *   - every pattern effect reaches the expected channel with a sane
  *     frequency, duty and volume;
- *   - the door's GBC CH3 wave is played as a triangle tone (the NES cannot
- *     reproduce the wave shape) plus its noise accents;
+ *   - the door's GBC CH3 wave is approximated by a triangle fundamental plus
+ *     a boosted 25% pulse layer on pulse 2, with the Atari noise accents
+ *     (the NES cannot reproduce the wave shape);
  *   - the legacy explosion uses the software envelope and decays to silence;
  *   - two effects overlap on pulse 1 + pulse 2, and noise can run alongside a
  *     pulse;
@@ -156,13 +157,6 @@ async function press(buttons, holdMs = 200) {
     await sleep(holdMs);
     await callTool('mesen_input_override', { action: 'set', port: 0, buttons: '' });
     await sleep(150);
-}
-
-async function apuField(name) {
-    const lua = `local s=emu.getState()\nemu.log(tostring(s['${name}']))`;
-    const text = await callTool('mesen_run_lua_script', { code: lua, waitMs: 250 });
-    const line = text.split(/\r?\n/).map(l => l.trim()).find(l => /^-?\d+$/.test(l));
-    return line === undefined ? null : parseInt(line, 10);
 }
 
 async function apuFields(names) {
@@ -512,7 +506,7 @@ async function main() {
         check(`SFX ${name}: ends cleanly`, (await voiceMask()) === 0);
     }
 
-    /* --- Door: triangle tone + noise accents ------------------------ */
+    /* --- Door: triangle body + 25% pulse + noise accents -------------- */
     recs = await recordEffect(6);
     const doorPulse = recs.filter(r => r.p2v > 0 && r.p2d === 1);
     check('SFX DOOR: drives the NES pulse channel at 25% duty',
@@ -520,6 +514,9 @@ async function main() {
     check('SFX DOOR: pulse pitch follows the GBC wave period',
         doorPulse.some(r => r.p2p >= 1200 && r.p2p <= 2050),
         `p2p=${doorPulse.map(r => r.p2p).slice(0, 4).join(',')}`);
+    const doorTri = recs.filter(r => r.tl > 0 && r.tlen > 0 && r.tp > 0);
+    check('SFX DOOR: triangle body is active', doorTri.length > 0,
+        `triangle frames=${doorTri.length}`);
     check('SFX DOOR: noise accents present', maxOf(recs, r => r.nv) > 0);
     check('SFX DOOR: ends cleanly', (await voiceMask()) === 0);
 

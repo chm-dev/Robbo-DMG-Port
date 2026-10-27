@@ -6,7 +6,7 @@ Missing pieces ported from original atari source code from: https://github.com/t
 
 Title screen, ending screen, two sfx and gbc pallettes ported from gbc port: https://github.com/trekawek/robbo-gbc
 
-Supports both DMG, GBC and NES (WIP)
+Supports DMG, GBC and NES.
 
 Ported with DeepSeek v4.1 Flash
 
