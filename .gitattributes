@@ -1,0 +1,9 @@
+# Normalize all text files to LF, in the repository and the working tree,
+# so MSYS2 git and Git for Windows agree on the status of every file.
+* text=auto eol=lf
+
+# Never apply line-ending conversion to binary assets.
+*.png binary
+*.rgba binary
+*.bin binary
+*.pyc binary
