@@ -6,7 +6,7 @@
 
 #define LEVEL_PAL_NES_COUNT 56
 
-/* [level-1][0..3]=normal, [4..7]=walls, NES entries in swapped-art order. */
-extern const uint8_t level_pal_nes[LEVEL_PAL_NES_COUNT][8];
+/* [level-1][0..3]=normal, [4..7]=walls, [8]=object body, NES order. */
+extern const uint8_t level_pal_nes[LEVEL_PAL_NES_COUNT][9];
 
 #endif

@@ -7,6 +7,8 @@
  * Checks the phase-3 colour contract:
  *   - the generated NES table is programmed into PPU palette RAM per level
  *     (normal / wall / objects / UI, with the shared backdrop = COLB),
+ *   - the generated crate/door body stays distinct from the floor and the
+ *     wall surface on all 56 levels,
  *   - every ring cell's 16x16 attribute matches the map (walls, cave fill,
  *     inverse objects, teleports borrowing the wall palette, normal-palette
  *     wall variants),
@@ -113,12 +115,38 @@ function arrEq(a, b) {
 
 const hex = a => a.map(v => v.toString(16).padStart(2, '0')).join(' ');
 
+/* 2C02 RGB entries as FCEUX expands them (matches NES_PALETTE_6BIT in
+ * gb/tools/gen_level_pal.py), used to assert the generated contrast rules. */
+const NES_RGB = [
+    0x757575, 0x24188e, 0x0000aa, 0x45009e, 0x8e0075, 0xaa0010, 0xa60000, 0x7d0800,
+    0x412c00, 0x004500, 0x005100, 0x003c14, 0x183c5d, 0x000000, 0x000000, 0x000000,
+    0xbebebe, 0x0071ef, 0x2038ef, 0x8200f3, 0xbe00be, 0xe70059, 0xdb2800, 0xcb4d0c,
+    0x8a7100, 0x009600, 0x00aa00, 0x009238, 0x00828a, 0x000000, 0x000000, 0x000000,
+    0xffffff, 0x3cbeff, 0x5d96ff, 0xcf8aff, 0xf779ff, 0xff75b6, 0xff7561, 0xff9a38,
+    0xf3be3c, 0x82d310, 0x4ddf49, 0x59fb9a, 0x00ebdb, 0x797979, 0x000000, 0x000000,
+    0xffffff, 0xaae7ff, 0xc7d7ff, 0xd7cbff, 0xffc7ff, 0xffc7db, 0xffbeb2, 0xffdbaa,
+    0xffe7a2, 0xe3ffa2, 0xaaf3be, 0xb2ffcf, 0x9efff3, 0xc7c7c7, 0x000000, 0x000000,
+].map(v => [(v >> 16) & 0xff, (v >> 8) & 0xff, v & 0xff]);
+
+function nesLuma(c) {
+    return 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
+}
+
+/* Mirrors _contrast() in gen_level_pal.py. */
+function nesContrast(a, b, need) {
+    const ca = NES_RGB[a], cb = NES_RGB[b];
+    const dy = Math.abs(nesLuma(ca) - nesLuma(cb));
+    const d = Math.sqrt((ca[0] - cb[0]) ** 2 + (ca[1] - cb[1]) ** 2 +
+        (ca[2] - cb[2]) ** 2);
+    return dy >= need || (dy >= 12 && d >= 90);
+}
+
 /* Per-level NES palettes straight from the generated source, so the test
  * fails if the generator output and the ROM ever drift apart. */
 function levelPalettes() {
     const text = fs.readFileSync(PAL_SRC, 'utf8');
     const rows = [];
-    const re = /\{((?:0x[0-9A-Fa-f]{2},\s*){7}0x[0-9A-Fa-f]{2})\},\s*\/\*\s*(\d+)\s*\*\//g;
+    const re = /\{((?:0x[0-9A-Fa-f]{2},\s*){8}0x[0-9A-Fa-f]{2})\},\s*\/\*\s*(\d+)\s*\*\//g;
     let m;
     while ((m = re.exec(text))) {
         const values = m[1].split(',').map(v => parseInt(v.trim(), 16));
@@ -254,7 +282,7 @@ async function checkPalettes(label, sym, row) {
     check(`${label}: wall palette`, arrEq(bg1, row.slice(4, 8)),
         `${hex(bg1)} expect ${hex(row.slice(4, 8))}`);
     check(`${label}: inverse objects derived from the wall`, arrEq(bg2, [
-        row[4], row[7], row[6], row[5],
+        row[4], row[7], row[6], row[8],
     ]), `${hex(bg2)}`);
     check(`${label}: shared backdrop is COLB`, bg0[0] === row[0] && bg3[0] === row[0]);
     check(`${label}: UI slot 3`, arrEq(bg3.slice(1, 4), [0x30, 0x00, 0x0D]),
@@ -305,6 +333,21 @@ async function main() {
     if (!fs.existsSync(NOI)) throw new Error(`Missing ${NOI}`);
     const sym = symbolsFromNoi(NOI);
     const palettes = levelPalettes();
+
+    // Crate/door body (row[8]) must read against both the floor and the wall
+    // surface.  Styles 25-28 and 37-40 draw their wall with the highlight
+    // entry (row[5]), all other styles with COL3 (row[6]).
+    const objBad = [];
+    for (let i = 0; i < palettes.length; i++) {
+        const p = palettes[i];
+        const main = ((i >> 2) === 6 || (i >> 2) === 9) ? p[5] : p[6];
+        if (!nesContrast(p[8], p[0], 35) || !nesContrast(p[8], main, 25)) {
+            objBad.push(`L${i + 1}(obj=${p[8].toString(16)} ` +
+                `bg=${p[0].toString(16)} wall=${main.toString(16)})`);
+        }
+    }
+    check('all 56 levels keep the crate/door body distinct from floor/wall',
+        objBad.length === 0, objBad.join(' '));
 
     // The teleport middle alternates the wall highlight (row[5]) and wall
     // detail (row[7]); the ring is the wall body (row[6]).  A shared entry

@@ -6,7 +6,7 @@
  * lives in a bank so the consumer rules and tile/trail handling do not grow
  * bank 0.
  */
-#pragma bank 14
+#pragma bank 15
 
 #include <gbdk/platform.h>
 #include "platform_compat.h"

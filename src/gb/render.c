@@ -29,6 +29,9 @@ uint8_t map_row_level[RENDER_RING_ROWS];
  * update without clobbering the neighbouring metarow. */
 static uint8_t nes_attr_shadow[8 * 8];
 static uint8_t nes_split_bkg;
+/* Row batch buffer for render_flush_cells(): up to 32 tiles (a full 16-cell
+ * row) in nametable order, two tile rows. */
+static uint8_t nes_dirty_tiles[64];
 #endif
 
 /* Dirty-cell bitmap (one bit per map cell).  Insertion is O(1); the old
@@ -37,6 +40,11 @@ static uint8_t nes_split_bkg;
 #define DIRTY_WORDS ((MAP_CELLS + 7) / 8)
 static uint8_t dirty_bits[DIRTY_WORDS];
 static uint8_t dirty_any;
+#ifdef NINTENDO_NES
+/* Number of set bits in dirty_bits.  Lets the NES flush keep the old
+ * per-cell path for sparse frames and batch only dense ones. */
+static uint16_t dirty_count;
+#endif
 
 static const uint8_t turret_mt[4] = {
     MT_TURRET_R, MT_TURRET_D, MT_TURRET_L, MT_TURRET_U
@@ -148,6 +156,7 @@ uint8_t render_cell_palette(uint8_t type, uint8_t extra, uint8_t mt)
 #endif
 }
 
+#ifndef NINTENDO_NES
 static void draw_metatile(uint8_t mt, uint8_t tx, uint8_t ty)
 {
     /* One library copy for the whole 2x2 metatile.  set_bkg_tile_xy() per
@@ -156,6 +165,7 @@ static void draw_metatile(uint8_t mt, uint8_t tx, uint8_t ty)
     const uint8_t *t = &metatile_tiles[mt << 2];
     set_bkg_tiles(tx, ty, 2, 2, t);
 }
+#endif
 
 #ifdef NINTENDO_NES
 /* Pack one metatile row's palette values into the hardware attribute shadow
@@ -224,6 +234,61 @@ void render_set_attr_span(uint8_t map_row, uint8_t cell_x, uint8_t count,
                             (uint8_t)(pal << bit));
     }
     set_bkg_attributes(0, (uint8_t)(attr_row << 2), 32, 4, a);
+}
+
+/* Update one cell's packed attribute shadow.  Returns 1 when the byte changed
+ * and the row needs republishing. */
+static uint8_t nes_set_cell_attr(uint8_t x, uint8_t map_row, uint8_t pal)
+{
+    uint8_t attr_row = (uint8_t)(map_row >> 1);
+    uint8_t shift = (uint8_t)((map_row & 1) ? 4 : 0);
+    uint8_t *a = &nes_attr_shadow[(uint16_t)attr_row * 8];
+    uint8_t byte = (uint8_t)(x >> 1);
+    uint8_t bit = (uint8_t)(shift + ((x & 1) ? 2 : 0));
+    uint8_t prev = a[byte];
+    uint8_t next = (uint8_t)((prev & (uint8_t)~(0x03u << bit)) |
+                             (uint8_t)(pal << bit));
+
+    if (next == prev) return 0;
+    a[byte] = next;
+    return 1;
+}
+
+/* Per-cell NES draw used by the sparse flush path.  This is the old R1 path:
+ * one 2x2 set_bkg_tiles; returns the changed attribute row + 1 so the flush
+ * can publish each attribute row once instead of once per cell. */
+static uint8_t draw_cell_nes(uint8_t x, uint8_t y)
+{
+    uint8_t map_row = render_ring_slot(y);
+    uint8_t mt;
+    uint16_t idx;
+
+    if (map_row_level[map_row] != y) return 0;
+    idx = (uint16_t)y * MAP_W + x;
+    mt = render_metatile_for_cell(map_type[idx], map_extra[idx]);
+    set_bkg_tiles((uint8_t)(x << 1), (uint8_t)(map_row << 1), 2, 2,
+                  &metatile_tiles[(uint16_t)mt << 2]);
+    if (nes_set_cell_attr(x, map_row,
+                          render_cell_palette(map_type[idx], map_extra[idx], mt))) {
+        return (uint8_t)((map_row >> 1) + 1);
+    }
+    return 0;
+}
+
+/* Several moved actors usually share an attribute row, so publish each
+ * touched row once per flush rather than once per cell. */
+static void publish_attr_rows(uint16_t pending)
+{
+    uint8_t r = 0;
+
+    while (pending) {
+        if (pending & 1u) {
+            set_bkg_attributes(0, (uint8_t)(r << 2), 32, 4,
+                               &nes_attr_shadow[(uint16_t)r * 8]);
+        }
+        pending >>= 1;
+        r++;
+    }
 }
 #endif
 
@@ -493,6 +558,9 @@ void render_intro_clear_dirty(void)
     uint8_t i;
     for (i = 0; i < DIRTY_WORDS; i++) dirty_bits[i] = 0;
     dirty_any = 0;
+#ifdef NINTENDO_NES
+    dirty_count = 0;
+#endif
 }
 
 /* render_hud() lives in hud.c (bank 10). */
@@ -592,6 +660,7 @@ uint8_t render_sync_rows(void)
 }
 
 
+#ifndef NINTENDO_NES
 static void draw_cell_now(uint8_t x, uint8_t y)
 {
     uint8_t map_row = render_ring_slot(y);
@@ -602,39 +671,170 @@ static void draw_cell_now(uint8_t x, uint8_t y)
     idx = (uint16_t)y * MAP_W + x;
     mt = render_metatile_for_cell(map_type[idx], map_extra[idx]);
     draw_metatile(mt, x * 2, map_row * 2);
-#ifdef NINTENDO_NES
-    {
-        /* Keep the packed NES attribute shadow in sync and publish the whole
-         * 32x32 attribute row (the two metarows of the block share a byte). */
-        uint8_t pal = render_cell_palette(map_type[idx], map_extra[idx], mt);
-        uint8_t attr_row = (uint8_t)(map_row >> 1);
-        uint8_t shift = (uint8_t)((map_row & 1) ? 4 : 0);
-        uint8_t *a = &nes_attr_shadow[(uint16_t)attr_row * 8];
-        uint8_t byte = (uint8_t)(x >> 1);
-        uint8_t bit = (uint8_t)(shift + ((x & 1) ? 2 : 0));
-
-        a[byte] = (uint8_t)((a[byte] & (uint8_t)~(0x03u << bit)) |
-                            (uint8_t)(pal << bit));
-        set_bkg_attributes(0, (uint8_t)(attr_row << 2), 32, 4, a);
-    }
-#else
     if (color_on) {
         color_cell_attr((uint8_t)(x * 2), (uint8_t)(map_row * 2),
                         render_cell_palette(map_type[idx], map_extra[idx], mt));
     }
-#endif
 }
+#endif
 
 void render_cell(uint8_t x, uint8_t y)
 {
     uint16_t idx = ((uint16_t)y << 4) | x;
 
+#ifdef NINTENDO_NES
+    {
+        uint8_t word = (uint8_t)(idx >> 3);
+        uint8_t mask = (uint8_t)(1u << (idx & 7));
+
+        if (!(dirty_bits[word] & mask)) {
+            dirty_bits[word] |= mask;
+            dirty_count++;
+        }
+    }
+#else
     dirty_bits[idx >> 3] |= (uint8_t)(1u << (idx & 7));
+#endif
     dirty_any = 1;
 }
 
+#ifdef NINTENDO_NES
+/* Count newly set bits; called from the burst paths, so it runs only for
+ * rows that actually changed. */
+static uint8_t count_new_bits(uint8_t oldv, uint8_t bits)
+{
+    uint8_t n = 0;
+
+    bits &= (uint8_t)~oldv;
+    while (bits) {
+        n++;
+        bits &= (uint8_t)(bits - 1);
+    }
+    return n;
+}
+#endif
+
+#ifdef NINTENDO_NES
+void render_mark_row(uint8_t y, uint16_t mask)
+{
+    uint8_t i = (uint8_t)(y << 1);
+    uint8_t old0 = dirty_bits[i];
+    uint8_t old1 = dirty_bits[(uint8_t)(i + 1)];
+
+    dirty_bits[i] |= (uint8_t)mask;
+    dirty_bits[(uint8_t)(i + 1)] |= (uint8_t)(mask >> 8);
+    dirty_any = 1;
+    dirty_count += count_new_bits(old0, (uint8_t)mask);
+    dirty_count += count_new_bits(old1, (uint8_t)(mask >> 8));
+}
+#endif
+
 void render_flush_cells(void)
 {
+#ifdef NINTENDO_NES
+    uint8_t y;
+    uint16_t attr_pending = 0;
+
+    if (!dirty_any) return;
+
+    /* Sparse frames keep the old per-cell path: it is ~600 cycles cheaper
+     * than walking 31 rows and forming runs when only a handful of cells
+     * changed.  Dense frames (barrier rows, explosion bursts, the death
+     * wipe) use the run batch below. */
+    if (dirty_count < 16) {
+        uint8_t i, p;
+        uint16_t idx;
+
+        for (i = 0; i < DIRTY_WORDS; i++) {
+            uint8_t b = dirty_bits[i];
+            if (!b) continue;
+            dirty_bits[i] = 0;
+            for (p = 0; p < 8; p++) {
+                uint8_t attr_row;
+
+                if (!(b & (uint8_t)(1u << p))) continue;
+                idx = (uint16_t)((i << 3) | p);
+                attr_row = draw_cell_nes((uint8_t)(idx & 0x0F), (uint8_t)(idx >> 4));
+                if (attr_row) attr_pending |= (uint16_t)1u << (attr_row - 1);
+            }
+        }
+        publish_attr_rows(attr_pending);
+        dirty_count = 0;
+        dirty_any = 0;
+        return;
+    }
+
+    /* NES dense path: one rect per dirty map row, spanning the first..last
+     * dirty cell.  Cells in the gap are redrawn from the current map, so the
+     * overdraw is harmless, and merging them removes a set_bkg_tiles() call
+     * per run.  A wipe's fully dirty row is still a single call. */
+    for (y = 0; y < MAP_H; y++) {
+        uint8_t lo = dirty_bits[(uint8_t)(y << 1)];
+        uint8_t hi = dirty_bits[(uint8_t)((y << 1) + 1)];
+        uint16_t mask;
+        uint8_t slot;
+        uint8_t first, last, w, j;
+        uint16_t idx;
+
+        if ((uint8_t)(lo | hi) == 0) continue;
+        dirty_bits[(uint8_t)(y << 1)] = 0;
+        dirty_bits[(uint8_t)((y << 1) + 1)] = 0;
+
+        slot = render_ring_slot(y);
+        if (map_row_level[slot] != y) continue;
+
+        mask = (uint16_t)lo | ((uint16_t)hi << 8);
+
+        /* Merge runs only across gaps of at most two cells: redrawing a
+         * couple of neighbours is cheaper than another set_bkg_tiles() call,
+         * but a row with two distant cells must stay two writes. */
+        first = 0;
+        while (!(mask & ((uint16_t)1u << first))) first++;
+        last = first;
+        while (last < 15) {
+            uint8_t nxt = (uint8_t)(last + 1);
+
+            if (!(mask & ((uint16_t)1u << nxt))) {
+                if ((uint8_t)(nxt + 1) < 16 &&
+                    (mask & ((uint16_t)1u << (uint8_t)(nxt + 1)))) {
+                    nxt = (uint8_t)(nxt + 1);
+                } else if ((uint8_t)(nxt + 2) < 16 &&
+                           (mask & ((uint16_t)1u << (uint8_t)(nxt + 2)))) {
+                    nxt = (uint8_t)(nxt + 2);
+                } else {
+                    break;
+                }
+            }
+            last = nxt;
+        }
+        w = (uint8_t)(last - first + 1);
+
+        idx = (uint16_t)(((uint16_t)y << 4) + first);
+        for (j = 0; j < w; j++) {
+            uint8_t type = map_type[idx];
+            uint8_t extra = map_extra[idx];
+            uint8_t mt = render_metatile_for_cell(type, extra);
+            const uint8_t *t = &metatile_tiles[(uint16_t)mt << 2];
+            uint8_t o = (uint8_t)(j << 1);
+
+            nes_dirty_tiles[o] = t[0];
+            nes_dirty_tiles[o + 1] = t[1];
+            nes_dirty_tiles[(uint8_t)(w << 1) + o] = t[2];
+            nes_dirty_tiles[(uint8_t)(w << 1) + o + 1] = t[3];
+            if (nes_set_cell_attr((uint8_t)(first + j), slot,
+                                  render_cell_palette(type, extra, mt))) {
+                attr_pending |= (uint16_t)1u << (slot >> 1);
+            }
+            idx++;
+        }
+
+        set_bkg_tiles((uint8_t)(first << 1), (uint8_t)(slot << 1),
+                      (uint8_t)(w << 1), 2, nes_dirty_tiles);
+    }
+    publish_attr_rows(attr_pending);
+    dirty_count = 0;
+    dirty_any = 0;
+#else
     uint8_t i, p;
     uint16_t idx;
 
@@ -650,6 +850,7 @@ void render_flush_cells(void)
             draw_cell_now((uint8_t)(idx & 0x0F), (uint8_t)(idx >> 4));
         }
     }
+#endif
 }
 
 

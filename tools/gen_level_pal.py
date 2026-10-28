@@ -13,9 +13,9 @@ colour indices with a grey-aware, contrast-constrained quantiser (the 2C02
 has no mid-grey, and several Atari palettes put a grey wall/background next
 to a dark blue/green), then reordered for the NES build's swapped tile
 indices: entry 0 = background (shared backdrop), 1 = bright, 2 = mid,
-3 = dark.  Only the normal and wall palettes are stored; the inverse object
-palette is a reorder of the wall entries and is built at load time by
-color.c.
+3 = dark.  Each row stores the normal palette, the wall palette and the
+inverse-object body colour; color.c builds the rest of the object palette
+from the wall entries at load time.
 
 The GBC table stores two 4-colour palettes per level in Atari order:
 
@@ -212,23 +212,61 @@ _BASE_CONSTRAINTS = (
 )
 
 
+def _object_body(current: list[int], src: list[tuple[int, int, int]],
+                 wall_main: int) -> int:
+    """Pick the inverse-object body colour (crates, doors) for a level.
+
+    The body is the large area of the stone/door glyph.  It uses the wall
+    palette's COLPF0 entry, but that same colour is also the normal dark role
+    and, on some wall styles, the wall's main surface.  If it would merge into
+    the floor or the wall, fall back to the normal palette's COLPF0 entry and
+    then to the nearest NES colour that stays distinguishable.
+    """
+    bg = current[0]
+
+    def ok(candidate: int) -> bool:
+        return (_contrast(candidate, bg, 35) and
+                _contrast(candidate, current[wall_main], 25))
+
+    # Keep the existing wall-derived body whenever it already reads clearly.
+    if ok(current[4]):
+        return current[4]
+    # The same COLPF0 is stored separately in the normal palette; it is the
+    # natural fallback when the wall copy collapsed into the background.
+    if ok(current[3]):
+        return current[3]
+    # Styles whose wall surface uses COLPF0 can have both copies equal to the
+    # wall; take the nearest unrelated NES entry instead.
+    for candidate in sorted(range(64),
+                            key=lambda i: _rgb_dist(src[4], NES_RGB[i])):
+        if ok(candidate):
+            return candidate
+    raise SystemExit("no contrast-safe object body colour")
+
+
 def _solve_nes_roles(level: int,
                      normal: list[str],
-                     wall: list[str]) -> tuple[list[int], list[int]]:
-    """Pick NES entries for one level's normal + wall palettes.
+                     wall: list[str]) -> tuple[list[int], list[int], int]:
+    """Pick NES entries for one level's normal + wall + object palettes.
 
     Starts from a grey-aware nearest match, then repairs pairs that would
     visually collapse.  Roles are weighted by their art usage (and the
-    teleport blink), so the least visible role is changed first.
+    teleport blink), so the least visible role is changed first.  The object
+    body is chosen afterwards so it cannot drag the authentic wall/normal
+    entries around.
     """
     style = (level - 1) // 4
     usage_counts = _wall_usage()[style]
     constraints = list(_BASE_CONSTRAINTS)
-    # When the wall highlight is the style's main surface (styles 25-28 and
-    # 37-40), it must also stand out from the floor.  It may equal the cave
-    # fill (both are COLPF0) - that is the authentic wall-in-cave look; the
-    # body/detail lines carry the structure there.
-    if usage_counts[0] > 100:
+    # The wall's main surface is the glyph's most used colour role.  Most
+    # styles draw it with COL3 (role 5); styles 25-28 and 37-40 draw it with
+    # COLPF0 (role 4).
+    wall_main = 4 if usage_counts[0] > usage_counts[2] else 5
+    # When the wall highlight is the style's main surface it must also stand
+    # out from the floor.  It may equal the cave fill (both are COLPF0) - that
+    # is the authentic wall-in-cave look; the body/detail lines carry the
+    # structure there.
+    if wall_main == 4:
         constraints.append((0, 4, 25))
     usage = [1000, 100, 80, 500,
              usage_counts[0] + 128, usage_counts[2] + 128,
@@ -279,9 +317,10 @@ def _solve_nes_roles(level: int,
     if bad:
         raise SystemExit(f"level {level}: no contrast-safe NES palette for {bad}")
 
+    obj = _object_body(current, src, wall_main)
     return ([current[0], current[1], current[2], current[3]],
-            [current[0], current[4], current[5], current[6]])
-
+            [current[0], current[4], current[5], current[6]],
+            obj)
 
 
 def art_palettes(v: list[str], level: int) -> tuple[list[str], list[str]]:
@@ -321,14 +360,14 @@ def main() -> None:
         "",
         "const uint16_t level_pal_data[LEVEL_PAL_COUNT][8] = {",
     ]
-    nes_rows: list[tuple[list[int], list[int]]] = []
+    nes_rows: list[tuple[list[int], list[int], int]] = []
     for i, row in enumerate(rows, start=1):
         normal, wall = art_palettes(row, i)
         entry = ", ".join(normal + wall)
         lines.append(f"  {{{entry}}}, /* {i} */")
         nes_rows.append(_solve_nes_roles(i, normal, wall))
     lines += ["};", ""]
-    OUT_C.write_text("\n".join(lines), encoding="utf-8")
+    OUT_C.write_text("\n".join(lines), encoding="utf-8", newline="\n")
 
     OUT_H.write_text(
         "/* GENERATED by gb/tools/gen_level_pal.py - do not edit. */\n"
@@ -344,6 +383,7 @@ def main() -> None:
         "\n"
         "#endif\n",
         encoding="utf-8",
+        newline="\n",
     )
     print(f"wrote {OUT_C.relative_to(ROOT)} and {OUT_H.relative_to(ROOT)}")
 
@@ -356,12 +396,15 @@ def main() -> None:
         " *   entry 0 = background / shared backdrop (COLB)",
         " *   entry 1 = bright (COLPF2), 2 = mid (COLPF1), 3 = dark (COLPF0)",
         " * Walls: entry 1 = COLPF0, 2 = COL3, 3 = wall detail (black after L4).",
+        " * Objects: entry 8 is the inverse palette's crate/door body.  It is",
+        " * normally COLPF0, but the generator recolours it on levels where that",
+        " * would merge into the background or the wall's main surface.",
         " * The table is contrast-repaired: low-chroma sources stay grey (the",
         " * 2C02 has no mid-grey, so a plain nearest match sends them to dark",
-        " * blue/green), and wall body/background/cave, baddie outline/floor and",
-        " * the teleport blink pair are forced to stay distinguishable.",
-        " * The inverse object palette is derived from the wall entries at load",
-        " * time by color.c.",
+        " * blue/green), and wall body/background/cave, baddie outline/floor,",
+        " * the object body and the teleport blink pair are forced to stay",
+        " * distinguishable.  color.c derives the rest of the inverse object",
+        " * palette from the wall entries.",
         " */",
         "#pragma bank 10",
         "",
@@ -370,13 +413,13 @@ def main() -> None:
         "#ifdef NINTENDO_NES",
         '#include "level_pal_nes.h"',
         "",
-        "const uint8_t level_pal_nes[LEVEL_PAL_NES_COUNT][8] = {",
+        "const uint8_t level_pal_nes[LEVEL_PAL_NES_COUNT][9] = {",
     ]
-    for i, (normal, wall) in enumerate(nes_rows, start=1):
-        entry = ", ".join(f"0x{v:02X}" for v in normal + wall)
+    for i, (normal, wall, obj) in enumerate(nes_rows, start=1):
+        entry = ", ".join(f"0x{v:02X}" for v in normal + wall + [obj])
         nes_lines.append(f"  {{{entry}}}, /* {i} */")
     nes_lines += ["};", "#endif", ""]
-    OUT_NES_C.write_text("\n".join(nes_lines), encoding="utf-8")
+    OUT_NES_C.write_text("\n".join(nes_lines), encoding="utf-8", newline="\n")
 
     OUT_NES_H.write_text(
         "/* GENERATED by gb/tools/gen_level_pal.py - do not edit. */\n"
@@ -387,11 +430,12 @@ def main() -> None:
         "\n"
         "#define LEVEL_PAL_NES_COUNT 56\n"
         "\n"
-        "/* [level-1][0..3]=normal, [4..7]=walls, NES entries in swapped-art order. */\n"
-        "extern const uint8_t level_pal_nes[LEVEL_PAL_NES_COUNT][8];\n"
+        "/* [level-1][0..3]=normal, [4..7]=walls, [8]=object body, NES order. */\n"
+        "extern const uint8_t level_pal_nes[LEVEL_PAL_NES_COUNT][9];\n"
         "\n"
         "#endif\n",
         encoding="utf-8",
+        newline="\n",
     )
     print(f"wrote {OUT_NES_C.relative_to(ROOT)} and {OUT_NES_H.relative_to(ROOT)}")
 

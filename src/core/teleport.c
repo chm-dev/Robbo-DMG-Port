@@ -1,5 +1,5 @@
 /*
- * Teleport landing resolution (bank 14).
+ * Teleport landing resolution (bank 14 on GB, bank 15 on NES).
  *
  * GNU Robbo walks the teleports of the same group in id order, wrapping, and
  * uses the first one with a free neighbouring cell; the source teleport is the

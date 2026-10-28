@@ -48,6 +48,12 @@ void render_apply_camera(void);
  * stay inside the VRAM transfer budget). */
 uint8_t render_sync_rows(void);
 void render_cell(uint8_t x, uint8_t y);
+/* Bulk dirty mark used by the death wipe and the explosion timer loop:
+ * 16-bit mask for one map row.  NES only; the DMG flush keeps the per-cell
+ * path. */
+#ifdef NINTENDO_NES
+void render_mark_row(uint8_t y, uint16_t mask);
+#endif
 void render_flush_cells(void);
 uint8_t render_metatile_for_cell(uint8_t type, uint8_t extra);
 /* CGB attribute byte used for a map cell (render.c).  Shared with the banked

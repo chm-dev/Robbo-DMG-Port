@@ -435,6 +435,17 @@ static void collect_bonus(uint16_t idx)
 static const int8_t tp_dx[4] = { 1, 0, -1, 0 };
 static const int8_t tp_dy[4] = { 0, 1, 0, -1 };
 
+#ifdef NINTENDO_NES
+/* 1 << column.  The explosion timer loop groups its dirty marks by map row;
+ * a table avoids a variable shift for every live explosion. */
+static const uint16_t explosion_bit[16] = {
+    0x0001, 0x0002, 0x0004, 0x0008,
+    0x0010, 0x0020, 0x0040, 0x0080,
+    0x0100, 0x0200, 0x0400, 0x0800,
+    0x1000, 0x2000, 0x4000, 0x8000
+};
+#endif
+
 #define TELEPORT_NONE 0xFFFF
 
 static void game_teleport(uint16_t entry_idx)
@@ -840,7 +851,7 @@ void blast_cell(uint16_t idx, uint8_t timer) GAME_BANKED
     }
 }
 
-/* Barrier/ZAPO sweep hit lives in barrier.c (bank 14), where the wave needs
+/* Barrier/ZAPO sweep hit lives in barrier.c (bank 15), where the wave needs
  * it; its destruction helpers are exported above. */
 
 /* A chain can detonate several bombs in the same logic tick. Restarting the
@@ -920,21 +931,45 @@ static uint8_t player_bullet_active(void)
 /* Source restart(): after Robbo's own explosion has played, every map cell
  * that is neither Empty nor Walls is replaced by an Explosion.  The level is
  * reloaded six ticks later, so this is a visual wipe rather than loot or
- * bomb-chain logic.  Ground, teleports, the spaceship and live actors are all
- * consumed just like in the original.  The explosion effect restarts once for
- * the whole wipe; re-triggering it per cell would just restart it again. */
+ * bomb-chain logic.  Teleports, the spaceship and live actors are consumed
+ * just like in the original.
+ *
+ * Experiment: ground is deliberately left in place.  It is most of the room
+ * and its explosion tiles dominate the wipe without adding readable
+ * feedback; items/actors still perish and the level still reloads. */
 static void destroy_all_items(void)
 {
+#ifdef NINTENDO_NES
+    uint8_t y, x;
+    uint16_t idx = 0;
+
+    for (y = 0; y < MAP_H; y++) {
+        uint16_t mask = 0;
+
+        for (x = 0; x < MAP_W; x++, idx++) {
+            uint8_t type = map_type[idx];
+
+            if (type != CT_EMPTY && type != CT_GROUND && !IS_WALL(type)) {
+                map_obj[idx] = 0;
+                map_type[idx] = CT_EXPLOSION;
+                map_extra[idx] = (uint8_t)(2 + (next_rand8() & 1));
+                mask |= explosion_bit[x];
+            }
+        }
+        if (mask) render_mark_row(y, mask);
+    }
+#else
     uint16_t idx;
 
     for (idx = 0; idx < MAP_CELLS; idx++) {
         uint8_t type = map_type[idx];
 
-        if (type != CT_EMPTY && !IS_WALL(type)) {
+        if (type != CT_EMPTY && type != CT_GROUND && !IS_WALL(type)) {
             map_obj[idx] = 0;
             spawn_explosion_timer(idx, (uint8_t)(2 + (next_rand8() & 1)));
         }
     }
+#endif
 
     play_explosion_sfx();
 }
@@ -1327,7 +1362,7 @@ static void animate_static_objects(void)
     }
 
     /* Barricades use the second F.FNT animation frame (glyph $1E's S.FNT
-     * +64 variant); barrier_tick handles the dirty marks in bank 14. */
+     * +64 variant); barrier_tick handles the dirty marks in bank 15. */
 }
 
 void game_check_enemies(void) GAME_BANKED
@@ -1631,9 +1666,16 @@ static void game_tick_phase1(void)
     }
 }
 
+/* Collect runs on its own frame.  The map scan is the largest single piece of
+ * tick work, and sharing this frame with the barrier/turret/enemy update used
+ * to push phase 2 past a whole VBlank on turret-heavy levels. */
 static void game_tick_phase2(void)
 {
     collect_actors();
+}
+
+static void game_tick_phase3(void)
+{
     if (barrier_row_lo | barrier_row_hi) {
         barrier_tick(barrier_row_lo, barrier_row_hi, (uint8_t)!anim_frame);
     }
@@ -1641,11 +1683,15 @@ static void game_tick_phase2(void)
     enemy_tick();
 }
 
-static void game_tick_phase3(void)
+static void game_tick_phase4(void)
 {
     uint8_t i = 0;
     uint16_t ei;
     uint16_t eidx;
+#ifdef NINTENDO_NES
+    uint16_t mark_mask = 0;
+    uint8_t mark_y = 0xFF;
+#endif
 
     /* Bomb fuses.  map_extra 0 = idle; 1..2 = remaining ticks. */
     for (i = 0; i < bomb_count; i++) {
@@ -1662,6 +1708,40 @@ static void game_tick_phase3(void)
 
     /* Explosion countdown.  Low 3 bits are the timer; high bits hold an
      * optional Question payload to spawn when the explosion clears. */
+#ifdef NINTENDO_NES
+    /* collect_actors() walks the map top-down, so explosion_list is in
+     * descending cell order: accumulate one row's dirty mask and publish it
+     * when the row changes, instead of calling render_cell() per cell. */
+    for (ei = 0; ei < explosion_count; ei++) {
+        eidx = explosion_list[ei];
+        if (map_type[eidx] == CT_EXPLOSION) {
+            uint8_t timer = map_extra[eidx] & 7;
+            uint8_t payload = map_extra[eidx] >> 3;
+            uint8_t y = (uint8_t)(eidx >> 4);
+
+            if (y != mark_y) {
+                if (mark_mask) render_mark_row(mark_y, mark_mask);
+                mark_y = y;
+                mark_mask = 0;
+            }
+
+            if (timer > 0) {
+                timer--;
+                map_extra[eidx] = (uint8_t)((payload << 3) | timer);
+                mark_mask |= explosion_bit[eidx & 15];
+            } else if (payload == 12) {
+                teleport_arrive(eidx);
+            } else if (payload != 0) {
+                spawn_question_payload(eidx, payload - 1);
+            } else {
+                map_type[eidx] = CT_EMPTY;
+                map_extra[eidx] = 0;
+                mark_mask |= explosion_bit[eidx & 15];
+            }
+        }
+    }
+    if (mark_mask) render_mark_row(mark_y, mark_mask);
+#else
     for (ei = 0; ei < explosion_count; ei++) {
         eidx = explosion_list[ei];
         if (map_type[eidx] == CT_EXPLOSION) {
@@ -1682,6 +1762,7 @@ static void game_tick_phase3(void)
             }
         }
     }
+#endif
 
     /* `i` still holds the explosion-loop count here; restart it for the
      * sliding list or an active explosion silently skips every box. */
@@ -1739,7 +1820,7 @@ static void game_tick_phase3(void)
     }
 }
 
-static void game_tick_phase4(void)
+static void game_tick_phase5(void)
 {
     animate_static_objects();
     magnet_tick();
@@ -1751,6 +1832,7 @@ void game_tick_step(void) GAME_BANKED
         case 1: game_tick_phase1(); tick_phase = 2; break;
         case 2: game_tick_phase2(); tick_phase = 3; break;
         case 3: game_tick_phase3(); tick_phase = 4; break;
-        case 4: game_tick_phase4(); tick_phase = 0; break;
+        case 4: game_tick_phase4(); tick_phase = 5; break;
+        case 5: game_tick_phase5(); tick_phase = 0; break;
     }
 }

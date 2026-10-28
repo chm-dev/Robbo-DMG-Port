@@ -158,11 +158,12 @@ void color_level_pal(uint8_t level) BANKED
     }
     /* Inverse objects (crates, doors), derived from the wall entries:
      * background role = COLB, bright = wall detail, mid = COL3,
-     * dark = COLPF0. */
+     * dark = the generated object body (normally COLPF0, recoloured by the
+     * generator when COLPF0 would merge into the floor or wall surface). */
     nes_pal[8] = src[4];
     nes_pal[9] = src[7];
     nes_pal[10] = src[6];
-    nes_pal[11] = src[5];
+    nes_pal[11] = src[8];
 
     nes_backdrop = src[0];
     nes_flash_on = 0;

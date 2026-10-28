@@ -8,7 +8,8 @@
  * and noise.  This test drives each effect through the debug-ROM sound hook
  * and samples Mesen's APU state once per emulated frame through a persistent
  * Lua script.  Samples are packed into unused PRG-RAM above the game's BSS
- * ($7A00-$7FB0) so the test can read them with the normal memory API.
+ * (position taken from the .noi `s__HEAP` symbol, below the $7FF0 save page)
+ * so the test can read them with the normal memory API.
  *
  * Coverage:
  *   - sound_init selects the 4-step frame sequencer with IRQ inhibited and
@@ -40,9 +41,18 @@ const MCP_URL = process.env.MESEN_MCP_URL || 'http://localhost:9100/mcp';
 const ROM = path.resolve('roms/robbo-debug.nes');
 const NOI = path.resolve('roms/robbo-debug-nes.noi');
 
-const SAMPLER_BASE = 0x7A00;
-const SAMPLER_DATA = 0x7A10;
-const SAMPLER_MAX = 90;
+/* Put the APU sampler in PRG-RAM above the game's BSS/heap so it cannot
+ * clobber globals (a fixed $7A00 overlapped _sfx_debug_play once BSS grew). */
+const HEAP_END = (() => {
+    for (const line of fs.readFileSync(NOI, 'utf8').split(/\r?\n/)) {
+        const m = line.match(/^DEF s__HEAP (0x[0-9A-Fa-f]+)$/);
+        if (m) return parseInt(m[1], 16);
+    }
+    return 0x7A00;
+})();
+const SAMPLER_BASE = (HEAP_END + 0x0F) & ~0x0F;
+const SAMPLER_DATA = SAMPLER_BASE + 16;
+const SAMPLER_MAX = Math.min(90, Math.floor((0x7FF0 - SAMPLER_DATA) / 16));
 const SAMPLER_STRIDE = 16;
 
 const CT_EMPTY = 0;
@@ -188,7 +198,8 @@ async function inHangLoop() {
 /* ------------------------------------------------------------------ */
 /* Frame-accurate APU sampler                                          */
 /* ------------------------------------------------------------------ */
-/* Header at $7A00: trigger, count, done, recording.  Records at $7A10, 16 bytes:
+/* Header at SAMPLER_BASE: trigger, count, done, recording.  Records at
+ * SAMPLER_DATA, 16 bytes (SAMPLER_MAX frames, sized to stay below $7FF0):
  *   0 p1 volume     1 p1 duty       2/3 p1 realPeriod
  *   4 p2 volume     5 p2 duty       6/7 p2 realPeriod
  *   8 noise volume  9/10 noise period (Mesen timer.period - 1)
@@ -196,9 +207,9 @@ async function inHangLoop() {
  *  14 triangle lengthCounter        15 frameCount low byte
  */
 const SAMPLER_LUA = `
-local BASE=0x7A00
-local DATA=0x7A10
-local MAX=90
+local BASE=0x${SAMPLER_BASE.toString(16)}
+local DATA=0x${SAMPLER_DATA.toString(16)}
+local MAX=${SAMPLER_MAX}
 local STRIDE=16
 local recording=false
 local count=0
