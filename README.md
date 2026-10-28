@@ -1,4 +1,4 @@
-Atari 8bit [Robbo](https://en.wikipedia.org/wiki/Robbo_(video_game)) Gameboy port.
+Atari 8bit [Robbo](https://en.wikipedia.org/wiki/Robbo_(video_game)) Gameboy and NES port.
 
 Port source - https://github.com/Zibx/robbo
 
