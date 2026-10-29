@@ -67,7 +67,7 @@
 #define HOLD_LINE        15
 #define HOLD_BLANK        8
 #define HOLD_END        180
-#define LOGO_PHASE_FRAMES 35
+#define LOGO_PHASE_FRAMES 10
 
 #define MENU_MODE_SCROLL  0
 #define MENU_MODE_START   1
