@@ -764,10 +764,11 @@ void render_flush_cells(void)
         return;
     }
 
-    /* NES dense path: one rect per dirty map row, spanning the first..last
-     * dirty cell.  Cells in the gap are redrawn from the current map, so the
-     * overdraw is harmless, and merging them removes a set_bkg_tiles() call
-     * per run.  A wipe's fully dirty row is still a single call. */
+    /* NES dense path: one rect per dirty run in each map row.  Runs are
+     * merged across small gaps and gap cells are redrawn from the current
+     * map, so the overdraw is harmless and a wipe's fully dirty row is still
+     * a single call.  Every run must be written: the row mask is cleared up
+     * front, so anything not drawn would stay stale on screen. */
     for (y = 0; y < MAP_H; y++) {
         uint8_t lo = dirty_bits[(uint8_t)(y << 1)];
         uint8_t hi = dirty_bits[(uint8_t)((y << 1) + 1)];
@@ -785,51 +786,61 @@ void render_flush_cells(void)
 
         mask = (uint16_t)lo | ((uint16_t)hi << 8);
 
-        /* Merge runs only across gaps of at most two cells: redrawing a
-         * couple of neighbours is cheaper than another set_bkg_tiles() call,
-         * but a row with two distant cells must stay two writes. */
-        first = 0;
-        while (!(mask & ((uint16_t)1u << first))) first++;
-        last = first;
-        while (last < 15) {
-            uint8_t nxt = (uint8_t)(last + 1);
+        /* Draw every run in this row, not just the first one.  Runs are merged
+         * across gaps of at most two cells because redrawing a couple of
+         * neighbours is cheaper than another set_bkg_tiles() call, but a row
+         * with two distant dirty cells still needs two writes.  The row mask
+         * was cleared up front, so every set bit must be covered here or the
+         * cell would stay stale until something else redraws it. */
+        while (mask) {
+            first = 0;
+            while (!(mask & ((uint16_t)1u << first))) first++;
+            last = first;
+            while (last < 15) {
+                uint8_t nxt = (uint8_t)(last + 1);
 
-            if (!(mask & ((uint16_t)1u << nxt))) {
-                if ((uint8_t)(nxt + 1) < 16 &&
-                    (mask & ((uint16_t)1u << (uint8_t)(nxt + 1)))) {
-                    nxt = (uint8_t)(nxt + 1);
-                } else if ((uint8_t)(nxt + 2) < 16 &&
-                           (mask & ((uint16_t)1u << (uint8_t)(nxt + 2)))) {
-                    nxt = (uint8_t)(nxt + 2);
-                } else {
-                    break;
+                if (!(mask & ((uint16_t)1u << nxt))) {
+                    if ((uint8_t)(nxt + 1) < 16 &&
+                        (mask & ((uint16_t)1u << (uint8_t)(nxt + 1)))) {
+                        nxt = (uint8_t)(nxt + 1);
+                    } else if ((uint8_t)(nxt + 2) < 16 &&
+                               (mask & ((uint16_t)1u << (uint8_t)(nxt + 2)))) {
+                        nxt = (uint8_t)(nxt + 2);
+                    } else {
+                        break;
+                    }
                 }
+                last = nxt;
             }
-            last = nxt;
-        }
-        w = (uint8_t)(last - first + 1);
+            w = (uint8_t)(last - first + 1);
 
-        idx = (uint16_t)(((uint16_t)y << 4) + first);
-        for (j = 0; j < w; j++) {
-            uint8_t type = map_type[idx];
-            uint8_t extra = map_extra[idx];
-            uint8_t mt = render_metatile_for_cell(type, extra);
-            const uint8_t *t = &metatile_tiles[(uint16_t)mt << 2];
-            uint8_t o = (uint8_t)(j << 1);
+            idx = (uint16_t)(((uint16_t)y << 4) + first);
+            for (j = 0; j < w; j++) {
+                uint8_t type = map_type[idx];
+                uint8_t extra = map_extra[idx];
+                uint8_t mt = render_metatile_for_cell(type, extra);
+                const uint8_t *t = &metatile_tiles[(uint16_t)mt << 2];
+                uint8_t o = (uint8_t)(j << 1);
 
-            nes_dirty_tiles[o] = t[0];
-            nes_dirty_tiles[o + 1] = t[1];
-            nes_dirty_tiles[(uint8_t)(w << 1) + o] = t[2];
-            nes_dirty_tiles[(uint8_t)(w << 1) + o + 1] = t[3];
-            if (nes_set_cell_attr((uint8_t)(first + j), slot,
-                                  render_cell_palette(type, extra, mt))) {
-                attr_pending |= (uint16_t)1u << (slot >> 1);
+                nes_dirty_tiles[o] = t[0];
+                nes_dirty_tiles[o + 1] = t[1];
+                nes_dirty_tiles[(uint8_t)(w << 1) + o] = t[2];
+                nes_dirty_tiles[(uint8_t)(w << 1) + o + 1] = t[3];
+                if (nes_set_cell_attr((uint8_t)(first + j), slot,
+                                      render_cell_palette(type, extra, mt))) {
+                    attr_pending |= (uint16_t)1u << (slot >> 1);
+                }
+                idx++;
             }
-            idx++;
-        }
 
-        set_bkg_tiles((uint8_t)(first << 1), (uint8_t)(slot << 1),
-                      (uint8_t)(w << 1), 2, nes_dirty_tiles);
+            set_bkg_tiles((uint8_t)(first << 1), (uint8_t)(slot << 1),
+                          (uint8_t)(w << 1), 2, nes_dirty_tiles);
+
+            /* Drop the run (including its merged gaps) from the mask. */
+            for (j = first; j <= last; j++) {
+                mask &= (uint16_t)~(uint16_t)(1u << j);
+            }
+        }
     }
     publish_attr_rows(attr_pending);
     dirty_count = 0;
